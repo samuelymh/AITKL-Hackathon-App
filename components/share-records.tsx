@@ -1,45 +1,45 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Shield, Clock, X } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Shield, Clock, X } from "lucide-react";
 
 interface ShareRecordsProps {
-  onBack: () => void
+  onBack: () => void;
 }
 
 export default function ShareRecords({ onBack }: ShareRecordsProps) {
-  const [timeLeft, setTimeLeft] = useState(30 * 60) // 30 minutes in seconds
-  const [isActive, setIsActive] = useState(true)
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+  const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
-    if (!isActive || timeLeft <= 0) return
+    if (!isActive || timeLeft <= 0) return;
 
     const interval = setInterval(() => {
       setTimeLeft((time) => {
         if (time <= 1) {
-          setIsActive(false)
-          return 0
+          setIsActive(false);
+          return 0;
         }
-        return time - 1
-      })
-    }, 1000)
+        return time - 1;
+      });
+    }, 1000);
 
-    return () => clearInterval(interval)
-  }, [isActive, timeLeft])
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft]);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-  }
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const handleRevoke = () => {
-    setIsActive(false)
-    setTimeLeft(0)
-  }
+    setIsActive(false);
+    setTimeLeft(0);
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -79,14 +79,20 @@ export default function ShareRecords({ onBack }: ShareRecordsProps) {
                   <Clock className="w-4 h-4 text-orange-600" />
                   <span className="text-sm text-gray-600">Expires in</span>
                 </div>
-                <div className="text-3xl font-mono font-bold text-orange-600">{formatTime(timeLeft)}</div>
+                <div className="text-3xl font-mono font-bold text-orange-600">
+                  {formatTime(timeLeft)}
+                </div>
               </div>
             </>
           ) : (
             <div className="py-16 space-y-4">
               <X className="w-16 h-16 mx-auto text-gray-400" />
-              <div className="text-lg font-semibold text-gray-600">Access Expired</div>
-              <p className="text-sm text-gray-500">Generate a new QR code to share your records</p>
+              <div className="text-lg font-semibold text-gray-600">
+                Access Expired
+              </div>
+              <p className="text-sm text-gray-500">
+                Generate a new QR code to share your records
+              </p>
             </div>
           )}
         </CardContent>
@@ -124,14 +130,18 @@ export default function ShareRecords({ onBack }: ShareRecordsProps) {
       {/* Actions */}
       <div className="space-y-3">
         {isActive ? (
-          <Button onClick={handleRevoke} variant="destructive" className="w-full">
+          <Button
+            onClick={handleRevoke}
+            variant="destructive"
+            className="w-full"
+          >
             Revoke Access
           </Button>
         ) : (
           <Button
             onClick={() => {
-              setTimeLeft(30 * 60)
-              setIsActive(true)
+              setTimeLeft(30 * 60);
+              setIsActive(true);
             }}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
@@ -140,5 +150,5 @@ export default function ShareRecords({ onBack }: ShareRecordsProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
