@@ -1,0 +1,41 @@
+name: Next.js CI/CD Pipeline
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push events for the "main" branch
+  push:
+    branches: ["main"]
+  # Triggers the workflow on pull request events targeting the "main" branch
+  pull_request:
+    branches: ["main", "development"]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This job runs the build and linting checks
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Specify your project's Node.js version
+          cache: "npm" # Or 'yarn', 'pnpm'
+
+      # 3. Install dependencies
+      - name: Install Dependencies
+        run: npm install # Or 'yarn install', 'pnpm install'
+
+      # 4. Run the linter (standard in Next.js projects)
+      - name: Run Linter
+        run: npm run format
+
+      # 5. Run the build command to ensure the app compiles
+      - name: Build Project
+        run: npm run build

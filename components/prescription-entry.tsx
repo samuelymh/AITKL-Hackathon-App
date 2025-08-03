@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Pill, Clock, Shield, Check } from "lucide-react"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Pill, Clock, Shield, Check } from "lucide-react";
 
 interface PrescriptionEntryProps {
-  onBack: () => void
+  onBack: () => void;
 }
 
 export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
@@ -22,17 +22,17 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
     frequency: "",
     duration: "",
     instructions: "",
-  })
-  const [prescriptionGenerated, setPrescriptionGenerated] = useState(false)
+  });
+  const [prescriptionGenerated, setPrescriptionGenerated] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPrescriptionGenerated(true)
-  }
+    e.preventDefault();
+    setPrescriptionGenerated(true);
+  };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   if (prescriptionGenerated) {
     return (
@@ -49,15 +49,21 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-6 text-center">
             <Check className="w-16 h-16 mx-auto text-green-600 mb-4" />
-            <h2 className="text-xl font-semibold text-green-800 mb-2">Prescription Created Successfully</h2>
-            <p className="text-green-700">Secure e-Prescription has been generated</p>
+            <h2 className="text-xl font-semibold text-green-800 mb-2">
+              Prescription Created Successfully
+            </h2>
+            <p className="text-green-700">
+              Secure e-Prescription has been generated
+            </p>
           </CardContent>
         </Card>
 
         {/* QR Code */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">e-Prescription QR Code</CardTitle>
+            <CardTitle className="text-center">
+              e-Prescription QR Code
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             {/* Large QR Code */}
@@ -81,7 +87,9 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
                 <Clock className="w-4 h-4 text-orange-600" />
                 <span className="text-sm">Valid for 30 days</span>
               </div>
-              <Badge className="bg-red-100 text-red-800">One-time use only</Badge>
+              <Badge className="bg-red-100 text-red-800">
+                One-time use only
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -115,7 +123,7 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
           Return to Patient Records
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -135,7 +143,9 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
             <Pill className="w-5 h-5 text-blue-600" />
             <div>
               <p className="font-semibold">Sarah Johnson</p>
-              <p className="text-sm text-gray-600">Age 34 • Patient ID: P-2024-001</p>
+              <p className="text-sm text-gray-600">
+                Age 34 • Patient ID: P-2024-001
+              </p>
             </div>
           </div>
         </CardContent>
@@ -175,7 +185,9 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
                 <Input
                   id="frequency"
                   value={formData.frequency}
-                  onChange={(e) => handleInputChange("frequency", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("frequency", e.target.value)
+                  }
                   placeholder="e.g., Once daily"
                   required
                 />
@@ -198,7 +210,9 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
               <Textarea
                 id="instructions"
                 value={formData.instructions}
-                onChange={(e) => handleInputChange("instructions", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("instructions", e.target.value)
+                }
                 placeholder="Take with food, avoid alcohol, etc."
                 rows={3}
               />
@@ -209,11 +223,16 @@ export default function PrescriptionEntry({ onBack }: PrescriptionEntryProps) {
         <Button
           type="submit"
           className="w-full bg-blue-600 hover:bg-blue-700 h-12"
-          disabled={!formData.drugName || !formData.dosage || !formData.frequency || !formData.duration}
+          disabled={
+            !formData.drugName ||
+            !formData.dosage ||
+            !formData.frequency ||
+            !formData.duration
+          }
         >
           Generate e-Prescription
         </Button>
       </form>
     </div>
-  )
+  );
 }

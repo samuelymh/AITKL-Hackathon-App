@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Eye, FileText, Clock } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Eye, FileText, Clock } from "lucide-react";
 
 interface AuditLogProps {
-  onBack: () => void
+  onBack: () => void;
 }
 
 const auditEvents = [
@@ -55,7 +55,7 @@ const auditEvents = [
     icon: FileText,
     color: "purple",
   },
-]
+];
 
 export default function AuditLog({ onBack }: AuditLogProps) {
   return (
@@ -93,7 +93,7 @@ export default function AuditLog({ onBack }: AuditLogProps) {
         <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
 
         {auditEvents.map((event, index) => {
-          const IconComponent = event.icon
+          const IconComponent = event.icon;
           return (
             <Card key={event.id} className="relative">
               <CardContent className="p-4">
@@ -102,18 +102,27 @@ export default function AuditLog({ onBack }: AuditLogProps) {
                   <div
                     className={`w-10 h-10 rounded-full bg-${event.color}-100 flex items-center justify-center flex-shrink-0 mt-1`}
                   >
-                    <IconComponent className={`w-5 h-5 text-${event.color}-600`} />
+                    <IconComponent
+                      className={`w-5 h-5 text-${event.color}-600`}
+                    />
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-semibold text-gray-900">{event.doctor}</p>
+                        <p className="font-semibold text-gray-900">
+                          {event.doctor}
+                        </p>
                         <p className="text-sm text-gray-600">{event.clinic}</p>
-                        <p className="text-sm text-gray-500 mt-1">{event.time}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {event.time}
+                        </p>
                       </div>
-                      <Badge variant="secondary" className={`bg-${event.color}-100 text-${event.color}-800 text-xs`}>
+                      <Badge
+                        variant="secondary"
+                        className={`bg-${event.color}-100 text-${event.color}-800 text-xs`}
+                      >
                         {event.accessType}
                       </Badge>
                     </div>
@@ -121,10 +130,12 @@ export default function AuditLog({ onBack }: AuditLogProps) {
                 </div>
 
                 {/* Timeline line */}
-                {index < auditEvents.length - 1 && <div className="absolute left-8 top-14 w-0.5 h-6 bg-gray-200" />}
+                {index < auditEvents.length - 1 && (
+                  <div className="absolute left-8 top-14 w-0.5 h-6 bg-gray-200" />
+                )}
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -133,5 +144,5 @@ export default function AuditLog({ onBack }: AuditLogProps) {
         Load More History
       </Button>
     </div>
-  )
+  );
 }
