@@ -18,7 +18,7 @@ const RegisterSchema = z.object({
     }),
   }),
   password: z.string().min(8).max(128),
-  role: z.nativeEnum(UserRole).default("patient" as UserRole),
+  role: z.nativeEnum(UserRole).default(UserRole.PATIENT),
   medicalInfo: z
     .object({
       bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
@@ -37,6 +37,8 @@ const RegisterSchema = z.object({
     .optional(),
 });
 
+type RegisterData = z.infer<typeof RegisterSchema>;
+
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -48,7 +50,7 @@ const LoginSchema = z.object({
 async function registerHandler(request: NextRequest) {
   try {
     const body = await request.json();
-    const validatedData = RegisterSchema.parse(body);
+    const validatedData: RegisterData = RegisterSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
       // Check if user already exists

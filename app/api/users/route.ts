@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
 
   if (!authCheck.success) {
-    return createErrorResponse(authCheck.error!, authCheck.status!);
+    return createErrorResponse(authCheck.error, authCheck.status);
   }
 
   const { searchParams } = new URL(request.url);
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
 
   if (!authCheck.success) {
-    return createErrorResponse(authCheck.error!, authCheck.status!);
+    return createErrorResponse(authCheck.error, authCheck.status);
   }
 
   try {
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
   const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT])(authContext);
 
   if (!authCheck.success) {
-    return createErrorResponse(authCheck.error!, authCheck.status!);
+    return createErrorResponse(authCheck.error, authCheck.status);
   }
 
   try {
@@ -229,10 +229,10 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   // Extract authentication context
   const authContext = getAuthContext(request);
-  const authCheck = requireAuth([UserRole.ADMIN])(authContext);
+  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
 
   if (!authCheck.success) {
-    return createErrorResponse(authCheck.error!, authCheck.status!);
+    return createErrorResponse(authCheck.error, authCheck.status);
   }
 
   const { searchParams } = new URL(request.url);
@@ -270,4 +270,76 @@ export async function DELETE(request: NextRequest) {
   }
 
   return createSuccessResponse(result.data);
+}
+
+/**
+ * PATCH /api/users - Update partial user data (requires digitalIdentifier in body)
+ */
+export async function PATCH(request: NextRequest) {
+  // Extract authentication context
+  const authContext = getAuthContext(request);
+  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
+
+  if (!authCheck.success) {
+    return createErrorResponse(authCheck.error, authCheck.status);
+  }
+
+  try {
+    const body = await request.json();
+
+    // Validate required fields
+    const validationError = validateRequiredFields(body, ["digitalIdentifier"]);
+    if (validationError) {
+      return createErrorResponse(validationError, 400);
+    }
+
+    const { digitalIdentifier, ...updateData } = body;
+
+    const result = await executeDatabaseOperation(async () => {
+      const user = await User.findOne({
+        digitalIdentifier,
+        ...getActiveUserQuery(),
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Check if user can update this profile
+      if (authContext?.role === UserRole.PATIENT && authContext.digitalIdentifier !== digitalIdentifier) {
+        throw new Error("Patients can only update their own profile");
+      }
+
+      // Apply updates (excluding sensitive fields)
+      const { auth, ...safeUpdateData } = updateData;
+      Object.assign(user, safeUpdateData);
+
+      // Apply audit fields for update with authenticated user ID
+      const currentUserId = authContext?.userId || "system-api";
+      AuditHelper.applyAudit(user, "update", currentUserId);
+
+      const updatedUser = await user.save();
+
+      return {
+        user: updatedUser.toPublicJSON(),
+        message: "User updated successfully",
+      };
+    }, "Update User");
+
+    if (!result.success) {
+      let status = 500;
+      if (result.error?.includes("not found")) {
+        status = 404;
+      } else if (result.error?.includes("only update")) {
+        status = 403;
+      }
+
+      return createErrorResponse(result.error || "Failed to update user", status);
+    }
+
+    return createSuccessResponse(result.data);
+  } catch (error) {
+    console.error("User update error:", error);
+    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
+  }
 }

@@ -1,7 +1,6 @@
 import mongoose, { Model } from "mongoose";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
-import { UserRole } from "@/lib/auth";
 
 // Interface definitions matching the knowledge base
 export interface IUser extends IBaseDocument {
