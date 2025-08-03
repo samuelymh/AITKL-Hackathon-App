@@ -7,6 +7,9 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "format": "prettier --write \"**/*.ts\" \"**/*.tsx\"",
     "db:health": "curl -s http://localhost:3000/api/health | jq",
     "db:test": "node -e \"require('./lib/mongodb.ts').then(db => console.log('DB Connected:', db.connection.readyState === 1))\""

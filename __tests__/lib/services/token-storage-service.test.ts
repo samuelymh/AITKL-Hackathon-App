@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import { TokenStorageService } from "../../../lib/services/token-storage-service";
+import { InMemoryTokenRepository } from "../../../lib/repositories/token-repository";
 
 describe("TokenStorageService", () => {
   const mockToken = "test-token-12345";
@@ -7,9 +8,10 @@ describe("TokenStorageService", () => {
   const mockUserId = "507f1f77bcf86cd799439012";
   const mockOrganizationId = "507f1f77bcf86cd799439013";
 
-  beforeEach(() => {
-    // Clear all tokens before each test
-    TokenStorageService.clearAllTokens();
+  beforeEach(async () => {
+    // Initialize with in-memory repository for testing
+    TokenStorageService.setRepository(new InMemoryTokenRepository());
+    await TokenStorageService.clearAllTokens();
     jest.clearAllMocks();
   });
 

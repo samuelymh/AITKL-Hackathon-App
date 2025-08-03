@@ -1,3 +1,5 @@
+import { ITokenRepository, MongoTokenRepository, InMemoryTokenRepository } from "../repositories/token-repository";
+
 export interface StoredToken {
   token: string;
   grantId: string;
@@ -19,11 +21,61 @@ export interface TokenValidationResult {
 }
 
 /**
- * Secure token storage and management service
+ * Configuration for token storage backend
+ */
+export interface TokenStorageConfig {
+  backend: "memory" | "mongodb" | "redis";
+  enablePeriodicCleanup?: boolean;
+  cleanupIntervalMinutes?: number;
+}
+
+/**
+ * Secure token storage and management service with pluggable repository backends
  * Handles token lifecycle including creation, validation, and revocation
  */
 export class TokenStorageService {
-  private static readonly tokens: Map<string, StoredToken> = new Map();
+  private static repository: ITokenRepository;
+  private static config: TokenStorageConfig = {
+    backend: "mongodb", // Default to MongoDB for production
+    enablePeriodicCleanup: true,
+    cleanupIntervalMinutes: 60,
+  };
+
+  /**
+   * Initialize the service with a specific repository backend
+   */
+  static initialize(config?: Partial<TokenStorageConfig>): void {
+    if (config) {
+      this.config = { ...this.config, ...config };
+    }
+
+    // Initialize repository based on backend choice
+    switch (this.config.backend) {
+      case "mongodb":
+        this.repository = new MongoTokenRepository();
+        break;
+      case "memory":
+        this.repository = new InMemoryTokenRepository();
+        break;
+      default:
+        throw new Error(`Unsupported token storage backend: ${this.config.backend}`);
+    }
+
+    // Start periodic cleanup if enabled
+    if (this.config.enablePeriodicCleanup) {
+      this.initializePeriodicCleanup(this.config.cleanupIntervalMinutes);
+    }
+  }
+
+  /**
+   * Get the current repository (initialize with defaults if not set)
+   */
+  private static getRepository(): ITokenRepository {
+    if (!this.repository) {
+      this.initialize();
+    }
+    return this.repository;
+  }
 
   /**
    * Store a token securely with expiration and metadata
@@ -49,131 +101,49 @@ export class TokenStorageService {
       metadata,
     };
 
-    this.tokens.set(token, storedToken);
-
-    // Schedule automatic cleanup for expired tokens
-    this.scheduleTokenCleanup(token, expiresAt);
+    await this.getRepository().storeToken(storedToken);
   }
 
   /**
    * Validate a token and return its details if valid
    */
   static async validateToken(token: string): Promise<TokenValidationResult> {
-    const storedToken = this.tokens.get(token);
-
-    if (!storedToken) {
-      return {
-        isValid: false,
-        error: "Token not found",
-      };
-    }
-
-    if (storedToken.isRevoked) {
-      return {
-        isValid: false,
-        error: "Token has been revoked",
-      };
-    }
-
-    if (new Date() > storedToken.expiresAt) {
-      // Auto-revoke expired token
-      await this.revokeToken(token, "system", "Token expired");
-      return {
-        isValid: false,
-        error: "Token has expired",
-      };
-    }
-
-    return {
-      isValid: true,
-      token: storedToken,
-    };
+    return await this.getRepository().validateToken(token);
   }
 
   /**
    * Revoke a token manually
    */
   static async revokeToken(token: string, revokedBy: string, reason?: string): Promise<boolean> {
-    const storedToken = this.tokens.get(token);
-
-    if (!storedToken) {
-      return false;
-    }
-
-    storedToken.isRevoked = true;
-    storedToken.revokedAt = new Date();
-    storedToken.revokedBy = revokedBy;
-
-    if (reason && storedToken.metadata) {
-      storedToken.metadata.revocationReason = reason;
-    }
-
-    this.tokens.set(token, storedToken);
-    return true;
+    return await this.getRepository().revokeToken(token, revokedBy, reason);
   }
 
   /**
    * Revoke all tokens for a specific grant
    */
   static async revokeTokensForGrant(grantId: string, revokedBy: string, reason?: string): Promise<number> {
-    let revokedCount = 0;
-
-    for (const [token, storedToken] of this.tokens.entries()) {
-      if (storedToken.grantId === grantId && !storedToken.isRevoked) {
-        await this.revokeToken(token, revokedBy, reason);
-        revokedCount++;
-      }
-    }
-
-    return revokedCount;
+    return await this.getRepository().revokeTokensForGrant(grantId, revokedBy, reason);
   }
 
   /**
    * Revoke all tokens for a specific user
    */
   static async revokeTokensForUser(userId: string, revokedBy: string, reason?: string): Promise<number> {
-    let revokedCount = 0;
-
-    for (const [token, storedToken] of this.tokens.entries()) {
-      if (storedToken.userId === userId && !storedToken.isRevoked) {
-        await this.revokeToken(token, revokedBy, reason);
-        revokedCount++;
-      }
-    }
-
-    return revokedCount;
+    return await this.getRepository().revokeTokensForUser(userId, revokedBy, reason);
   }
 
   /**
    * Get all tokens for a grant (for debugging/audit purposes)
    */
   static async getTokensForGrant(grantId: string): Promise<StoredToken[]> {
-    const grantTokens: StoredToken[] = [];
-
-    for (const storedToken of this.tokens.values()) {
-      if (storedToken.grantId === grantId) {
-        grantTokens.push(storedToken);
-      }
-    }
-
-    return grantTokens;
+    return await this.getRepository().getTokensForGrant(grantId);
   }
 
   /**
    * Clean up expired tokens
    */
   static async cleanupExpiredTokens(): Promise<number> {
-    const now = new Date();
-    let cleanedCount = 0;
-
-    for (const [token, storedToken] of this.tokens.entries()) {
-      if (now > storedToken.expiresAt) {
-        this.tokens.delete(token);
-        cleanedCount++;
-      }
-    }
-
-    return cleanedCount;
+    return await this.getRepository().cleanupExpiredTokens();
   }
 
   /**
@@ -186,44 +156,7 @@ export class TokenStorageService {
     expired: number;
     byType: Record<StoredToken["tokenType"], number>;
   }> {
-    const now = new Date();
-    const stats = {
-      total: this.tokens.size,
-      active: 0,
-      revoked: 0,
-      expired: 0,
-      byType: { access: 0, qr: 0, scan: 0 } as Record<StoredToken["tokenType"], number>,
-    };
-
-    for (const storedToken of this.tokens.values()) {
-      // Count by type
-      stats.byType[storedToken.tokenType]++;
-
-      // Count by status
-      if (storedToken.isRevoked) {
-        stats.revoked++;
-      } else if (now > storedToken.expiresAt) {
-        stats.expired++;
-      } else {
-        stats.active++;
-      }
-    }
-
-    return stats;
-  }
-
-  /**
-   * Schedule automatic cleanup for a token when it expires
-   */
-  private static scheduleTokenCleanup(token: string, expiresAt: Date): void {
-    const timeoutMs = expiresAt.getTime() - Date.now();
-
-    // Only schedule if expiration is within reasonable time (24 hours max)
-    if (timeoutMs > 0 && timeoutMs <= 24 * 60 * 60 * 1000) {
-      setTimeout(() => {
-        this.tokens.delete(token);
-      }, timeoutMs);
-    }
+    return await this.getRepository().getTokenStats();
   }
 
   /**
@@ -232,9 +165,13 @@ export class TokenStorageService {
   static initializePeriodicCleanup(intervalMinutes: number = 60): void {
     setInterval(
       async () => {
-        const cleaned = await this.cleanupExpiredTokens();
-        if (cleaned > 0) {
-          console.log(`TokenStorageService: Cleaned up ${cleaned} expired tokens`);
+        try {
+          const cleaned = await this.cleanupExpiredTokens();
+          if (cleaned > 0) {
+            console.log(`TokenStorageService: Cleaned up ${cleaned} expired tokens`);
+          }
+        } catch (error) {
+          console.error("TokenStorageService: Error during periodic cleanup:", error);
         }
       },
       intervalMinutes * 60 * 1000
@@ -244,8 +181,22 @@ export class TokenStorageService {
   /**
    * Clear all tokens (for testing purposes)
    */
-  static clearAllTokens(): void {
-    this.tokens.clear();
+  static async clearAllTokens(): Promise<void> {
+    await this.getRepository().clearAllTokens();
+  }
+
+  /**
+   * Get current configuration
+   */
+  static getConfig(): TokenStorageConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Set repository for testing (dependency injection)
+   */
+  static setRepository(repository: ITokenRepository): void {
+    this.repository = repository;
   }
 }
 
