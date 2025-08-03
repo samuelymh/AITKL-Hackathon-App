@@ -6,6 +6,13 @@ import Organization from "@/lib/models/Organization";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { AuthorizationPermissions } from "@/lib/utils/authorization-permissions";
+import {
+  AuthorizationError,
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+  ErrorHandler,
+} from "@/lib/errors/custom-errors";
 import { z } from "zod";
 
 // Validation schemas
@@ -36,84 +43,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = CreateGrantRequestSchema.parse(body);
 
-    // Verify that user exists
-    const user = await User.findById(validatedData.userId);
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    // Verify entities exist and validate permissions
+    await validateEntitiesAndPermissions(validatedData);
 
-    // Verify that organization exists
-    const organization = await Organization.findById(validatedData.organizationId);
-    if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-    }
-
-    // Verify practitioner permissions if provided
-    if (validatedData.requestingPractitionerId) {
-      const permissionCheck = await AuthorizationPermissions.canRequestGrant(
-        validatedData.requestingPractitionerId,
-        validatedData.organizationId,
-        validatedData.accessScope
-      );
-
-      if (!permissionCheck.allowed) {
-        return NextResponse.json({ error: permissionCheck.error }, { status: 403 });
-      }
-    }
-
-    // Check for existing active grants between user and organization
-    const existingGrant = await AuthorizationGrant.findOne({
-      userId: validatedData.userId,
-      organizationId: validatedData.organizationId,
-      "grantDetails.status": "ACTIVE",
-    });
-
-    if (existingGrant) {
-      return NextResponse.json(
-        {
-          error: "An active authorization grant already exists between this user and organization",
-          existingGrantId: existingGrant._id,
-        },
-        { status: 409 }
-      );
-    }
+    // Check for existing grants
+    await checkExistingGrants(validatedData);
 
     // Create the authorization grant
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + validatedData.timeWindowHours);
+    const authGrant = await createAuthorizationGrant(validatedData);
 
-    const authGrant = new AuthorizationGrant({
-      userId: validatedData.userId,
-      organizationId: validatedData.organizationId,
-      requestingPractitionerId: validatedData.requestingPractitionerId,
-      grantDetails: {
-        status: validatedData.metadata?.autoApprove ? "ACTIVE" : "PENDING",
-        timeWindowHours: validatedData.timeWindowHours,
-        expiresAt: expiresAt,
-        justification: validatedData.justification,
-      },
-      accessScope: validatedData.accessScope,
-      metadata: {
-        requestSource: validatedData.metadata?.requestSource || "api",
-        urgencyLevel: validatedData.metadata?.urgencyLevel || "normal",
-        requestedAt: new Date(),
-      },
-      auditCreatedBy: validatedData.requestingPractitionerId || "system",
-    });
+    // Log the security event
+    await logAuthorizationRequest(request, authGrant, validatedData);
 
-    await authGrant.save();
-
-    // Log the authorization request
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, validatedData.userId, {
-      action: "AUTHORIZATION_REQUESTED",
-      grantId: authGrant._id.toString(),
-      organizationId: validatedData.organizationId,
-      practitionerId: validatedData.requestingPractitionerId,
-      accessScope: validatedData.accessScope,
-      autoApproved: validatedData.metadata?.autoApprove || false,
-    });
-
-    // Populate the response with related data
+    // Prepare response
     await authGrant.populate(["userId", "organizationId", "requestingPractitionerId"]);
 
     return NextResponse.json(
@@ -131,11 +73,115 @@ export async function POST(request: NextRequest) {
     console.error("Error creating authorization grant:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
+      const validationError = new ValidationError("Validation failed", error.errors);
+      const errorResponse = ErrorHandler.formatErrorResponse(validationError);
+      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
     }
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof AuthorizationError) {
+      const errorResponse = ErrorHandler.formatErrorResponse(error);
+      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
+    }
+
+    // Generic error fallback
+    const errorResponse = ErrorHandler.formatErrorResponse(error as Error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
   }
+}
+
+/**
+ * Validate that entities exist and check permissions
+ */
+async function validateEntitiesAndPermissions(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+  // Verify that user exists
+  const user = await User.findById(validatedData.userId);
+  if (!user) {
+    throw new NotFoundError("User");
+  }
+
+  // Verify that organization exists
+  const organization = await Organization.findById(validatedData.organizationId);
+  if (!organization) {
+    throw new NotFoundError("Organization");
+  }
+
+  // Verify practitioner permissions if provided
+  if (validatedData.requestingPractitionerId) {
+    const permissionCheck = await AuthorizationPermissions.canRequestGrant(
+      validatedData.requestingPractitionerId,
+      validatedData.organizationId,
+      validatedData.accessScope
+    );
+
+    if (!permissionCheck.allowed) {
+      throw new AuthorizationError(permissionCheck.error || "Insufficient permissions");
+    }
+  }
+}
+
+/**
+ * Check for existing active grants
+ */
+async function checkExistingGrants(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+  const existingGrant = await AuthorizationGrant.findOne({
+    userId: validatedData.userId,
+    organizationId: validatedData.organizationId,
+    "grantDetails.status": "ACTIVE",
+  });
+
+  if (existingGrant) {
+    throw new ConflictError(
+      `An active authorization grant already exists between this user and organization. Grant ID: ${existingGrant._id}`
+    );
+  }
+}
+
+/**
+ * Create the authorization grant
+ */
+async function createAuthorizationGrant(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + validatedData.timeWindowHours);
+
+  const authGrant = new AuthorizationGrant({
+    userId: validatedData.userId,
+    organizationId: validatedData.organizationId,
+    requestingPractitionerId: validatedData.requestingPractitionerId,
+    grantDetails: {
+      status: validatedData.metadata?.autoApprove ? "ACTIVE" : "PENDING",
+      timeWindowHours: validatedData.timeWindowHours,
+      expiresAt: expiresAt,
+      justification: validatedData.justification,
+    },
+    accessScope: validatedData.accessScope,
+    metadata: {
+      requestSource: validatedData.metadata?.requestSource || "api",
+      urgencyLevel: validatedData.metadata?.urgencyLevel || "normal",
+      requestedAt: new Date(),
+    },
+    auditCreatedBy: validatedData.requestingPractitionerId || "system",
+  });
+
+  await authGrant.save();
+  return authGrant;
+}
+
+/**
+ * Log the authorization request for audit purposes
+ */
+async function logAuthorizationRequest(
+  request: NextRequest,
+  authGrant: any,
+  validatedData: z.infer<typeof CreateGrantRequestSchema>
+) {
+  await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, validatedData.userId, {
+    action: "AUTHORIZATION_REQUESTED",
+    grantId: authGrant._id.toString(),
+    organizationId: validatedData.organizationId,
+    practitionerId: validatedData.requestingPractitionerId,
+    accessScope: validatedData.accessScope,
+    autoApproved: validatedData.metadata?.autoApprove || false,
+  });
 }
 
 /**

@@ -3,18 +3,14 @@ import connectToDatabase from "@/lib/mongodb";
 import AuthorizationGrant, { GrantStatus } from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { AuthorizationPermissions, GrantStateManager } from "@/lib/utils/authorization-permissions";
+import {
+  AuthorizationError,
+  ValidationError,
+  NotFoundError,
+  GrantActionError,
+  ErrorHandler,
+} from "@/lib/errors/custom-errors";
 import { z } from "zod";
-
-// State transition lookup table for better maintainability
-const ALLOWED_TRANSITIONS: { [key: string]: { [key: string]: GrantStatus } } = {
-  [GrantStatus.PENDING]: {
-    approve: GrantStatus.ACTIVE,
-    deny: GrantStatus.REVOKED,
-  },
-  [GrantStatus.ACTIVE]: {
-    revoke: GrantStatus.REVOKED,
-  },
-};
 
 // Validation schemas
 const ApprovalActionSchema = z.object({
@@ -41,73 +37,24 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
     const body = await request.json();
     const validatedData = ApprovalActionSchema.parse(body);
 
-    // Find the authorization grant
-    const authGrant = await AuthorizationGrant.findById(grantId);
-    if (!authGrant) {
-      return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });
-    }
+    // Find and validate the authorization grant
+    const authGrant = await findAndValidateGrant(grantId);
 
-    // Check current status and validate action
+    // Validate permissions and action
+    const { action, actionBy } = validatedData;
+    await validateActionPermissions(actionBy, action, authGrant);
+
+    // Validate state transition
     const currentStatus = authGrant.grantDetails.status;
-    const { action, actionBy, reason } = validatedData;
+    validateStateTransition(currentStatus, action);
 
-    // SECURITY: Verify that the actionBy user has permission to perform this action
-    const permissionCheck = await AuthorizationPermissions.canPerformAction(
-      actionBy,
-      action,
-      authGrant.organizationId.toString()
-    );
+    // Perform the action
+    const updatedGrant = await performGrantAction(authGrant, action, actionBy);
 
-    if (!permissionCheck.allowed) {
-      return NextResponse.json({ error: permissionCheck.error }, { status: 403 });
-    }
+    // Log the action for audit purposes
+    await logGrantAction(request, authGrant, updatedGrant, validatedData, currentStatus);
 
-    // Validate action and determine new status using lookup table
-    const newStatus = GrantStateManager.getNewStatus(currentStatus, action);
-    const isValidAction = newStatus !== null;
-
-    if (!isValidAction) {
-      return NextResponse.json(
-        {
-          error: `Cannot ${action} a grant with status ${currentStatus}`,
-          currentStatus,
-          allowedActions: GrantStateManager.getAllowedActions(currentStatus),
-        },
-        { status: 400 }
-      );
-    }
-
-    // Perform the action using the model method
-    let updatedGrant;
-    try {
-      switch (action) {
-        case "approve":
-          updatedGrant = await authGrant.approve(actionBy);
-          break;
-        case "deny":
-          updatedGrant = await authGrant.deny(actionBy);
-          break;
-        case "revoke":
-          updatedGrant = await authGrant.revoke(actionBy);
-          break;
-      }
-    } catch (modelError: any) {
-      return NextResponse.json({ error: modelError.message }, { status: 400 });
-    }
-
-    // Log the action
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authGrant.userId.toString(), {
-      action: `AUTHORIZATION_${action.toUpperCase()}D`,
-      grantId: authGrant._id.toString(),
-      organizationId: authGrant.organizationId.toString(),
-      actionBy,
-      reason,
-      previousStatus: currentStatus,
-      newStatus: updatedGrant.grantDetails.status,
-      metadata: validatedData.metadata,
-    });
-
-    // Populate the response
+    // Prepare response
     await updatedGrant.populate(["userId", "organizationId", "requestingPractitionerId"]);
 
     return NextResponse.json({
@@ -123,11 +70,111 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
     console.error(`Error performing authorization action:`, error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
+      const validationError = new ValidationError("Validation failed", error.errors);
+      const errorResponse = ErrorHandler.formatErrorResponse(validationError);
+      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
     }
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    if (error instanceof NotFoundError || error instanceof AuthorizationError || error instanceof GrantActionError) {
+      const errorResponse = ErrorHandler.formatErrorResponse(error);
+      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
+    }
+
+    // Generic error fallback
+    const errorResponse = ErrorHandler.formatErrorResponse(error as Error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
   }
+}
+
+/**
+ * Find and validate the authorization grant exists
+ */
+async function findAndValidateGrant(grantId: string) {
+  const authGrant = await AuthorizationGrant.findById(grantId);
+  if (!authGrant) {
+    throw new NotFoundError("Authorization grant");
+  }
+  return authGrant;
+}
+
+/**
+ * Validate that the user has permission to perform the action
+ */
+async function validateActionPermissions(actionBy: string, action: string, authGrant: any) {
+  const permissionCheck = await AuthorizationPermissions.canPerformAction(
+    actionBy,
+    action as "approve" | "deny" | "revoke",
+    authGrant.organizationId.toString()
+  );
+
+  if (!permissionCheck.allowed) {
+    throw new AuthorizationError(permissionCheck.error || "Insufficient permissions to perform this action");
+  }
+}
+
+/**
+ * Validate that the state transition is allowed
+ */
+function validateStateTransition(currentStatus: GrantStatus, action: string) {
+  const newStatus = GrantStateManager.getNewStatus(currentStatus, action);
+
+  if (!newStatus) {
+    throw new GrantActionError(
+      `Cannot ${action} a grant with status ${currentStatus}`,
+      currentStatus,
+      GrantStateManager.getAllowedActions(currentStatus)
+    );
+  }
+}
+
+/**
+ * Perform the grant action using the model methods
+ */
+async function performGrantAction(authGrant: any, action: string, actionBy: string) {
+  try {
+    switch (action) {
+      case "approve":
+        return await authGrant.approve(actionBy);
+      case "deny":
+        return await authGrant.deny(actionBy);
+      case "revoke":
+        return await authGrant.revoke(actionBy);
+      default:
+        throw new GrantActionError(
+          `Invalid action: ${action}`,
+          authGrant.grantDetails.status,
+          GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
+        );
+    }
+  } catch (modelError: any) {
+    throw new GrantActionError(
+      modelError.message,
+      authGrant.grantDetails.status,
+      GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
+    );
+  }
+}
+
+/**
+ * Log the grant action for audit purposes
+ */
+async function logGrantAction(
+  request: NextRequest,
+  authGrant: any,
+  updatedGrant: any,
+  validatedData: z.infer<typeof ApprovalActionSchema>,
+  currentStatus: GrantStatus
+) {
+  await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authGrant.userId.toString(), {
+    action: `AUTHORIZATION_${validatedData.action.toUpperCase()}D`,
+    grantId: authGrant._id.toString(),
+    organizationId: authGrant.organizationId.toString(),
+    actionBy: validatedData.actionBy,
+    reason: validatedData.reason,
+    previousStatus: currentStatus,
+    newStatus: updatedGrant.grantDetails.status,
+    metadata: validatedData.metadata,
+  });
 }
 
 /**

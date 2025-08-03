@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import crypto from "crypto";
+import { QRCodeGenerationError, TokenGenerationError } from "@/lib/errors/custom-errors";
 
 export interface QRCodeData {
   grantId: string;
@@ -55,7 +56,7 @@ export class QRCodeService {
       return qrCodeDataURL;
     } catch (error) {
       console.error("Error generating QR code:", error);
-      throw new Error("Failed to generate QR code");
+      throw new QRCodeGenerationError("Failed to generate QR code");
     }
   }
 
@@ -92,7 +93,7 @@ export class QRCodeService {
       return qrCodeSVG;
     } catch (error) {
       console.error("Error generating QR code SVG:", error);
-      throw new Error("Failed to generate QR code SVG");
+      throw new QRCodeGenerationError("Failed to generate QR code SVG");
     }
   }
 
@@ -138,7 +139,12 @@ export class QRCodeService {
    * NOTE: The caller must securely store this token with proper expiration
    */
   static generateAccessToken(): string {
-    return crypto.randomBytes(32).toString("hex"); // 32 bytes = 256 bits
+    try {
+      return crypto.randomBytes(32).toString("hex"); // 32 bytes = 256 bits
+    } catch (error) {
+      console.error("Error generating access token:", error);
+      throw new TokenGenerationError("Failed to generate secure access token");
+    }
   }
 
   /**
