@@ -22,7 +22,7 @@ function WelcomeCard() {
       case "patient":
         return "Patient - View your medical records and prescriptions";
       default:
-        return "User - Please contact support if you need role assignment";
+        return "Patient - View your medical records and prescriptions";
     }
   };
 
@@ -34,7 +34,7 @@ function WelcomeCard() {
             Welcome, {user.firstName} {user.lastName}
           </span>
           <Badge variant="secondary">
-            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "User"}
+            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Patient"}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -45,6 +45,15 @@ function WelcomeCard() {
             <span className="text-sm text-gray-500">Email:</span>
             <span className="text-sm">{user.email}</span>
             {user.emailVerified && (
+              <Badge variant="outline" className="text-xs">
+                Verified
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Phone:</span>
+            <span className="text-sm">{user.phone}</span>
+            {user.phoneVerified && (
               <Badge variant="outline" className="text-xs">
                 Verified
               </Badge>

@@ -262,13 +262,15 @@ UserSchema.methods = {
 
   // Convert to safe public format (no sensitive data)
   toPublicJSON: function () {
+    const role = this.auth?.role || "patient";
     return {
       id: this._id.toString(),
       digitalIdentifier: this.digitalIdentifier,
       firstName: this.personalInfo.firstName,
       lastName: this.personalInfo.lastName,
       email: this.personalInfo.contact.email,
-      role: this.auth?.role || "patient",
+      phone: this.personalInfo.contact.phone,
+      role: role,
       emailVerified: this.auth?.emailVerified || false,
       phoneVerified: this.auth?.phoneVerified || false,
       name: this.getFullName(),

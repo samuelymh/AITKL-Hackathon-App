@@ -9,6 +9,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
   role: "patient" | "doctor" | "pharmacist" | "admin";
   emailVerified: boolean;
   phoneVerified: boolean;
@@ -65,9 +66,24 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     const savedUser = localStorage.getItem("auth-user");
 
     if (savedToken && savedUser) {
-      setToken(savedToken);
-      setRefreshToken(savedRefreshToken);
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        // Ensure user has a valid role property and phone number
+        const userWithRole = {
+          ...parsedUser,
+          role: parsedUser.role || "patient",
+          phone: parsedUser.phone || "",
+        };
+        setToken(savedToken);
+        setRefreshToken(savedRefreshToken);
+        setUser(userWithRole);
+      } catch (error) {
+        // If user data is corrupted, clear it
+        console.error("Error parsing saved user data:", error);
+        localStorage.removeItem("auth-token");
+        localStorage.removeItem("auth-refresh-token");
+        localStorage.removeItem("auth-user");
+      }
     }
 
     setIsLoading(false);
@@ -87,13 +103,20 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
     const { data } = await response.json();
 
+    // Ensure user has a valid role property and phone number
+    const userWithRole = {
+      ...data.user,
+      role: data.user.role || "patient",
+      phone: data.user.phone || "",
+    };
+
     // Store auth data
-    setUser(data.user);
+    setUser(userWithRole);
     setToken(data.accessToken);
     setRefreshToken(data.refreshToken);
     localStorage.setItem("auth-token", data.accessToken);
     localStorage.setItem("auth-refresh-token", data.refreshToken);
-    localStorage.setItem("auth-user", JSON.stringify(data.user));
+    localStorage.setItem("auth-user", JSON.stringify(userWithRole));
   };
 
   const refreshAuthToken = async () => {
@@ -146,13 +169,20 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
     const { data } = await response.json();
 
+    // Ensure user has a valid role property and phone number
+    const userWithRole = {
+      ...data.user,
+      role: data.user.role || "patient",
+      phone: data.user.phone || "",
+    };
+
     // Automatically log in after registration
-    setUser(data.user);
+    setUser(userWithRole);
     setToken(data.accessToken);
     setRefreshToken(data.refreshToken);
     localStorage.setItem("auth-token", data.accessToken);
     localStorage.setItem("auth-refresh-token", data.refreshToken);
-    localStorage.setItem("auth-user", JSON.stringify(data.user));
+    localStorage.setItem("auth-user", JSON.stringify(userWithRole));
   };
 
   const value = useMemo(
