@@ -45,7 +45,6 @@ async function connectToDatabase(): Promise<typeof mongoose> {
 
       // Disable buffering for serverless
       bufferCommands: false,
-      bufferMaxEntries: 0,
 
       // Connection optimization
       family: 4, // Use IPv4, skip trying IPv6

@@ -51,7 +51,7 @@ export const BaseSchema = new Schema(
     // Don't add timestamps as we're managing our own audit fields
     timestamps: false,
     versionKey: false,
-  }
+  },
 );
 
 /**

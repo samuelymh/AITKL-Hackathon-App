@@ -8,7 +8,10 @@ import { executeDatabaseOperation } from "@/lib/db-utils";
  */
 export async function GET() {
   try {
-    const healthCheck = await executeDatabaseOperation(() => checkDatabaseHealth(), "Database Health Check");
+    const healthCheck = await executeDatabaseOperation(
+      () => checkDatabaseHealth(),
+      "Database Health Check",
+    );
 
     if (!healthCheck.success) {
       return NextResponse.json(
@@ -21,7 +24,7 @@ export async function GET() {
             service: "MongoDB",
           },
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -40,7 +43,7 @@ export async function GET() {
           total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
         },
       },
-      { status: statusCode }
+      { status: statusCode },
     );
   } catch (error) {
     console.error("Health check endpoint error:", error);
@@ -55,7 +58,7 @@ export async function GET() {
           service: "MongoDB",
         },
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }

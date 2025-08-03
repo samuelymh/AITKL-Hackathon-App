@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
+import {
+  generateToken,
+  generateRefreshToken,
+  hashPassword,
+  UserRole,
+  AuthErrors,
+} from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
 
@@ -14,14 +20,18 @@ const RegisterSchema = z.object({
     dateOfBirth: z.string().transform((str) => new Date(str)),
     contact: z.object({
       email: z.string().email(),
-      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
     }),
   }),
   password: z.string().min(8).max(128),
   role: z.nativeEnum(UserRole).default(UserRole.PATIENT),
   medicalInfo: z
     .object({
-      bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      bloodType: z
+        .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+        .optional(),
       knownAllergies: z.array(z.string()).optional(),
       emergencyContact: z
         .object({
@@ -119,7 +129,7 @@ async function registerHandler(request: NextRequest) {
           error: result.error || "Registration failed",
           timestamp: result.timestamp,
         },
-        { status }
+        { status },
       );
     }
 
@@ -129,7 +139,7 @@ async function registerHandler(request: NextRequest) {
         data: result.data,
         timestamp: result.timestamp,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Registration error:", error);
@@ -142,7 +152,7 @@ async function registerHandler(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -152,7 +162,7 @@ async function registerHandler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Registration failed",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

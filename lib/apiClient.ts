@@ -2,7 +2,7 @@
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -20,7 +20,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function request<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<ApiResponse<T>> {
   try {
     // Use URL constructor for robust path joining

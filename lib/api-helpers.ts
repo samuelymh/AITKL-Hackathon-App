@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 /**
  * Centralized error response creation helper
  */
-export function createErrorResponse(error: string, status: number, details?: any) {
+export function createErrorResponse(
+  error: string,
+  status: number,
+  details?: any,
+) {
   return NextResponse.json(
     {
       success: false,
@@ -11,7 +15,7 @@ export function createErrorResponse(error: string, status: number, details?: any
       details,
       timestamp: new Date(),
     },
-    { status }
+    { status },
   );
 }
 
@@ -25,7 +29,7 @@ export function createSuccessResponse(data: any, status: number = 200) {
       data,
       timestamp: new Date(),
     },
-    { status }
+    { status },
   );
 }
 
@@ -34,7 +38,10 @@ export function createSuccessResponse(data: any, status: number = 200) {
  */
 export function extractPaginationParams(searchParams: URLSearchParams) {
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-  const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "10")), 100); // Max 100 per page
+  const limit = Math.min(
+    Math.max(1, parseInt(searchParams.get("limit") || "10")),
+    100,
+  ); // Max 100 per page
   const skip = (page - 1) * limit;
 
   return { page, limit, skip };
@@ -43,7 +50,12 @@ export function extractPaginationParams(searchParams: URLSearchParams) {
 /**
  * Create pagination metadata
  */
-export function createPaginationMeta(page: number, limit: number, total: number, skip: number) {
+export function createPaginationMeta(
+  page: number,
+  limit: number,
+  total: number,
+  skip: number,
+) {
   return {
     currentPage: page,
     totalPages: Math.ceil(total / limit),
@@ -61,7 +73,9 @@ export function transformUserForResponse(user: any) {
   return {
     digitalIdentifier: user.digitalIdentifier,
     name: `${user.personalInfo.firstName} ${user.personalInfo.lastName}`,
-    age: user.getAge ? user.getAge() : calculateAge(user.personalInfo.dateOfBirth),
+    age: user.getAge
+      ? user.getAge()
+      : calculateAge(user.personalInfo.dateOfBirth),
     bloodType: user.medicalInfo?.bloodType,
     hasEmergencyContact: !!user.medicalInfo?.emergencyContact?.name,
     contactVerified: user.isContactVerified ? user.isContactVerified() : false,
@@ -87,7 +101,10 @@ export function calculateAge(dateOfBirth: Date): number {
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
 
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
     age--;
   }
 
@@ -97,7 +114,10 @@ export function calculateAge(dateOfBirth: Date): number {
 /**
  * Validate required fields in request body
  */
-export function validateRequiredFields(body: any, requiredFields: string[]): string | null {
+export function validateRequiredFields(
+  body: any,
+  requiredFields: string[],
+): string | null {
   for (const field of requiredFields) {
     if (!body[field]) {
       return `Missing required field: ${field}`;
@@ -116,7 +136,11 @@ export function getActiveUserQuery() {
 /**
  * Rate limiting helper (placeholder for future implementation)
  */
-export function checkRateLimit(identifier: string, maxRequests: number = 100, windowMs: number = 60000): boolean {
+export function checkRateLimit(
+  identifier: string,
+  maxRequests: number = 100,
+  windowMs: number = 60000,
+): boolean {
   // TODO: Implement rate limiting logic with Redis or in-memory store
   // For now, always return true (no rate limiting)
   return true;

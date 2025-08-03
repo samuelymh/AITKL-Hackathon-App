@@ -5,7 +5,9 @@ import { createErrorResponse } from "@/lib/api-helpers";
 /**
  * Global error handling middleware for API routes
  */
-export function withErrorHandling(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function withErrorHandling(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
       return await handler(request);
@@ -53,7 +55,10 @@ function handleError(error: unknown, request: NextRequest): NextResponse {
 
   // Rate limiting errors
   if (isRateLimitError(error)) {
-    return createErrorResponse("Too many requests, please try again later", 429);
+    return createErrorResponse(
+      "Too many requests, please try again later",
+      429,
+    );
   }
 
   // Custom application errors
@@ -63,11 +68,17 @@ function handleError(error: unknown, request: NextRequest): NextResponse {
       return createErrorResponse(error.message, 404);
     }
 
-    if (error.message.includes("unauthorized") || error.message.includes("forbidden")) {
+    if (
+      error.message.includes("unauthorized") ||
+      error.message.includes("forbidden")
+    ) {
       return createErrorResponse(error.message, 403);
     }
 
-    if (error.message.includes("invalid") || error.message.includes("required")) {
+    if (
+      error.message.includes("invalid") ||
+      error.message.includes("required")
+    ) {
       return createErrorResponse(error.message, 400);
     }
   }
@@ -81,7 +92,7 @@ function handleError(error: unknown, request: NextRequest): NextResponse {
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
         }
-      : undefined
+      : undefined,
   );
 }
 
@@ -116,7 +127,10 @@ function handleMongoError(error: Error): NextResponse {
   }
 
   // Connection error
-  if (error.message.includes("connection") || error.message.includes("timeout")) {
+  if (
+    error.message.includes("connection") ||
+    error.message.includes("timeout")
+  ) {
     return createErrorResponse("Database connection error", 503);
   }
 
@@ -169,13 +183,19 @@ function isNetworkError(error: unknown): boolean {
  */
 function isRateLimitError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return error.message.includes("rate limit") || error.message.includes("too many requests");
+  return (
+    error.message.includes("rate limit") ||
+    error.message.includes("too many requests")
+  );
 }
 
 /**
  * Error boundary for async operations
  */
-export async function safeAsyncOperation<T>(operation: () => Promise<T>, fallback?: T): Promise<T | null> {
+export async function safeAsyncOperation<T>(
+  operation: () => Promise<T>,
+  fallback?: T,
+): Promise<T | null> {
   try {
     return await operation();
   } catch (error) {
@@ -187,7 +207,9 @@ export async function safeAsyncOperation<T>(operation: () => Promise<T>, fallbac
 /**
  * Middleware to catch unhandled promise rejections in API routes
  */
-export function withAsyncErrorHandling(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function withAsyncErrorHandling(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   return async (request: NextRequest): Promise<NextResponse> => {
     return Promise.resolve(handler(request)).catch((error) => {
       console.error("Unhandled async error:", error);

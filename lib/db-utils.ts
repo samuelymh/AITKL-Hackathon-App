@@ -6,7 +6,7 @@ import connectToDatabase, { isConnected, getConnectionStatus } from "./mongodb";
 export async function withDatabaseRetry<T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 1000
+  baseDelay: number = 1000,
 ): Promise<T> {
   let lastError: Error = new Error("Database operation failed");
 
@@ -16,7 +16,9 @@ export async function withDatabaseRetry<T>(
       await connectToDatabase();
 
       if (!isConnected()) {
-        throw new Error(`Database not connected. State: ${getConnectionStatus()}`);
+        throw new Error(
+          `Database not connected. State: ${getConnectionStatus()}`,
+        );
       }
 
       return await operation();
@@ -32,15 +34,19 @@ export async function withDatabaseRetry<T>(
           error.message.includes("connection") ||
           error.message.includes("timeout"));
 
-      console.log(`Database operation failed (attempt ${attempt}/${maxRetries}):`, {
-        error: error instanceof Error ? error.message : "Unknown error",
-        isRetryable: isRetryableError,
-        connectionStatus: getConnectionStatus(),
-      });
+      console.log(
+        `Database operation failed (attempt ${attempt}/${maxRetries}):`,
+        {
+          error: error instanceof Error ? error.message : "Unknown error",
+          isRetryable: isRetryableError,
+          connectionStatus: getConnectionStatus(),
+        },
+      );
 
       if (isRetryableError && attempt < maxRetries) {
         // Exponential backoff with jitter
-        const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+        const delay =
+          baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
         console.log(`Retrying in ${Math.round(delay)}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
@@ -60,7 +66,7 @@ export async function withDatabaseRetry<T>(
  */
 async function executeOperationWithTiming<T>(
   operation: () => Promise<T>,
-  operationName: string
+  operationName: string,
 ): Promise<{ result: T; duration: number }> {
   const startTime = Date.now();
 
@@ -83,7 +89,9 @@ async function executeOperationWithTiming<T>(
     if (error instanceof Error) {
       throw error;
     } else {
-      throw new Error(typeof error === "string" ? error : "Unknown error occurred");
+      throw new Error(
+        typeof error === "string" ? error : "Unknown error occurred",
+      );
     }
   }
 }
@@ -94,7 +102,7 @@ async function executeOperationWithTiming<T>(
 function formatOperationResult<T>(
   success: boolean,
   data?: T,
-  error?: string
+  error?: string,
 ): {
   success: boolean;
   data?: T;
@@ -114,7 +122,7 @@ function formatOperationResult<T>(
  */
 export async function executeDatabaseOperation<T>(
   operation: () => Promise<T>,
-  operationName: string = "Database Operation"
+  operationName: string = "Database Operation",
 ): Promise<{
   success: boolean;
   data?: T;
@@ -122,10 +130,14 @@ export async function executeDatabaseOperation<T>(
   timestamp: Date;
 }> {
   try {
-    const { result } = await executeOperationWithTiming(operation, operationName);
+    const { result } = await executeOperationWithTiming(
+      operation,
+      operationName,
+    );
     return formatOperationResult(true, result);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return formatOperationResult(false, undefined, errorMessage);
   }
 }
@@ -138,7 +150,7 @@ export async function executeBatchOperations<T>(
     name: string;
     operation: () => Promise<T>;
   }>,
-  continueOnError: boolean = false
+  continueOnError: boolean = false,
 ): Promise<{
   success: boolean;
   results: Array<{
