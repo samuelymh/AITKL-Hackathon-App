@@ -43,6 +43,9 @@ export const PractitionerZodSchema = z.object({
     canPrescribeMedications: z.boolean().default(false),
     canViewAuditLogs: z.boolean().default(false),
     canManageOrganization: z.boolean().default(false),
+    canRequestAuthorizationGrants: z.boolean().default(false),
+    canApproveAuthorizationGrants: z.boolean().default(false),
+    canRevokeAuthorizationGrants: z.boolean().default(false),
     specialPermissions: z.array(z.string()).default([]),
   }),
 
@@ -124,6 +127,9 @@ export interface IPractitioner extends Document {
     canPrescribeMedications: boolean;
     canViewAuditLogs: boolean;
     canManageOrganization: boolean;
+    canRequestAuthorizationGrants: boolean;
+    canApproveAuthorizationGrants: boolean;
+    canRevokeAuthorizationGrants: boolean;
     specialPermissions: string[];
   };
   schedule?: {
@@ -259,6 +265,18 @@ const PractitionerSchema = new Schema<IPractitioner>(
         default: false,
       },
       canManageOrganization: {
+        type: Boolean,
+        default: false,
+      },
+      canRequestAuthorizationGrants: {
+        type: Boolean,
+        default: false,
+      },
+      canApproveAuthorizationGrants: {
+        type: Boolean,
+        default: false,
+      },
+      canRevokeAuthorizationGrants: {
         type: Boolean,
         default: false,
       },
@@ -504,8 +522,35 @@ PractitionerSchema.pre("save", function (next) {
         doc.permissions.canManageOrganization = true;
         break;
       default:
-        // Basic access for other types
-        doc.permissions.canAccessPatientRecords = false;
+        switch (type) {
+          case "doctor":
+            doc.permissions.canAccessPatientRecords = true;
+            doc.permissions.canModifyPatientRecords = true;
+            doc.permissions.canPrescribeMedications = true;
+            doc.permissions.canRequestAuthorizationGrants = true;
+            doc.permissions.canApproveAuthorizationGrants = true;
+            break;
+          case "nurse":
+            doc.permissions.canAccessPatientRecords = true;
+            doc.permissions.canModifyPatientRecords = true;
+            doc.permissions.canRequestAuthorizationGrants = true;
+            break;
+          case "pharmacist":
+            doc.permissions.canAccessPatientRecords = true;
+            doc.permissions.canPrescribeMedications = true;
+            doc.permissions.canRequestAuthorizationGrants = true;
+            break;
+          case "admin":
+            doc.permissions.canViewAuditLogs = true;
+            doc.permissions.canManageOrganization = true;
+            doc.permissions.canRequestAuthorizationGrants = true;
+            doc.permissions.canApproveAuthorizationGrants = true;
+            doc.permissions.canRevokeAuthorizationGrants = true;
+            break;
+          default:
+            // Basic access for other types
+            doc.permissions.canAccessPatientRecords = false;
+        }
     }
   }
 

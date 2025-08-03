@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import AuthorizationGrant, { GrantStatus } from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
+import { AuthorizationPermissions, GrantStateManager } from "@/lib/utils/authorization-permissions";
 import { z } from "zod";
+
+// State transition lookup table for better maintainability
+const ALLOWED_TRANSITIONS: { [key: string]: { [key: string]: GrantStatus } } = {
+  [GrantStatus.PENDING]: {
+    approve: GrantStatus.ACTIVE,
+    deny: GrantStatus.REVOKED,
+  },
+  [GrantStatus.ACTIVE]: {
+    revoke: GrantStatus.REVOKED,
+  },
+};
 
 // Validation schemas
 const ApprovalActionSchema = z.object({
@@ -39,36 +51,27 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
     const currentStatus = authGrant.grantDetails.status;
     const { action, actionBy, reason } = validatedData;
 
-    let newStatus: GrantStatus;
-    let isValidAction = false;
+    // SECURITY: Verify that the actionBy user has permission to perform this action
+    const permissionCheck = await AuthorizationPermissions.canPerformAction(
+      actionBy,
+      action,
+      authGrant.organizationId.toString()
+    );
 
-    switch (action) {
-      case "approve":
-        if (currentStatus === GrantStatus.PENDING) {
-          newStatus = GrantStatus.ACTIVE;
-          isValidAction = true;
-        }
-        break;
-      case "deny":
-        if (currentStatus === GrantStatus.PENDING) {
-          newStatus = GrantStatus.REVOKED;
-          isValidAction = true;
-        }
-        break;
-      case "revoke":
-        if (currentStatus === GrantStatus.ACTIVE || currentStatus === GrantStatus.PENDING) {
-          newStatus = GrantStatus.REVOKED;
-          isValidAction = true;
-        }
-        break;
+    if (!permissionCheck.allowed) {
+      return NextResponse.json({ error: permissionCheck.error }, { status: 403 });
     }
+
+    // Validate action and determine new status using lookup table
+    const newStatus = GrantStateManager.getNewStatus(currentStatus, action);
+    const isValidAction = newStatus !== null;
 
     if (!isValidAction) {
       return NextResponse.json(
         {
           error: `Cannot ${action} a grant with status ${currentStatus}`,
           currentStatus,
-          allowedActions: getAllowedActions(currentStatus),
+          allowedActions: GrantStateManager.getAllowedActions(currentStatus),
         },
         { status: 400 }
       );
@@ -172,15 +175,5 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
  * Helper function to get allowed actions based on current status
  */
 function getAllowedActions(status: GrantStatus): string[] {
-  switch (status) {
-    case GrantStatus.PENDING:
-      return ["approve", "deny"];
-    case GrantStatus.ACTIVE:
-      return ["revoke"];
-    case GrantStatus.EXPIRED:
-    case GrantStatus.REVOKED:
-      return [];
-    default:
-      return [];
-  }
+  return GrantStateManager.getAllowedActions(status);
 }

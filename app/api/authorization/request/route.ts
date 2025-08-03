@@ -3,9 +3,9 @@ import connectToDatabase from "@/lib/mongodb";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
 import Organization from "@/lib/models/Organization";
-import Practitioner from "@/lib/models/Practitioner";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
+import { AuthorizationPermissions } from "@/lib/utils/authorization-permissions";
 import { z } from "zod";
 
 // Validation schemas
@@ -48,20 +48,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    // Verify practitioner if provided
-    let practitioner = null;
+    // Verify practitioner permissions if provided
     if (validatedData.requestingPractitionerId) {
-      practitioner = await Practitioner.findById(validatedData.requestingPractitionerId);
-      if (!practitioner) {
-        return NextResponse.json({ error: "Practitioner not found" }, { status: 404 });
-      }
+      const permissionCheck = await AuthorizationPermissions.canRequestGrant(
+        validatedData.requestingPractitionerId,
+        validatedData.organizationId,
+        validatedData.accessScope
+      );
 
-      // Verify practitioner belongs to the organization
-      if (practitioner.organizationId.toString() !== validatedData.organizationId) {
-        return NextResponse.json(
-          { error: "Practitioner does not belong to the specified organization" },
-          { status: 400 }
-        );
+      if (!permissionCheck.allowed) {
+        return NextResponse.json({ error: permissionCheck.error }, { status: 403 });
       }
     }
 
@@ -167,13 +163,17 @@ export async function GET(request: NextRequest) {
     if (organizationId) query.organizationId = organizationId;
     if (status) query["grantDetails.status"] = status;
 
-    // Execute query with pagination
+    // Execute query with pagination and projection for efficiency
     const grants = await AuthorizationGrant.find(query)
-      .populate(["userId", "organizationId", "requestingPractitionerId"])
+      .select("userId organizationId requestingPractitionerId grantDetails accessScope createdAt updatedAt")
+      .populate([
+        { path: "userId", select: "name email digitalIdentifier" },
+        { path: "organizationId", select: "name organizationInfo.type" },
+        { path: "requestingPractitionerId", select: "professionalInfo.specialty professionalInfo.licenseNumber" },
+      ])
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(offset);
-
     const total = await AuthorizationGrant.countDocuments(query);
 
     return NextResponse.json({

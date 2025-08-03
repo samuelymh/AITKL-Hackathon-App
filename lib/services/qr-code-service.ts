@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import crypto from "crypto";
 
 export interface QRCodeData {
   grantId: string;
@@ -133,12 +134,11 @@ export class QRCodeService {
   }
 
   /**
-   * Generate a unique access token for QR code scanning
+   * Generate a cryptographically secure access token
+   * NOTE: The caller must securely store this token with proper expiration
    */
   static generateAccessToken(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2);
-    return `${timestamp}-${random}`;
+    return crypto.randomBytes(32).toString("hex"); // 32 bytes = 256 bits
   }
 
   /**
