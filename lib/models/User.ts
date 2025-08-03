@@ -1,4 +1,5 @@
 import mongoose, { Model } from "mongoose";
+import { randomUUID } from "crypto";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
 
@@ -57,11 +58,11 @@ export interface IUserModel extends Model<IUser> {
 const userSchemaFields = {
   digitalIdentifier: {
     type: String,
-    required: true,
+    required: false, // Let pre-save middleware generate this
     unique: true,
     trim: true,
     minlength: 10,
-    maxlength: 50,
+    maxlength: 45, // HID_ prefix (4) + UUID (36) = 40 chars, with some buffer
   },
   personalInfo: {
     firstName: {
@@ -201,9 +202,9 @@ UserSchema.index({ updatedAt: 1 });
 
 // Pre-save middleware for data validation and transformation
 UserSchema.pre("save", function (next) {
-  // Generate digital identifier if not provided
-  if (!this.digitalIdentifier) {
-    this.digitalIdentifier = `HID_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  // Generate digital identifier if not provided or empty
+  if (!this.digitalIdentifier || (typeof this.digitalIdentifier === "string" && this.digitalIdentifier.trim() === "")) {
+    this.digitalIdentifier = `HID_${randomUUID()}`;
   }
 
   // Ensure digital identifier is unique format
@@ -261,8 +262,17 @@ UserSchema.methods = {
 
   // Convert to safe public format (no sensitive data)
   toPublicJSON: function () {
+    const role = this.auth?.role || "patient";
     return {
+      id: this._id.toString(),
       digitalIdentifier: this.digitalIdentifier,
+      firstName: this.personalInfo.firstName,
+      lastName: this.personalInfo.lastName,
+      email: this.personalInfo.contact.email,
+      phone: this.personalInfo.contact.phone,
+      role: role,
+      emailVerified: this.auth?.emailVerified || false,
+      phoneVerified: this.auth?.phoneVerified || false,
       name: this.getFullName(),
       age: this.getAge(),
       bloodType: this.medicalInfo.bloodType,

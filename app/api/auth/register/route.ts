@@ -18,7 +18,7 @@ const RegisterSchema = z.object({
     }),
   }),
   password: z.string().min(8).max(128),
-  role: z.nativeEnum(UserRole).default(UserRole.PATIENT),
+  role: z.enum(["patient", "doctor", "pharmacist", "admin"]).default("patient"),
   medicalInfo: z
     .object({
       bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
@@ -90,11 +90,13 @@ async function registerHandler(request: NextRequest) {
 
       const savedUser = await user.save();
 
+      const publicUser = savedUser.toPublicJSON();
+
       // Generate JWT tokens
       const token = generateToken({
         userId: savedUser._id.toString(),
         digitalIdentifier: savedUser.digitalIdentifier,
-        role: validatedData.role,
+        role: validatedData.role as UserRole,
         email: validatedData.personalInfo.contact.email,
         tokenVersion: 1,
       });
@@ -102,7 +104,7 @@ async function registerHandler(request: NextRequest) {
       const refreshToken = generateRefreshToken(savedUser._id.toString(), 1);
 
       return {
-        user: savedUser.toPublicJSON(),
+        user: publicUser,
         accessToken: token,
         refreshToken,
         tokenType: "Bearer",

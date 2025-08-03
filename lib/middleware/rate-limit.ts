@@ -15,7 +15,10 @@ interface RateLimitConfig {
 /**
  * Rate limiting middleware for API routes
  */
-export function withRateLimit(handler: (request: NextRequest) => Promise<NextResponse>, config: RateLimitConfig) {
+export function withRateLimit(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+  config: RateLimitConfig,
+) {
   const {
     windowMs,
     maxRequests,
@@ -44,7 +47,7 @@ export function withRateLimit(handler: (request: NextRequest) => Promise<NextRes
       if (rateLimitEntry.count >= maxRequests) {
         return createErrorResponse(
           message,
-          429 // Too Many Requests
+          429, // Too Many Requests
         );
       }
 
@@ -56,7 +59,8 @@ export function withRateLimit(handler: (request: NextRequest) => Promise<NextRes
 
       // Conditionally count the request based on success/failure
       const shouldCount =
-        (!skipSuccessfulRequests || response.status >= 400) && (!skipFailedRequests || response.status < 400);
+        (!skipSuccessfulRequests || response.status >= 400) &&
+        (!skipFailedRequests || response.status < 400);
 
       if (!shouldCount) {
         rateLimitEntry.count--;
@@ -65,8 +69,14 @@ export function withRateLimit(handler: (request: NextRequest) => Promise<NextRes
       // Add rate limit headers
       const headers = new Headers(response.headers);
       headers.set("X-RateLimit-Limit", maxRequests.toString());
-      headers.set("X-RateLimit-Remaining", Math.max(0, maxRequests - rateLimitEntry.count).toString());
-      headers.set("X-RateLimit-Reset", new Date(rateLimitEntry.resetTime).toISOString());
+      headers.set(
+        "X-RateLimit-Remaining",
+        Math.max(0, maxRequests - rateLimitEntry.count).toString(),
+      );
+      headers.set(
+        "X-RateLimit-Reset",
+        new Date(rateLimitEntry.resetTime).toISOString(),
+      );
 
       return new NextResponse(response.body, {
         status: response.status,
@@ -90,10 +100,12 @@ function getClientId(request: NextRequest): string {
   const realIp = request.headers.get("x-real-ip");
   const cfConnectingIp = request.headers.get("cf-connecting-ip");
 
-  const ip = cfConnectingIp || realIp || forwardedFor?.split(",")[0] || "unknown";
+  const ip =
+    cfConnectingIp || realIp || forwardedFor?.split(",")[0] || "unknown";
 
   // Include user agent for better identification (truncated to avoid long keys)
-  const userAgent = request.headers.get("user-agent")?.substring(0, 50) || "unknown";
+  const userAgent =
+    request.headers.get("user-agent")?.substring(0, 50) || "unknown";
 
   return `${ip}-${userAgent}`;
 }

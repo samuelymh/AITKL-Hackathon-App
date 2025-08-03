@@ -1,119 +1,118 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import PatientHome from "@/components/patient-home";
-import ShareRecords from "@/components/share-records";
-import AuditLog from "@/components/audit-log";
-import UploadDocs from "@/components/upload-docs";
-import DoctorPortal from "@/components/doctor-portal";
-import PrescriptionEntry from "@/components/prescription-entry";
-import PharmacistView from "@/components/pharmacist-view";
-import { User, Stethoscope, Pill } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 
-type UserRole = "patient" | "doctor" | "pharmacist";
-type Screen =
-  | "home"
-  | "share"
-  | "audit"
-  | "upload"
-  | "doctor-portal"
-  | "prescription"
-  | "pharmacist";
+export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
-export default function HealthApp() {
-  const [userRole, setUserRole] = useState<UserRole>("patient");
-  const [currentScreen, setCurrentScreen] = useState<Screen>("home");
-  const [sharedData, setSharedData] = useState<any>(null);
-
-  const renderScreen = () => {
-    switch (currentScreen) {
-      case "home":
-        return <PatientHome onNavigate={setCurrentScreen} />;
-      case "share":
-        return <ShareRecords onBack={() => setCurrentScreen("home")} />;
-      case "audit":
-        return <AuditLog onBack={() => setCurrentScreen("home")} />;
-      case "upload":
-        return (
-          <UploadDocs
-            onBack={() => setCurrentScreen("home")}
-            onDataUploaded={setSharedData}
-          />
-        );
-      case "doctor-portal":
-        return (
-          <DoctorPortal onNavigate={setCurrentScreen} sharedData={sharedData} />
-        );
-      case "prescription":
-        return (
-          <PrescriptionEntry onBack={() => setCurrentScreen("doctor-portal")} />
-        );
-      case "pharmacist":
-        return <PharmacistView onBack={() => setCurrentScreen("home")} />;
-      default:
-        return <PatientHome onNavigate={setCurrentScreen} />;
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
     }
-  };
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return null; // Will redirect to dashboard
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Role Switcher */}
-      <div className="bg-white p-4">
-        <div className="flex gap-2 justify-center max-w-md mx-auto">
-          <Button
-            variant={userRole === "patient" ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setUserRole("patient");
-              setCurrentScreen("home");
-            }}
-            className={`flex items-center gap-2 rounded-full px-4 ${
-              userRole === "patient"
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <User className="w-4 h-4" />
-            Patient
-          </Button>
-          <Button
-            variant={userRole === "doctor" ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setUserRole("doctor");
-              setCurrentScreen("doctor-portal");
-            }}
-            className={`flex items-center gap-2 rounded-full px-4 ${
-              userRole === "doctor"
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Stethoscope className="w-4 h-4" />
-            Doctor
-          </Button>
-          <Button
-            variant={userRole === "pharmacist" ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setUserRole("pharmacist");
-              setCurrentScreen("pharmacist");
-            }}
-            className={`flex items-center gap-2 rounded-full px-4 ${
-              userRole === "pharmacist"
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Pill className="w-4 h-4" />
-            Pharmacist
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">Health Records System</h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Secure, comprehensive digital health records management for patients, healthcare professionals, and
+            administrators.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link href="/login">
+              <Button size="lg" className="px-8 py-3">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button size="lg" variant="outline" className="px-8 py-3">
+                Create Account
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center text-blue-600">For Patients</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-gray-600">
+                <li>• Access your medical records securely</li>
+                <li>• View prescription history</li>
+                <li>• Share records with healthcare providers</li>
+                <li>• Update personal information</li>
+                <li>• Track medical appointments</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center text-green-600">For Doctors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-gray-600">
+                <li>• Manage patient records</li>
+                <li>• Create and update prescriptions</li>
+                <li>• Access shared patient data</li>
+                <li>• View comprehensive audit logs</li>
+                <li>• Collaborate with healthcare teams</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center text-purple-600">For Pharmacists</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-gray-600">
+                <li>• View prescription details</li>
+                <li>• Update medication status</li>
+                <li>• Manage drug interactions</li>
+                <li>• Access patient medication history</li>
+                <li>• Coordinate with prescribing doctors</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="text-center mt-16">
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Secure & Compliant</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Our system features enterprise-grade security with JWT authentication, comprehensive audit logging,
+                role-based access control, and secure data encryption to protect your health information.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Main Content */}
-      <div className="max-w-md mx-auto">{renderScreen()}</div>
     </div>
   );
 }

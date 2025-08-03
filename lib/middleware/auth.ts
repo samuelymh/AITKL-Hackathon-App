@@ -11,7 +11,7 @@ export function withAuth(
   options: {
     allowedRoles?: UserRole[];
     requireAuth?: boolean;
-  } = {}
+  } = {},
 ) {
   const { allowedRoles, requireAuth: authRequired = true } = options;
 
@@ -26,7 +26,10 @@ export function withAuth(
         const authResult = authCheck(authContext);
 
         if (!authResult.success) {
-          return createErrorResponse(authResult.error || AuthErrors.INVALID_TOKEN, authResult.status || 401);
+          return createErrorResponse(
+            authResult.error || AuthErrors.INVALID_TOKEN,
+            authResult.status || 401,
+          );
         }
       }
 
@@ -42,23 +45,32 @@ export function withAuth(
 /**
  * Role-specific middleware wrappers
  */
-export const withAdminAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { allowedRoles: [UserRole.ADMIN] });
+export const withAdminAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) => withAuth(handler, { allowedRoles: [UserRole.ADMIN] });
 
-export const withDoctorAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { allowedRoles: [UserRole.DOCTOR, UserRole.ADMIN] });
+export const withDoctorAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) => withAuth(handler, { allowedRoles: [UserRole.DOCTOR, UserRole.ADMIN] });
 
-export const withPharmacistAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { allowedRoles: [UserRole.PHARMACIST, UserRole.ADMIN] });
+export const withPharmacistAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) => withAuth(handler, { allowedRoles: [UserRole.PHARMACIST, UserRole.ADMIN] });
 
-export const withMedicalStaffAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { allowedRoles: [UserRole.DOCTOR, UserRole.PHARMACIST, UserRole.ADMIN] });
+export const withMedicalStaffAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) =>
+  withAuth(handler, {
+    allowedRoles: [UserRole.DOCTOR, UserRole.PHARMACIST, UserRole.ADMIN],
+  });
 
-export const withAnyAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { requireAuth: true });
+export const withAnyAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) => withAuth(handler, { requireAuth: true });
 
 /**
  * Optional authentication middleware (for public routes that can benefit from auth context)
  */
-export const withOptionalAuth = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
-  withAuth(handler, { requireAuth: false });
+export const withOptionalAuth = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) => withAuth(handler, { requireAuth: false });

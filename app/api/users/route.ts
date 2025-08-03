@@ -23,12 +23,16 @@ const CreateUserSchema = z.object({
     dateOfBirth: z.string().transform((str) => new Date(str)),
     contact: z.object({
       email: z.string().email(),
-      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
     }),
   }),
   medicalInfo: z
     .object({
-      bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      bloodType: z
+        .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+        .optional(),
       knownAllergies: z.array(z.string()).optional(),
       emergencyContact: z
         .object({
@@ -68,7 +72,9 @@ export async function GET(request: NextRequest) {
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
-        .select("-personalInfo.contact.email -personalInfo.contact.phone -auth.passwordHash") // Exclude sensitive data
+        .select(
+          "-personalInfo.contact.email -personalInfo.contact.phone -auth.passwordHash",
+        ) // Exclude sensitive data
         .lean()
         .exec(),
       User.countDocuments(activeUserQuery),
@@ -136,7 +142,10 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       const status = result.error?.includes("already exists") ? 409 : 500;
-      return createErrorResponse(result.error || "Failed to create user", status);
+      return createErrorResponse(
+        result.error || "Failed to create user",
+        status,
+      );
     }
 
     return createSuccessResponse(result.data, 201);
@@ -147,7 +156,10 @@ export async function POST(request: NextRequest) {
       return createErrorResponse("Invalid input data", 400, error.errors);
     }
 
-    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
+    return createErrorResponse(
+      error instanceof Error ? error.message : "Unknown error occurred",
+      500,
+    );
   }
 }
 
@@ -157,7 +169,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   // Extract authentication context
   const authContext = getAuthContext(request);
-  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT])(authContext);
+  const authCheck = requireAuth([
+    UserRole.ADMIN,
+    UserRole.DOCTOR,
+    UserRole.PATIENT,
+  ])(authContext);
 
   if (!authCheck.success) {
     return createErrorResponse(authCheck.error, authCheck.status);
@@ -185,7 +201,10 @@ export async function PUT(request: NextRequest) {
       }
 
       // Check if user can update this profile
-      if (authContext?.role === UserRole.PATIENT && authContext.digitalIdentifier !== digitalIdentifier) {
+      if (
+        authContext?.role === UserRole.PATIENT &&
+        authContext.digitalIdentifier !== digitalIdentifier
+      ) {
         throw new Error("Patients can only update their own profile");
       }
 
@@ -213,13 +232,19 @@ export async function PUT(request: NextRequest) {
         status = 403;
       }
 
-      return createErrorResponse(result.error || "Failed to update user", status);
+      return createErrorResponse(
+        result.error || "Failed to update user",
+        status,
+      );
     }
 
     return createSuccessResponse(result.data);
   } catch (error) {
     console.error("User update error:", error);
-    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
+    return createErrorResponse(
+      error instanceof Error ? error.message : "Unknown error occurred",
+      500,
+    );
   }
 }
 
@@ -239,7 +264,10 @@ export async function DELETE(request: NextRequest) {
   const digitalIdentifier = searchParams.get("digitalIdentifier");
 
   if (!digitalIdentifier) {
-    return createErrorResponse("digitalIdentifier query parameter is required", 400);
+    return createErrorResponse(
+      "digitalIdentifier query parameter is required",
+      400,
+    );
   }
 
   const result = await executeDatabaseOperation(async () => {
@@ -306,7 +334,10 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Check if user can update this profile
-      if (authContext?.role === UserRole.PATIENT && authContext.digitalIdentifier !== digitalIdentifier) {
+      if (
+        authContext?.role === UserRole.PATIENT &&
+        authContext.digitalIdentifier !== digitalIdentifier
+      ) {
         throw new Error("Patients can only update their own profile");
       }
 
@@ -334,12 +365,18 @@ export async function PATCH(request: NextRequest) {
         status = 403;
       }
 
-      return createErrorResponse(result.error || "Failed to update user", status);
+      return createErrorResponse(
+        result.error || "Failed to update user",
+        status,
+      );
     }
 
     return createSuccessResponse(result.data);
   } catch (error) {
     console.error("User update error:", error);
-    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
+    return createErrorResponse(
+      error instanceof Error ? error.message : "Unknown error occurred",
+      500,
+    );
   }
 }

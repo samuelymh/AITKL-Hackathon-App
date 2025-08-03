@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, withOptionalAuth } from "./auth";
 import { withRateLimit } from "./rate-limit";
-import { withLogging, withSecurityLogging, withPerformanceLogging } from "./logging";
+import {
+  withLogging,
+  withSecurityLogging,
+  withPerformanceLogging,
+} from "./logging";
 import { withErrorHandling, withAsyncErrorHandling } from "./error-handling";
 import { UserRole } from "@/lib/auth";
 
@@ -30,7 +34,7 @@ export function composeMiddleware(
 
     // Error handling
     enableErrorHandling?: boolean;
-  } = {}
+  } = {},
 ) {
   const {
     requireAuth = false,
@@ -46,7 +50,10 @@ export function composeMiddleware(
 
   // Apply auth middleware
   if (requireAuth) {
-    composedHandler = withAuth(composedHandler, { allowedRoles, requireAuth: true });
+    composedHandler = withAuth(composedHandler, {
+      allowedRoles,
+      requireAuth: true,
+    });
   } else if (allowedRoles) {
     composedHandler = withOptionalAuth(composedHandler);
   }
@@ -67,7 +74,9 @@ export function composeMiddleware(
 
   // Apply error handling (outermost layer)
   if (enableErrorHandling) {
-    composedHandler = withAsyncErrorHandling(withErrorHandling(composedHandler));
+    composedHandler = withAsyncErrorHandling(
+      withErrorHandling(composedHandler),
+    );
   }
 
   return composedHandler;
@@ -78,7 +87,9 @@ export function composeMiddleware(
  */
 
 // Public API endpoints
-export const publicApiMiddleware = (handler: (request: NextRequest) => Promise<NextResponse>) =>
+export const publicApiMiddleware = (
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) =>
   composeMiddleware(handler, {
     requireAuth: false,
     rateLimit: {
@@ -92,7 +103,7 @@ export const publicApiMiddleware = (handler: (request: NextRequest) => Promise<N
 // Authenticated API endpoints
 export const authenticatedApiMiddleware = (
   handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
-  allowedRoles?: UserRole[]
+  allowedRoles?: UserRole[],
 ) =>
   composeMiddleware(handler, {
     requireAuth: true,
@@ -106,7 +117,9 @@ export const authenticatedApiMiddleware = (
   });
 
 // Authentication endpoints (login, register, etc.)
-export const authEndpointMiddleware = (handler: (request: NextRequest) => Promise<NextResponse>) =>
+export const authEndpointMiddleware = (
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) =>
   composeMiddleware(handler, {
     requireAuth: false,
     rateLimit: {
@@ -119,7 +132,9 @@ export const authEndpointMiddleware = (handler: (request: NextRequest) => Promis
   });
 
 // Admin-only endpoints
-export const adminApiMiddleware = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
+export const adminApiMiddleware = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) =>
   composeMiddleware(handler, {
     requireAuth: true,
     allowedRoles: [UserRole.ADMIN],
@@ -132,7 +147,9 @@ export const adminApiMiddleware = (handler: (request: NextRequest, authContext: 
   });
 
 // Medical staff endpoints (doctors, pharmacists)
-export const medicalStaffApiMiddleware = (handler: (request: NextRequest, authContext: any) => Promise<NextResponse>) =>
+export const medicalStaffApiMiddleware = (
+  handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
+) =>
   composeMiddleware(handler, {
     requireAuth: true,
     allowedRoles: [UserRole.DOCTOR, UserRole.PHARMACIST, UserRole.ADMIN],
@@ -148,7 +165,7 @@ export const medicalStaffApiMiddleware = (handler: (request: NextRequest, authCo
 // High-security endpoints (prescription management, medical records)
 export const highSecurityApiMiddleware = (
   handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
-  allowedRoles?: UserRole[]
+  allowedRoles?: UserRole[],
 ) =>
   composeMiddleware(handler, {
     requireAuth: true,
@@ -167,7 +184,7 @@ export const highSecurityApiMiddleware = (
  */
 export function createAuthenticatedRoute(
   handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
-  allowedRoles?: UserRole[]
+  allowedRoles?: UserRole[],
 ) {
   return authenticatedApiMiddleware(handler, allowedRoles);
 }
@@ -175,6 +192,8 @@ export function createAuthenticatedRoute(
 /**
  * Utility function to create a public route
  */
-export function createPublicRoute(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function createPublicRoute(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   return publicApiMiddleware(handler);
 }

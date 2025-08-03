@@ -8,7 +8,10 @@ import { getCurrentUserId } from "@/lib/auth";
  * @param options - Additional schema options
  * @returns A new schema that includes base audit fields
  */
-export function createExtendedSchema(definition: SchemaDefinition, options: SchemaOptions = {}): Schema {
+export function createExtendedSchema(
+  definition: SchemaDefinition,
+  options: SchemaOptions = {},
+): Schema {
   // Create a new schema with the provided definition
   const extendedSchema = new Schema(definition, {
     timestamps: false, // We handle our own audit fields
@@ -86,7 +89,11 @@ export class AuditHelper {
   /**
    * Apply audit fields based on operation type
    */
-  static applyAudit(doc: any, operation: "create" | "update" | "delete" | "restore", userId?: string): void {
+  static applyAudit(
+    doc: any,
+    operation: "create" | "update" | "delete" | "restore",
+    userId?: string,
+  ): void {
     const currentUserId = userId || this.getCurrentUserId();
 
     switch (operation) {

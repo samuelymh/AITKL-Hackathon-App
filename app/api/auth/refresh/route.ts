@@ -1,7 +1,13 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import User from "@/lib/models/User";
-import { verifyRefreshToken, generateToken, generateRefreshToken, AuthErrors, UserRole } from "@/lib/auth";
+import {
+  verifyRefreshToken,
+  generateToken,
+  generateRefreshToken,
+  AuthErrors,
+  UserRole,
+} from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-helpers";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
@@ -25,12 +31,16 @@ async function refreshHandler(request: NextRequest) {
     // Verify refresh token
     const payload = verifyRefreshToken(validatedData.refreshToken);
     if (!payload) {
-      return createErrorResponse(AuthErrors.INVALID_TOKEN, 401, "INVALID_REFRESH_TOKEN");
+      return createErrorResponse(
+        AuthErrors.INVALID_TOKEN,
+        401,
+        "INVALID_REFRESH_TOKEN",
+      );
     }
 
     // Find user in database
     const user = await User.findById(payload.userId).select(
-      "digitalIdentifier personalInfo.contact.email auth.role personalInfo.firstName personalInfo.lastName auth.tokenVersion auth.accountLocked"
+      "digitalIdentifier personalInfo.contact.email auth.role personalInfo.firstName personalInfo.lastName auth.tokenVersion auth.accountLocked",
     );
 
     if (!user) {
@@ -57,7 +67,8 @@ async function refreshHandler(request: NextRequest) {
     });
 
     // Generate new refresh token (optional rotation)
-    const shouldRotateRefreshToken = process.env.ROTATE_REFRESH_TOKENS === "true";
+    const shouldRotateRefreshToken =
+      process.env.ROTATE_REFRESH_TOKENS === "true";
     let newRefreshToken = validatedData.refreshToken;
 
     if (shouldRotateRefreshToken) {
@@ -67,7 +78,10 @@ async function refreshHandler(request: NextRequest) {
         await user.save();
       }
 
-      newRefreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
+      newRefreshToken = generateRefreshToken(
+        user._id.toString(),
+        user.auth?.tokenVersion || 1,
+      );
     }
 
     // Return new tokens
@@ -89,10 +103,18 @@ async function refreshHandler(request: NextRequest) {
     console.error("Refresh token error:", error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse("Invalid request data: " + error.errors.map((e) => e.message).join(", "), 400);
+      return createErrorResponse(
+        "Invalid request data: " +
+          error.errors.map((e) => e.message).join(", "),
+        400,
+      );
     }
 
-    return createErrorResponse("Failed to refresh token", 500, "REFRESH_TOKEN_ERROR");
+    return createErrorResponse(
+      "Failed to refresh token",
+      500,
+      "REFRESH_TOKEN_ERROR",
+    );
   }
 }
 

@@ -50,14 +50,19 @@ export async function POST(request: NextRequest) {
     }
 
     return createSuccessResponse({
-      message: logoutFromAllDevices ? "Successfully logged out from all devices" : "Successfully logged out",
+      message: logoutFromAllDevices
+        ? "Successfully logged out from all devices"
+        : "Successfully logged out",
       logoutFromAllDevices,
     });
   } catch (error) {
     console.error("Logout error:", error);
 
     if (error instanceof z.ZodError) {
-      return createErrorResponse("Invalid logout data: " + error.errors.map((e) => e.message).join(", "), 400);
+      return createErrorResponse(
+        "Invalid logout data: " + error.errors.map((e) => e.message).join(", "),
+        400,
+      );
     }
 
     return createErrorResponse("Failed to logout", 500);

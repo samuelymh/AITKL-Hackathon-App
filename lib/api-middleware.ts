@@ -7,7 +7,7 @@ import { getConnectionStatus, isConnected } from "@/lib/mongodb";
 export function createApiMiddleware() {
   return async function middleware(
     request: NextRequest,
-    handler: (request: NextRequest) => Promise<NextResponse>
+    handler: (request: NextRequest) => Promise<NextResponse>,
   ): Promise<NextResponse> {
     const startTime = Date.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -28,7 +28,9 @@ export function createApiMiddleware() {
       const status = response.status;
 
       // Log successful response
-      console.log(`✅ [${requestId}] ${status} ${request.method} ${request.url} - ${duration}ms`);
+      console.log(
+        `✅ [${requestId}] ${status} ${request.method} ${request.url} - ${duration}ms`,
+      );
 
       // Add request ID and performance headers
       response.headers.set("X-Request-ID", requestId);
@@ -40,11 +42,14 @@ export function createApiMiddleware() {
       const duration = Date.now() - startTime;
 
       // Log error response
-      console.error(`❌ [${requestId}] ERROR ${request.method} ${request.url} - ${duration}ms:`, {
-        error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-        dbStatus: getConnectionStatus(),
-      });
+      console.error(
+        `❌ [${requestId}] ERROR ${request.method} ${request.url} - ${duration}ms:`,
+        {
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          dbStatus: getConnectionStatus(),
+        },
+      );
 
       // Return error response
       return NextResponse.json(
@@ -61,7 +66,7 @@ export function createApiMiddleware() {
             "X-Response-Time": `${duration}ms`,
             "X-DB-Status": getConnectionStatus(),
           },
-        }
+        },
       );
     }
   };
@@ -70,7 +75,9 @@ export function createApiMiddleware() {
 /**
  * Helper function to wrap API route handlers with middleware
  */
-export function withApiMiddleware(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function withApiMiddleware(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   const middleware = createApiMiddleware();
   return (request: NextRequest) => middleware(request, handler);
 }
