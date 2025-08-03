@@ -1,4 +1,5 @@
 import Practitioner from "@/lib/models/Practitioner";
+import { PermissionMapper } from "../services/permission-mapper";
 
 /**
  * Permission checking utilities for authorization grants
@@ -34,25 +35,23 @@ export class AuthorizationPermissions {
       };
     }
 
-    // Validate access scope permissions
-    const hasRequiredPermissions = accessScope.every((scope) => {
-      switch (scope) {
-        case "canViewMedicalHistory":
-        case "canViewPrescriptions":
-          return practitioner.permissions.canAccessPatientRecords;
-        case "canCreateEncounters":
-          return practitioner.permissions.canModifyPatientRecords;
-        case "canViewAuditLogs":
-          return practitioner.permissions.canViewAuditLogs;
-        default:
-          return false; // Unknown scope, deny by default
-      }
-    });
+    // Validate access scope permissions using centralized permission mapper
+    const validation = PermissionMapper.validateAccessScopes(practitioner, accessScope);
 
-    if (!hasRequiredPermissions) {
+    if (!validation.valid) {
+      const errors = [];
+
+      if (validation.invalidScopes.length > 0) {
+        errors.push(`Invalid access scopes: ${validation.invalidScopes.join(", ")}`);
+      }
+
+      if (validation.missingPermissions.length > 0) {
+        errors.push(`Missing permissions for scopes: ${validation.missingPermissions.join(", ")}`);
+      }
+
       return {
         allowed: false,
-        error: "Practitioner lacks required permissions for requested access scope",
+        error: errors.join(". "),
       };
     }
 
@@ -81,23 +80,11 @@ export class AuthorizationPermissions {
       };
     }
 
-    // Check permissions based on action type
-    let hasPermission = false;
-    switch (action) {
-      case "approve":
-      case "deny":
-        hasPermission = practitioner.permissions.canApproveAuthorizationGrants;
-        break;
-      case "revoke":
-        hasPermission = practitioner.permissions.canRevokeAuthorizationGrants;
-        break;
-    }
+    // Validate grant action permission using centralized permission mapper
+    const validation = PermissionMapper.validateGrantAction(practitioner, action);
 
-    if (!hasPermission) {
-      return {
-        allowed: false,
-        error: `Practitioner cannot ${action} authorization grants`,
-      };
+    if (!validation.allowed) {
+      return validation;
     }
 
     return { allowed: true };

@@ -176,7 +176,7 @@ export class MongoTokenRepository implements ITokenRepository {
     byType: Record<StoredToken["tokenType"], number>;
   }> {
     const now = new Date();
-    
+
     const [total, revoked, expired, byType] = await Promise.all([
       Token.countDocuments(),
       Token.countDocuments({ isRevoked: true }),
@@ -192,7 +192,7 @@ export class MongoTokenRepository implements ITokenRepository {
     ]);
 
     const active = total - revoked - expired;
-    
+
     const typeStats = { access: 0, qr: 0, scan: 0 } as Record<StoredToken["tokenType"], number>;
     byType.forEach((item: { _id: StoredToken["tokenType"]; count: number }) => {
       typeStats[item._id] = item.count;

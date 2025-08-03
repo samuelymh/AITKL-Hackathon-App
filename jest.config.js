@@ -8,10 +8,9 @@ const config = {
     "^.+\\.(ts|tsx)$": "ts-jest",
   },
   collectCoverageFrom: ["lib/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "!**/*.d.ts", "!**/node_modules/**"],
-  moduleNameMapping: {
+  moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
-  setupFilesAfterEnv: ["<rootDir>/__tests__/setup.ts"],
 };
 
 module.exports = config;

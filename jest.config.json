@@ -7,11 +7,7 @@
     "^.+\\.ts$": "ts-jest"
   },
   "moduleFileExtensions": ["ts", "js"],
-  "collectCoverageFrom": [
-    "lib/**/*.ts",
-    "!lib/**/*.test.ts",
-    "!lib/**/*.d.ts"
-  ],
+  "collectCoverageFrom": ["lib/**/*.ts", "!lib/**/*.test.ts", "!lib/**/*.d.ts"],
   "coverageDirectory": "coverage",
   "coverageReporters": ["text", "lcov", "html"],
   "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],

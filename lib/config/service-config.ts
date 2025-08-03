@@ -55,7 +55,7 @@ export class ServiceConfigManager {
 
     const env = environment || process.env.NODE_ENV || "development";
     const defaultConfig = DEFAULT_CONFIGS[env] || DEFAULT_CONFIGS.development;
-    
+
     this.currentConfig = {
       ...defaultConfig,
       ...config,

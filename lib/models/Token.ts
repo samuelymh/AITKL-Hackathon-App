@@ -16,7 +16,7 @@ export interface ITokenDocument extends IBaseDocument {
   revokedAt?: Date;
   revokedBy?: string;
   metadata?: Record<string, any>;
-  
+
   // Instance methods
   revoke(revokedBy: string, reason?: string): Promise<ITokenDocument>;
   isValid(): boolean;
@@ -129,12 +129,12 @@ TokenSchema.methods.revoke = function (revokedBy: string, reason?: string) {
   this.isRevoked = true;
   this.revokedAt = new Date();
   this.revokedBy = revokedBy;
-  
+
   if (reason) {
     if (!this.metadata) this.metadata = {};
     this.metadata.revocationReason = reason;
   }
-  
+
   return this.save();
 };
 
