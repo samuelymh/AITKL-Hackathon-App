@@ -16,11 +16,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (keep .env.example for documentation)
-.env
-.env*.local
-.env.development
-.env.production
+# env files
+.env*
 
 # vercel
 .vercel
@@ -30,3 +27,4 @@ yarn-error.log*
 next-env.d.ts
 .codebuddy
 .next
+
