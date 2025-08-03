@@ -1,8 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
-import { z } from "zod";
+import { getAuthContext, requireAuth, UserRole } from "@/lib/auth";
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  extractPaginationParams,
+  createPaginationMeta,
+  transformUserForResponse,
+  validateRequiredFields,
+  getActiveUserQuery,
+} from "@/lib/api-helpers";
 
 // Input validation schema
 const CreateUserSchema = z.object({
@@ -38,62 +48,60 @@ const CreateUserSchema = z.object({
  * GET /api/users - Retrieve all users with pagination
  */
 export async function GET(request: NextRequest) {
+  // Extract authentication context
+  const authContext = getAuthContext(request);
+  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
+
+  if (!authCheck.success) {
+    return createErrorResponse(authCheck.error!, authCheck.status!);
+  }
+
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100); // Max 100 per page
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = extractPaginationParams(searchParams);
 
   const result = await executeDatabaseOperation(async () => {
+    const activeUserQuery = getActiveUserQuery();
+
+    // Use aggregation pipeline for better performance
     const [users, total] = await Promise.all([
-      User.find({ auditDeletedDateTime: { $exists: false } }) // Exclude soft-deleted users
+      User.find(activeUserQuery)
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 })
-        .select("-personalInfo.contact.email -personalInfo.contact.phone") // Exclude sensitive data
-        .lean(),
-      User.countDocuments({ auditDeletedDateTime: { $exists: false } }),
+        .select("-personalInfo.contact.email -personalInfo.contact.phone -auth.passwordHash") // Exclude sensitive data
+        .lean()
+        .exec(),
+      User.countDocuments(activeUserQuery),
     ]);
 
+    // Transform users using helper function
+    const transformedUsers = users.map(transformUserForResponse);
+
     return {
-      users: users.map((user) => ({
-        ...user,
-        name: `${user.personalInfo.firstName} ${user.personalInfo.lastName}`,
-        age: Math.floor(
-          (Date.now() - new Date(user.personalInfo.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-        ),
-      })),
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalUsers: total,
-        hasNext: skip + limit < total,
-        hasPrev: page > 1,
-      },
+      users: transformedUsers,
+      pagination: createPaginationMeta(page, limit, total, skip),
     };
   }, "Fetch Users");
 
   if (!result.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: result.error || "Failed to fetch users",
-        timestamp: result.timestamp,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(result.error || "Failed to fetch users", 500);
   }
 
-  return NextResponse.json({
-    success: true,
-    data: result.data,
-    timestamp: result.timestamp,
-  });
+  return createSuccessResponse(result.data);
 }
 
 /**
  * POST /api/users - Create a new user
  */
 export async function POST(request: NextRequest) {
+  // Extract authentication context
+  const authContext = getAuthContext(request);
+  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR])(authContext);
+
+  if (!authCheck.success) {
+    return createErrorResponse(authCheck.error!, authCheck.status!);
+  }
+
   try {
     const body = await request.json();
 
@@ -104,6 +112,7 @@ export async function POST(request: NextRequest) {
       // Check if user with this email already exists
       const existingUser = await User.findOne({
         "personalInfo.contact.email": validatedData.personalInfo.contact.email,
+        ...getActiveUserQuery(),
       });
 
       if (existingUser) {
@@ -113,9 +122,9 @@ export async function POST(request: NextRequest) {
       // Create new user
       const user = new User(validatedData);
 
-      // Apply audit fields for creation
-      // In a real app, you'd get the current user ID from authentication
-      AuditHelper.applyAudit(user, "create", "system-api");
+      // Apply audit fields for creation with authenticated user ID
+      const currentUserId = authContext?.userId || "system-api";
+      AuditHelper.applyAudit(user, "create", currentUserId);
 
       const savedUser = await user.save();
 
@@ -127,47 +136,18 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       const status = result.error?.includes("already exists") ? 409 : 500;
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error || "Failed to create user",
-          timestamp: result.timestamp,
-        },
-        { status }
-      );
+      return createErrorResponse(result.error || "Failed to create user", status);
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: result.data,
-        timestamp: result.timestamp,
-      },
-      { status: 201 }
-    );
+    return createSuccessResponse(result.data, 201);
   } catch (error) {
     console.error("User creation error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid input data",
-          details: error.errors,
-          timestamp: new Date(),
-        },
-        { status: 400 }
-      );
+      return createErrorResponse("Invalid input data", 400, error.errors);
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-        timestamp: new Date(),
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
   }
 }
 
@@ -175,33 +155,47 @@ export async function POST(request: NextRequest) {
  * PUT /api/users - Update a user (requires digitalIdentifier in body)
  */
 export async function PUT(request: NextRequest) {
+  // Extract authentication context
+  const authContext = getAuthContext(request);
+  const authCheck = requireAuth([UserRole.ADMIN, UserRole.DOCTOR, UserRole.PATIENT])(authContext);
+
+  if (!authCheck.success) {
+    return createErrorResponse(authCheck.error!, authCheck.status!);
+  }
+
   try {
     const body = await request.json();
-    const { digitalIdentifier, ...updateData } = body;
 
-    if (!digitalIdentifier) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "digitalIdentifier is required for updates",
-          timestamp: new Date(),
-        },
-        { status: 400 }
-      );
+    // Validate required fields
+    const validationError = validateRequiredFields(body, ["digitalIdentifier"]);
+    if (validationError) {
+      return createErrorResponse(validationError, 400);
     }
 
+    const { digitalIdentifier, ...updateData } = body;
+
     const result = await executeDatabaseOperation(async () => {
-      const user = await User.findOne({ digitalIdentifier });
+      const user = await User.findOne({
+        digitalIdentifier,
+        ...getActiveUserQuery(),
+      });
 
       if (!user) {
         throw new Error("User not found");
       }
 
-      // Apply updates
-      Object.assign(user, updateData);
+      // Check if user can update this profile
+      if (authContext?.role === UserRole.PATIENT && authContext.digitalIdentifier !== digitalIdentifier) {
+        throw new Error("Patients can only update their own profile");
+      }
 
-      // Apply audit fields for update
-      AuditHelper.applyAudit(user, "update", "system-api");
+      // Apply updates (excluding sensitive fields)
+      const { auth, ...safeUpdateData } = updateData;
+      Object.assign(user, safeUpdateData);
+
+      // Apply audit fields for update with authenticated user ID
+      const currentUserId = authContext?.userId || "system-api";
+      AuditHelper.applyAudit(user, "update", currentUserId);
 
       const updatedUser = await user.save();
 
@@ -212,33 +206,20 @@ export async function PUT(request: NextRequest) {
     }, "Update User");
 
     if (!result.success) {
-      const status = result.error?.includes("not found") ? 404 : 500;
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error || "Failed to update user",
-          timestamp: result.timestamp,
-        },
-        { status }
-      );
+      let status = 500;
+      if (result.error?.includes("not found")) {
+        status = 404;
+      } else if (result.error?.includes("only update")) {
+        status = 403;
+      }
+
+      return createErrorResponse(result.error || "Failed to update user", status);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      timestamp: result.timestamp,
-    });
+    return createSuccessResponse(result.data);
   } catch (error) {
     console.error("User update error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-        timestamp: new Date(),
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error instanceof Error ? error.message : "Unknown error occurred", 500);
   }
 }
 
@@ -246,29 +227,34 @@ export async function PUT(request: NextRequest) {
  * DELETE /api/users - Soft delete a user (requires digitalIdentifier as query param)
  */
 export async function DELETE(request: NextRequest) {
+  // Extract authentication context
+  const authContext = getAuthContext(request);
+  const authCheck = requireAuth([UserRole.ADMIN])(authContext);
+
+  if (!authCheck.success) {
+    return createErrorResponse(authCheck.error!, authCheck.status!);
+  }
+
   const { searchParams } = new URL(request.url);
   const digitalIdentifier = searchParams.get("digitalIdentifier");
 
   if (!digitalIdentifier) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "digitalIdentifier query parameter is required",
-        timestamp: new Date(),
-      },
-      { status: 400 }
-    );
+    return createErrorResponse("digitalIdentifier query parameter is required", 400);
   }
 
   const result = await executeDatabaseOperation(async () => {
-    const user = await User.findOne({ digitalIdentifier });
+    const user = await User.findOne({
+      digitalIdentifier,
+      ...getActiveUserQuery(),
+    });
 
     if (!user) {
       throw new Error("User not found");
     }
 
-    // Apply audit fields for soft delete
-    AuditHelper.applyAudit(user, "delete", "system-api");
+    // Apply audit fields for soft delete with authenticated user ID
+    const currentUserId = authContext?.userId || "system-api";
+    AuditHelper.applyAudit(user, "delete", currentUserId);
 
     const deletedUser = await user.save();
 
@@ -280,19 +266,8 @@ export async function DELETE(request: NextRequest) {
 
   if (!result.success) {
     const status = result.error?.includes("not found") ? 404 : 500;
-    return NextResponse.json(
-      {
-        success: false,
-        error: result.error || "Failed to delete user",
-        timestamp: result.timestamp,
-      },
-      { status }
-    );
+    return createErrorResponse(result.error || "Failed to delete user", status);
   }
 
-  return NextResponse.json({
-    success: true,
-    data: result.data,
-    timestamp: result.timestamp,
-  });
+  return createSuccessResponse(result.data);
 }

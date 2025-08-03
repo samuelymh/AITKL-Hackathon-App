@@ -1,6 +1,7 @@
 import mongoose, { Model } from "mongoose";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
+import { UserRole } from "@/lib/auth";
 
 // Interface definitions matching the knowledge base
 export interface IUser extends IBaseDocument {
@@ -26,6 +27,16 @@ export interface IUser extends IBaseDocument {
       phone: string;
       relationship: string;
     };
+  };
+  auth?: {
+    passwordHash: string;
+    role: string;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    lastLogin: Date | null;
+    loginAttempts: number;
+    accountLocked: boolean;
+    accountLockedUntil: Date | null;
   };
 
   // Instance methods
@@ -132,6 +143,44 @@ const userSchemaFields = {
         trim: true,
         maxlength: 50,
       },
+    },
+  },
+  auth: {
+    passwordHash: {
+      type: String,
+      required: function () {
+        return !!(this as any).auth;
+      },
+      select: false, // Don't include in queries by default
+    },
+    role: {
+      type: String,
+      enum: ["patient", "doctor", "pharmacist", "admin", "system"],
+      default: "patient",
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    accountLocked: {
+      type: Boolean,
+      default: false,
+    },
+    accountLockedUntil: {
+      type: Date,
+      default: null,
     },
   },
 };

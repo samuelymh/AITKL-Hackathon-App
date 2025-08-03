@@ -1,5 +1,6 @@
 import { Schema, SchemaDefinition, SchemaOptions } from "mongoose";
 import BaseSchema from "./BaseSchema";
+import { getCurrentUserId } from "@/lib/auth";
 
 /**
  * Utility function to create a schema that extends the BaseSchema
@@ -62,8 +63,23 @@ export class AuditHelper {
    * This is a placeholder implementation
    */
   static getCurrentUserId(context?: any): string {
-    // TODO: Implement based on your authentication system
-    // This could come from JWT token, session, or request context
+    // If context contains a request object, try to extract user ID from it
+    if (context?.request) {
+      const authHeader = context.request.headers.get?.("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        try {
+          const token = authHeader.split(" ")[1];
+          // In a real implementation, you'd verify the JWT here
+          // For now, return the context user ID or fallback
+          return context.userId || "authenticated-user";
+        } catch (error) {
+          console.error("Token verification failed:", error);
+          return "anonymous";
+        }
+      }
+    }
+
+    // Fallback to context properties or default
     return context?.userId || context?.user?._id || "system";
   }
 

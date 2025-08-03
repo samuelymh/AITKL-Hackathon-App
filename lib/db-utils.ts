@@ -56,6 +56,60 @@ export async function withDatabaseRetry<T>(
 }
 
 /**
+ * Handle operation execution with timing and logging
+ */
+async function executeOperationWithTiming<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<{ result: T; duration: number }> {
+  const startTime = Date.now();
+
+  try {
+    console.log(`🔄 Starting ${operationName}...`);
+    const result = await withDatabaseRetry(operation);
+    const duration = Date.now() - startTime;
+
+    console.log(`✅ ${operationName} completed successfully in ${duration}ms`);
+    return { result, duration };
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`❌ ${operationName} failed after ${duration}ms:`, {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      connectionStatus: getConnectionStatus(),
+    });
+
+    // Ensure we always throw an Error object
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error(typeof error === "string" ? error : "Unknown error occurred");
+    }
+  }
+}
+
+/**
+ * Format operation result for consistent API response
+ */
+function formatOperationResult<T>(
+  success: boolean,
+  data?: T,
+  error?: string
+): {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: Date;
+} {
+  return {
+    success,
+    ...(data !== undefined && { data }),
+    ...(error && { error }),
+    timestamp: new Date(),
+  };
+}
+
+/**
  * Safe database operation executor with comprehensive error handling
  */
 export async function executeDatabaseOperation<T>(
@@ -67,36 +121,12 @@ export async function executeDatabaseOperation<T>(
   error?: string;
   timestamp: Date;
 }> {
-  const startTime = Date.now();
-
   try {
-    console.log(`🔄 Starting ${operationName}...`);
-
-    const result = await withDatabaseRetry(operation);
-
-    const duration = Date.now() - startTime;
-    console.log(`✅ ${operationName} completed successfully in ${duration}ms`);
-
-    return {
-      success: true,
-      data: result,
-      timestamp: new Date(),
-    };
+    const { result } = await executeOperationWithTiming(operation, operationName);
+    return formatOperationResult(true, result);
   } catch (error) {
-    const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-
-    console.error(`❌ ${operationName} failed after ${duration}ms:`, {
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-      connectionStatus: getConnectionStatus(),
-    });
-
-    return {
-      success: false,
-      error: errorMessage,
-      timestamp: new Date(),
-    };
+    return formatOperationResult(false, undefined, errorMessage);
   }
 }
 

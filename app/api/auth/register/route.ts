@@ -1,0 +1,148 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { executeDatabaseOperation } from "@/lib/db-utils";
+import User from "@/lib/models/User";
+import { generateToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
+import { AuditHelper } from "@/lib/models/SchemaUtils";
+
+// Validation schemas
+const RegisterSchema = z.object({
+  personalInfo: z.object({
+    firstName: z.string().min(1).max(100),
+    lastName: z.string().min(1).max(100),
+    dateOfBirth: z.string().transform((str) => new Date(str)),
+    contact: z.object({
+      email: z.string().email(),
+      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+    }),
+  }),
+  password: z.string().min(8).max(128),
+  role: z.nativeEnum(UserRole).default(UserRole.PATIENT),
+  medicalInfo: z
+    .object({
+      bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      knownAllergies: z.array(z.string()).optional(),
+      emergencyContact: z
+        .object({
+          name: z.string().optional(),
+          phone: z
+            .string()
+            .regex(/^\+?[\d\s\-()]+$/)
+            .optional(),
+          relationship: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+/**
+ * POST /api/auth/register - Register a new user
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validatedData = RegisterSchema.parse(body);
+
+    const result = await executeDatabaseOperation(async () => {
+      // Check if user already exists
+      const existingUser = await User.findOne({
+        "personalInfo.contact.email": validatedData.personalInfo.contact.email,
+      });
+
+      if (existingUser) {
+        throw new Error(AuthErrors.EMAIL_ALREADY_EXISTS);
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(validatedData.password);
+
+      // Create user with authentication fields
+      const userData = {
+        ...validatedData,
+        auth: {
+          passwordHash: hashedPassword,
+          role: validatedData.role,
+          emailVerified: false,
+          phoneVerified: false,
+          lastLogin: null,
+          loginAttempts: 0,
+          accountLocked: false,
+          accountLockedUntil: null,
+        },
+      };
+
+      delete (userData as any).password; // Remove plain password
+
+      const user = new User(userData);
+
+      // Apply audit fields for creation
+      AuditHelper.applyAudit(user, "create", "system-registration");
+
+      const savedUser = await user.save();
+
+      // Generate JWT token
+      const token = generateToken({
+        userId: savedUser._id.toString(),
+        digitalIdentifier: savedUser.digitalIdentifier,
+        role: validatedData.role,
+        email: validatedData.personalInfo.contact.email,
+      });
+
+      return {
+        user: savedUser.toPublicJSON(),
+        token,
+        message: "User registered successfully",
+      };
+    }, "Register User");
+
+    if (!result.success) {
+      const status = result.error?.includes("already") ? 409 : 500;
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || "Registration failed",
+          timestamp: result.timestamp,
+        },
+        { status }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: result.data,
+        timestamp: result.timestamp,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Registration error:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid registration data",
+          details: error.errors,
+          timestamp: new Date(),
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Registration failed",
+        timestamp: new Date(),
+      },
+      { status: 500 }
+    );
+  }
+}
