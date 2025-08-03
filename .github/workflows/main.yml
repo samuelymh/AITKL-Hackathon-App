@@ -32,10 +32,10 @@ jobs:
       - name: Install Dependencies
         run: npm install # Or 'yarn install', 'pnpm install'
 
+      - name: Build Project
+        run: npm run build
       # 4. Run the linter (standard in Next.js projects)
       - name: Run Linter
         run: npm run format
 
       # 5. Run the build command to ensure the app compiles
-      - name: Build Project
-        run: npm run build

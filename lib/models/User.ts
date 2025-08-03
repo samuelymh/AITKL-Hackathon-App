@@ -2,17 +2,18 @@ import mongoose, { Model } from "mongoose";
 import { randomUUID } from "crypto";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
+import { encryptionPlugin, EncryptedFieldType } from "../services/encryption-plugin";
 
-// Interface definitions matching the knowledge base
+// Interface definitions matching the knowledge base with encryption support
 export interface IUser extends IBaseDocument {
   digitalIdentifier: string;
   personalInfo: {
-    firstName: string;
-    lastName: string;
+    firstName: EncryptedFieldType; // Encrypted PII
+    lastName: EncryptedFieldType; // Encrypted PII
     dateOfBirth: Date;
     contact: {
-      email: string;
-      phone: string;
+      email: EncryptedFieldType; // Encrypted PII
+      phone: EncryptedFieldType; // Encrypted PII
       verified: {
         email: boolean;
         phone: boolean;
@@ -21,10 +22,10 @@ export interface IUser extends IBaseDocument {
   };
   medicalInfo: {
     bloodType?: string;
-    knownAllergies?: string[];
+    knownAllergies?: EncryptedFieldType[]; // Encrypted PHI
     emergencyContact?: {
-      name: string;
-      phone: string;
+      name: EncryptedFieldType; // Encrypted PII
+      phone: EncryptedFieldType; // Encrypted PII
       relationship: string;
     };
   };
@@ -45,6 +46,11 @@ export interface IUser extends IBaseDocument {
   isContactVerified(): boolean;
   getAge(): number;
   toPublicJSON(): any;
+
+  // Encryption-specific methods
+  decryptField(fieldPath: string): Promise<string | null>;
+  needsReEncryption(fieldPath: string): boolean;
+  reEncryptField(fieldPath: string): Promise<void>;
 }
 
 // Static methods interface
@@ -52,6 +58,7 @@ export interface IUserModel extends Model<IUser> {
   findByDigitalId(digitalId: string): Promise<IUser | null>;
   findByBloodType(bloodType: string): Promise<IUser[]>;
   findByAllergy(allergy: string): Promise<IUser[]>;
+  bulkReEncrypt(batchSize?: number): Promise<number>;
 }
 
 // User schema fields (excluding audit fields which are added by createExtendedSchema)
@@ -66,13 +73,13 @@ const userSchemaFields = {
   },
   personalInfo: {
     firstName: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
       required: true,
       trim: true,
       maxlength: 100,
     },
     lastName: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
       required: true,
       trim: true,
       maxlength: 100,
@@ -89,18 +96,18 @@ const userSchemaFields = {
     },
     contact: {
       email: {
-        type: String,
+        type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         required: true,
         unique: true,
         lowercase: true,
         trim: true,
-        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email"],
+        // Note: validation will be applied to decrypted values
       },
       phone: {
-        type: String,
+        type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         required: true,
         trim: true,
-        match: [/^\+?[\d\s\-()]+$/, "Please enter a valid phone number"],
+        // Note: validation will be applied to decrypted values
       },
       verified: {
         email: {
@@ -122,21 +129,21 @@ const userSchemaFields = {
     },
     knownAllergies: [
       {
-        type: String,
+        type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         trim: true,
         maxlength: 100,
       },
     ],
     emergencyContact: {
       name: {
-        type: String,
+        type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         trim: true,
         maxlength: 100,
       },
       phone: {
-        type: String,
+        type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         trim: true,
-        match: [/^\+?[\d\s\-()]+$/, "Please enter a valid phone number"],
+        // Note: validation will be applied to decrypted values
       },
       relationship: {
         type: String,
@@ -194,6 +201,19 @@ const UserSchema = createExtendedSchema(userSchemaFields, {
   timestamps: true,
   versionKey: false,
   collection: "users",
+});
+
+// Apply encryption plugin to the schema
+UserSchema.plugin(encryptionPlugin, {
+  encryptedFields: [
+    "personalInfo.firstName",
+    "personalInfo.lastName",
+    "personalInfo.contact.email",
+    "personalInfo.contact.phone",
+    "medicalInfo.emergencyContact.name",
+    "medicalInfo.emergencyContact.phone",
+  ],
+  encryptedPaths: ["medicalInfo.knownAllergies"],
 });
 
 // Additional indexes for performance (non-unique fields)
