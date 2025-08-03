@@ -14,6 +14,40 @@ export interface IBaseDocument extends Document {
 }
 
 /**
+ * Audit fields that can be spread into other schemas
+ */
+export const auditFields = {
+  auditCreatedDateTime: {
+    type: String,
+    required: true,
+    immutable: true,
+    default: () => new Date().toISOString(),
+  },
+  auditCreatedBy: {
+    type: String,
+    required: true,
+    immutable: true,
+    default: "system", // Should be overridden with actual user ID
+  },
+  auditModifiedBy: {
+    type: String,
+    required: false,
+  },
+  auditModifiedDateTime: {
+    type: String,
+    required: false,
+  },
+  auditDeletedBy: {
+    type: String,
+    required: false,
+  },
+  auditDeletedDateTime: {
+    type: String,
+    required: false,
+  },
+};
+
+/**
  * Base schema with audit logging fields that all other schemas should extend
  */
 export const BaseSchema = new Schema(
@@ -51,7 +85,7 @@ export const BaseSchema = new Schema(
     // Don't add timestamps as we're managing our own audit fields
     timestamps: false,
     versionKey: false,
-  },
+  }
 );
 
 /**
