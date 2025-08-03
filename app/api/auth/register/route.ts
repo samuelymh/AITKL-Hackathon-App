@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import { generateToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
+import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
+import { withRateLimit } from "@/lib/middleware/rate-limit";
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -17,7 +18,7 @@ const RegisterSchema = z.object({
     }),
   }),
   password: z.string().min(8).max(128),
-  role: z.nativeEnum(UserRole).default(UserRole.PATIENT),
+  role: z.nativeEnum(UserRole).default("patient" as UserRole),
   medicalInfo: z
     .object({
       bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
@@ -44,7 +45,7 @@ const LoginSchema = z.object({
 /**
  * POST /api/auth/register - Register a new user
  */
-export async function POST(request: NextRequest) {
+async function registerHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = RegisterSchema.parse(body);
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
           loginAttempts: 0,
           accountLocked: false,
           accountLockedUntil: null,
+          tokenVersion: 1,
         },
       };
 
@@ -86,17 +88,23 @@ export async function POST(request: NextRequest) {
 
       const savedUser = await user.save();
 
-      // Generate JWT token
+      // Generate JWT tokens
       const token = generateToken({
         userId: savedUser._id.toString(),
         digitalIdentifier: savedUser.digitalIdentifier,
         role: validatedData.role,
         email: validatedData.personalInfo.contact.email,
+        tokenVersion: 1,
       });
+
+      const refreshToken = generateRefreshToken(savedUser._id.toString(), 1);
 
       return {
         user: savedUser.toPublicJSON(),
-        token,
+        accessToken: token,
+        refreshToken,
+        tokenType: "Bearer",
+        expiresIn: process.env.JWT_EXPIRES_IN || "15m",
         message: "User registered successfully",
       };
     }, "Register User");
@@ -146,3 +154,10 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to register endpoint
+export const POST = withRateLimit(registerHandler, {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 3,
+  message: "Too many registration attempts, please try again in 15 minutes",
+});

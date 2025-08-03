@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import { generateToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
+import { generateToken, generateRefreshToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
+import { withRateLimit } from "@/lib/middleware/rate-limit";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -13,7 +14,7 @@ const LoginSchema = z.object({
 /**
  * POST /api/auth/login - Authenticate user
  */
-export async function POST(request: NextRequest) {
+async function loginHandler(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password } = LoginSchema.parse(body);
@@ -70,17 +71,23 @@ export async function POST(request: NextRequest) {
         await user.save();
       }
 
-      // Generate JWT token
+      // Generate JWT tokens
       const token = generateToken({
         userId: user._id.toString(),
         digitalIdentifier: user.digitalIdentifier,
         role: (user.auth?.role as UserRole) || UserRole.PATIENT,
         email: user.personalInfo.contact.email,
+        tokenVersion: user.auth?.tokenVersion || 1,
       });
+
+      const refreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
 
       return {
         user: user.toPublicJSON(),
-        token,
+        accessToken: token,
+        refreshToken,
+        tokenType: "Bearer",
+        expiresIn: process.env.JWT_EXPIRES_IN || "15m",
         message: "Login successful",
       };
     }, "User Login");
@@ -127,3 +134,11 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to login endpoint
+export const POST = withRateLimit(loginHandler, {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 5,
+  message: "Too many login attempts, please try again in 15 minutes",
+  skipSuccessfulRequests: true,
+});

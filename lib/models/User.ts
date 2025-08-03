@@ -37,6 +37,7 @@ export interface IUser extends IBaseDocument {
     loginAttempts: number;
     accountLocked: boolean;
     accountLockedUntil: Date | null;
+    tokenVersion?: number; // For JWT refresh token rotation
   };
 
   // Instance methods
@@ -59,7 +60,6 @@ const userSchemaFields = {
     type: String,
     required: true,
     unique: true,
-    index: true,
     trim: true,
     minlength: 10,
     maxlength: 50,
@@ -182,6 +182,10 @@ const userSchemaFields = {
       type: Date,
       default: null,
     },
+    tokenVersion: {
+      type: Number,
+      default: 1,
+    },
   },
 };
 
@@ -192,9 +196,7 @@ const UserSchema = createExtendedSchema(userSchemaFields, {
   collection: "users",
 });
 
-// Indexes for performance
-UserSchema.index({ "personalInfo.contact.email": 1 }, { unique: true });
-UserSchema.index({ digitalIdentifier: 1 }, { unique: true });
+// Additional indexes for performance (non-unique fields)
 UserSchema.index({ createdAt: 1 });
 UserSchema.index({ updatedAt: 1 });
 
