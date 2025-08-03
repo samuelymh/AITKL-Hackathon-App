@@ -11,6 +11,23 @@ function WelcomeCard() {
 
   if (!user) return null;
 
+  // Helper function to safely render user data that might be encrypted
+  const safeRenderField = (field: any): string => {
+    if (!field) return "";
+
+    // If it's already a string, return it
+    if (typeof field === "string") return field;
+
+    // If it's an encrypted object, return a placeholder
+    if (typeof field === "object" && field.data && field.iv) {
+      console.warn("Encrypted field detected in dashboard, using fallback");
+      return "[Protected Data]";
+    }
+
+    // Convert to string as fallback
+    return String(field);
+  };
+
   const getRoleDescription = (role: string | undefined) => {
     switch (role) {
       case "admin":
@@ -31,7 +48,7 @@ function WelcomeCard() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>
-            Welcome, {user.firstName} {user.lastName}
+            Welcome, {safeRenderField(user.firstName)} {safeRenderField(user.lastName)}
           </span>
           <Badge variant="secondary">
             {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Patient"}
@@ -43,7 +60,7 @@ function WelcomeCard() {
         <div className="mt-4 space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Email:</span>
-            <span className="text-sm">{user.email}</span>
+            <span className="text-sm">{safeRenderField(user.email)}</span>
             {user.emailVerified && (
               <Badge variant="outline" className="text-xs">
                 Verified
@@ -52,7 +69,7 @@ function WelcomeCard() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Phone:</span>
-            <span className="text-sm">{user.phone}</span>
+            <span className="text-sm">{safeRenderField(user.phone)}</span>
             {user.phoneVerified && (
               <Badge variant="outline" className="text-xs">
                 Verified
