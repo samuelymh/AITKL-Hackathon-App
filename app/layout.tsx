@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { initDB } from "@/lib/init";
-
-initDB();
 
 export const metadata: Metadata = {
   title: "v0 App",

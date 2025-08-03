@@ -1,22 +1,52 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 
-const dbUri = process.env.DB_URL;
-let mongooseInstance: typeof mongoose | null = null;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-export const connectToDatabase = async () => {
-  try {
-    if (!dbUri) {
-      throw new Error(
-        "Please define the MONGODB_URI environment variable inside .env.local"
-      );
-    }
-    await mongoose.connect(dbUri);
-    console.log("Conected to MongoDb");
-    return mongooseInstance;
-  } catch (error) {
-    console.error("Error connecting to MongoDb", error);
-    throw error;
+if (!MONGODB_URI) {
+  throw new Error(
+    "Please define the MONGODB_URI environment variable inside .env.local"
+  );
+}
+
+// Augment the global NodeJS scope to cache the connection
+// This prevents "Type 'Mongoose | Promise<Mongoose> | null' is not assignable to type 'Mongoose'" errors
+declare global {
+  var mongoose: {
+    conn: Mongoose | null;
+    promise: Promise<Mongoose> | null;
+  };
+}
+
+// Cache the connection on the global object to persist across serverless function invocations.
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectToDatabase(): Promise<Mongoose> {
+  if (cached.conn) {
+    console.log("=> using existing database connection");
+    return cached.conn;
   }
-};
 
-export default mongooseInstance;
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false, // Recommended for modern Mongoose
+    };
+    console.log("=> creating new database connection");
+    cached.promise = mongoose.connect(MONGODB_URI!, opts);
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null; // Reset promise on error
+    console.error("Error connecting to MongoDb", e);
+    throw e;
+  }
+
+  return cached.conn;
+}
+
+export default connectToDatabase;

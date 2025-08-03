@@ -23,28 +23,30 @@ async function request<T>(
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Use URL constructor for robust path joining
+    const url = new URL(endpoint, API_BASE_URL);
+
+    const response = await fetch(url.toString(), {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        // Add Authorization headers if needed
         ...options?.headers,
       },
     });
 
     if (!response.ok) {
-      // Try to parse error message from the API, otherwise use status text
-      let errorMessage = `API Error: ${response.statusText}`;
+      let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+      // Safely attempt to parse error details from the response body
       try {
         const errorBody = await response.json();
-        errorMessage = errorBody.message || errorMessage;
+        errorMessage = errorBody?.message || errorMessage;
       } catch (e) {
-        // Ignore if response body is not JSON
+        // The error response was not JSON, stick with the default message
       }
       return { data: null, error: new ApiError(response.status, errorMessage) };
     }
 
-    // Handle cases with no content
+    // Handle cases with no content (e.g., 204 No Content)
     if (response.status === 204) {
       return { data: null, error: null };
     }
@@ -52,7 +54,7 @@ async function request<T>(
     const data: T = await response.json();
     return { data, error: null };
   } catch (error) {
-    // Network errors or other unexpected issues
+    // Catches network errors (e.g., offline) or other unexpected issues
     if (error instanceof Error) {
       return { data: null, error: new ApiError(500, error.message) };
     }
@@ -65,20 +67,27 @@ async function request<T>(
 
 // Export methods for different HTTP verbs
 export const apiClient = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: "GET" }),
-  post: <T>(endpoint: string, body: any, options?: RequestInit) =>
-    request<T>(endpoint, {
+  get: <T>(endpoint: string, options?: RequestInit) => {
+    return request<T>(endpoint, { ...options, method: "GET" });
+  },
+
+  post: <T>(endpoint: string, body: unknown, options?: RequestInit) => {
+    return request<T>(endpoint, {
       ...options,
       method: "POST",
       body: JSON.stringify(body),
-    }),
-  put: <T>(endpoint: string, body: any, options?: RequestInit) =>
-    request<T>(endpoint, {
+    });
+  },
+
+  put: <T>(endpoint: string, body: unknown, options?: RequestInit) => {
+    return request<T>(endpoint, {
       ...options,
       method: "PUT",
       body: JSON.stringify(body),
-    }),
-  delete: <T>(endpoint: string, options?: RequestInit) =>
-    request<T>(endpoint, { ...options, method: "DELETE" }),
+    });
+  },
+
+  delete: <T>(endpoint: string, options?: RequestInit) => {
+    return request<T>(endpoint, { ...options, method: "DELETE" });
+  },
 };
