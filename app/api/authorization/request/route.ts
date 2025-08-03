@@ -6,13 +6,7 @@ import Organization from "@/lib/models/Organization";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { AuthorizationPermissions } from "@/lib/utils/authorization-permissions";
-import {
-  AuthorizationError,
-  ValidationError,
-  NotFoundError,
-  ConflictError,
-  ErrorHandler,
-} from "@/lib/errors/custom-errors";
+import { AuthorizationError, NotFoundError, ConflictError, ErrorHandler } from "@/lib/errors/custom-errors";
 import { z } from "zod";
 
 // Validation schemas
@@ -72,19 +66,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating authorization grant:", error);
 
-    if (error instanceof z.ZodError) {
-      const validationError = new ValidationError("Validation failed", error.errors);
-      const errorResponse = ErrorHandler.formatErrorResponse(validationError);
-      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
-    }
-
-    if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof AuthorizationError) {
-      const errorResponse = ErrorHandler.formatErrorResponse(error);
-      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
-    }
-
-    // Generic error fallback
-    const errorResponse = ErrorHandler.formatErrorResponse(error as Error);
+    const errorResponse = ErrorHandler.handleError(error);
     return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
   }
 }

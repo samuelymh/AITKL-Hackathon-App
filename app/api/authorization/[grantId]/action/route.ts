@@ -3,13 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import AuthorizationGrant, { GrantStatus } from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { AuthorizationPermissions, GrantStateManager } from "@/lib/utils/authorization-permissions";
-import {
-  AuthorizationError,
-  ValidationError,
-  NotFoundError,
-  GrantActionError,
-  ErrorHandler,
-} from "@/lib/errors/custom-errors";
+import { AuthorizationError, NotFoundError, GrantActionError, ErrorHandler } from "@/lib/errors/custom-errors";
 import { z } from "zod";
 
 // Validation schemas
@@ -69,19 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
   } catch (error) {
     console.error(`Error performing authorization action:`, error);
 
-    if (error instanceof z.ZodError) {
-      const validationError = new ValidationError("Validation failed", error.errors);
-      const errorResponse = ErrorHandler.formatErrorResponse(validationError);
-      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
-    }
-
-    if (error instanceof NotFoundError || error instanceof AuthorizationError || error instanceof GrantActionError) {
-      const errorResponse = ErrorHandler.formatErrorResponse(error);
-      return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
-    }
-
-    // Generic error fallback
-    const errorResponse = ErrorHandler.formatErrorResponse(error as Error);
+    const errorResponse = ErrorHandler.handleError(error);
     return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
   }
 }
@@ -127,25 +109,29 @@ function validateStateTransition(currentStatus: GrantStatus, action: string) {
   }
 }
 
+// Action map for cleaner and more maintainable grant actions
+const actionMap: { [key: string]: (grant: any, actionBy: string) => Promise<any> } = {
+  approve: (grant, actionBy) => grant.approve(actionBy),
+  deny: (grant, actionBy) => grant.deny(actionBy),
+  revoke: (grant, actionBy) => grant.revoke(actionBy),
+};
+
 /**
  * Perform the grant action using the model methods
  */
 async function performGrantAction(authGrant: any, action: string, actionBy: string) {
+  const grantAction = actionMap[action];
+
+  if (!grantAction) {
+    throw new GrantActionError(
+      `Invalid action: ${action}`,
+      authGrant.grantDetails.status,
+      GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
+    );
+  }
+
   try {
-    switch (action) {
-      case "approve":
-        return await authGrant.approve(actionBy);
-      case "deny":
-        return await authGrant.deny(actionBy);
-      case "revoke":
-        return await authGrant.revoke(actionBy);
-      default:
-        throw new GrantActionError(
-          `Invalid action: ${action}`,
-          authGrant.grantDetails.status,
-          GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
-        );
-    }
+    return await grantAction(authGrant, actionBy);
   } catch (modelError: any) {
     throw new GrantActionError(
       modelError.message,

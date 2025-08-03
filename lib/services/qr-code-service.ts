@@ -135,16 +135,26 @@ export class QRCodeService {
   }
 
   /**
-   * Generate a cryptographically secure access token
-   * NOTE: The caller must securely store this token with proper expiration
+   * Generate a cryptographically secure access token with expiration
+   * @param expiresInSeconds - Token lifespan in seconds (default: 1 hour)
+   * @returns Object containing token and expiration timestamp
    */
-  static generateAccessToken(): string {
+  static generateAccessToken(expiresInSeconds: number = 3600): { token: string; expiresAt: Date } {
     try {
-      return crypto.randomBytes(32).toString("hex"); // 32 bytes = 256 bits
+      const token = crypto.randomBytes(32).toString("hex"); // 32 bytes = 256 bits
+      const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+      return { token, expiresAt };
     } catch (error) {
       console.error("Error generating access token:", error);
       throw new TokenGenerationError("Failed to generate secure access token");
     }
+  }
+
+  /**
+   * Generate a short-lived access token for QR codes (15 minutes default)
+   */
+  static generateQRAccessToken(expiresInSeconds: number = 900): { token: string; expiresAt: Date } {
+    return this.generateAccessToken(expiresInSeconds);
   }
 
   /**

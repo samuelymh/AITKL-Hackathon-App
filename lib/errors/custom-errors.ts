@@ -94,6 +94,35 @@ export class QRCodeGenerationError extends Error {
  * Error handler utility for consistent error responses
  */
 export class ErrorHandler {
+  /**
+   * Centralized error handling method
+   */
+  static handleError(error: any): {
+    error: string;
+    statusCode: number;
+    details?: any;
+  } {
+    // Handle Zod validation errors
+    if (error?.name === "ZodError" || (error?.errors && Array.isArray(error.errors))) {
+      const validationError = new ValidationError("Validation failed", error.errors);
+      return this.formatErrorResponse(validationError);
+    }
+
+    // Handle custom error types
+    if (
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof AuthorizationError ||
+      error instanceof GrantActionError ||
+      error instanceof ValidationError
+    ) {
+      return this.formatErrorResponse(error);
+    }
+
+    // Generic error fallback
+    return this.formatErrorResponse(error as Error);
+  }
+
   static formatErrorResponse(error: Error): {
     error: string;
     statusCode: number;

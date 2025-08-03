@@ -1,6 +1,8 @@
 import mongoose, { Model } from "mongoose";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
+import { GrantActionError } from "@/lib/errors/custom-errors";
+import { GrantStateManager } from "@/lib/utils/authorization-permissions";
 
 // Grant status enum matching knowledge base specification
 export enum GrantStatus {
@@ -205,11 +207,15 @@ AuthorizationGrantSchema.methods = {
   // Approve the authorization request
   approve: async function (this: IAuthorizationGrant, approvedBy: string): Promise<IAuthorizationGrant> {
     if (this.grantDetails.status !== GrantStatus.PENDING) {
-      throw new Error("Only pending grants can be approved");
+      throw new GrantActionError(
+        "Only pending grants can be approved",
+        this.grantDetails.status,
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
+      );
     }
 
     if (this.isExpired()) {
-      throw new Error("Cannot approve expired grant request");
+      throw new GrantActionError("Cannot approve expired grant request", this.grantDetails.status, []);
     }
 
     this.grantDetails.status = GrantStatus.ACTIVE;
@@ -222,11 +228,15 @@ AuthorizationGrantSchema.methods = {
   // Deny the authorization request
   deny: async function (this: IAuthorizationGrant, deniedBy: string): Promise<IAuthorizationGrant> {
     if (this.grantDetails.status !== GrantStatus.PENDING) {
-      throw new Error("Only pending grants can be denied");
+      throw new GrantActionError(
+        "Only pending grants can be denied",
+        this.grantDetails.status,
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
+      );
     }
 
-    // Mark as expired instead of creating a new status
-    this.grantDetails.status = GrantStatus.EXPIRED;
+    // Mark as revoked instead of expired for denial
+    this.grantDetails.status = GrantStatus.REVOKED;
     this.auditModifiedBy = deniedBy;
 
     return await this.save();
@@ -234,8 +244,12 @@ AuthorizationGrantSchema.methods = {
 
   // Revoke an active authorization grant
   revoke: async function (this: IAuthorizationGrant, revokedBy: string): Promise<IAuthorizationGrant> {
-    if (this.grantDetails.status !== GrantStatus.ACTIVE) {
-      throw new Error("Only active grants can be revoked");
+    if (this.grantDetails.status !== GrantStatus.ACTIVE && this.grantDetails.status !== GrantStatus.PENDING) {
+      throw new GrantActionError(
+        "Only active or pending grants can be revoked",
+        this.grantDetails.status,
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
+      );
     }
 
     this.grantDetails.status = GrantStatus.REVOKED;
