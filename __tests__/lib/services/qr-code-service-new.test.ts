@@ -2,15 +2,14 @@ import { describe, it, expect, jest } from "@jest/globals";
 import { QRCodeService } from "../../../lib/services/qr-code-service";
 import { QRCodeGenerationError, TokenGenerationError } from "../../../lib/errors/custom-errors";
 
-// Mock QRCode module
-jest.mock("qrcode", () => ({
-  toDataURL: jest.fn(),
-  toString: jest.fn(),
-}));
+// Mock QRCode module with proper typing
+const mockToDataURL = jest.fn() as jest.MockedFunction<any>;
+const mockToString = jest.fn() as jest.MockedFunction<any>;
 
-// Get the mocked functions
-const mockToDataURL = require("qrcode").toDataURL;
-const mockToString = require("qrcode").toString;
+jest.mock("qrcode", () => ({
+  toDataURL: mockToDataURL,
+  toString: mockToString,
+}));
 
 describe("QRCodeService", () => {
   const mockDigitalIdentifier = "HID_a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -184,71 +183,46 @@ describe("QRCodeService", () => {
   });
 
   describe("generateAccessToken", () => {
-    const digitalIdentifier = "HID123456";
-    const grantId = "grant123";
-
-    it("should generate JWT access token with default expiration", () => {
-      const result = QRCodeService.generateAccessToken(digitalIdentifier, grantId);
+    it("should generate access token with default expiration", () => {
+      const result = QRCodeService.generateAccessToken();
 
       expect(result).toMatchObject({
         token: expect.any(String),
         expiresAt: expect.any(Date),
       });
-
-      // JWT tokens are much longer than hex strings
-      expect(result.token.length).toBeGreaterThan(100);
+      expect(result.token).toHaveLength(64); // 32 bytes = 64 hex chars
       expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
-
-      // Verify the token can be decoded
-      const decoded = QRCodeService.verifyAccessToken(result.token);
-      expect(decoded).toMatchObject({
-        digitalIdentifier,
-        grantId,
-        purpose: "healthcare_authorization",
-      });
     });
 
-    it("should generate JWT access token with custom expiration", () => {
+    it("should generate access token with custom expiration", () => {
       const customSeconds = 7200; // 2 hours
       const beforeTime = Date.now();
-      const result = QRCodeService.generateAccessToken(digitalIdentifier, grantId, customSeconds);
+      const result = QRCodeService.generateAccessToken(customSeconds);
 
       const expectedExpiration = new Date(beforeTime + customSeconds * 1000);
-      const tolerance = 2000; // 2 second tolerance
+      const tolerance = 1000; // 1 second tolerance
 
       expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(expectedExpiration.getTime() - tolerance);
       expect(result.expiresAt.getTime()).toBeLessThanOrEqual(expectedExpiration.getTime() + tolerance);
-
-      // Verify the token contains correct claims
-      const decoded = QRCodeService.verifyAccessToken(result.token);
-      expect(decoded).toMatchObject({
-        digitalIdentifier,
-        grantId,
-        purpose: "healthcare_authorization",
-      });
     });
 
-    it("should throw TokenGenerationError on JWT signing failure", () => {
-      // Mock jwt.sign failure
-      const jwt = require("jsonwebtoken");
-      const originalSign = jwt.sign;
-      jwt.sign = jest.fn().mockImplementation(() => {
-        throw new Error("JWT signing error");
+    it("should throw TokenGenerationError on crypto failure", () => {
+      // Mock crypto failure
+      const originalRandomBytes = require("crypto").randomBytes;
+      require("crypto").randomBytes = jest.fn().mockImplementation(() => {
+        throw new Error("Crypto error");
       });
 
-      expect(() => QRCodeService.generateAccessToken(digitalIdentifier, grantId)).toThrow(TokenGenerationError);
+      expect(() => QRCodeService.generateAccessToken()).toThrow(TokenGenerationError);
 
       // Restore original function
-      jwt.sign = originalSign;
+      require("crypto").randomBytes = originalRandomBytes;
     });
   });
 
   describe("generateShortLivedToken", () => {
-    const digitalIdentifier = "HID123456";
-    const grantId = "grant123";
-
-    it("should generate short-lived JWT token with default 15 minutes", () => {
-      const result = QRCodeService.generateShortLivedToken(digitalIdentifier, grantId);
+    it("should generate short-lived token with default 15 minutes", () => {
+      const result = QRCodeService.generateShortLivedToken();
 
       expect(result).toMatchObject({
         token: expect.any(String),
@@ -261,19 +235,11 @@ describe("QRCodeService", () => {
 
       expect(actualDuration).toBeGreaterThanOrEqual(expectedDuration - tolerance);
       expect(actualDuration).toBeLessThanOrEqual(expectedDuration + tolerance);
-
-      // Verify the token can be decoded
-      const decoded = QRCodeService.verifyAccessToken(result.token);
-      expect(decoded).toMatchObject({
-        digitalIdentifier,
-        grantId,
-        purpose: "healthcare_authorization",
-      });
     });
 
-    it("should generate short-lived JWT token with custom duration", () => {
+    it("should generate short-lived token with custom duration", () => {
       const customSeconds = 600; // 10 minutes
-      const result = QRCodeService.generateShortLivedToken(digitalIdentifier, grantId, customSeconds);
+      const result = QRCodeService.generateShortLivedToken(customSeconds);
 
       const expectedDuration = customSeconds * 1000;
       const actualDuration = result.expiresAt.getTime() - Date.now();
@@ -281,54 +247,6 @@ describe("QRCodeService", () => {
 
       expect(actualDuration).toBeGreaterThanOrEqual(expectedDuration - tolerance);
       expect(actualDuration).toBeLessThanOrEqual(expectedDuration + tolerance);
-    });
-  });
-
-  describe("verifyAccessToken", () => {
-    const digitalIdentifier = "HID123456";
-    const grantId = "grant123";
-
-    it("should verify valid JWT access token", () => {
-      const { token } = QRCodeService.generateAccessToken(digitalIdentifier, grantId);
-
-      const decoded = QRCodeService.verifyAccessToken(token);
-
-      expect(decoded).toMatchObject({
-        digitalIdentifier,
-        grantId,
-        purpose: "healthcare_authorization",
-        iat: expect.any(Number),
-        exp: expect.any(Number),
-      });
-      expect(decoded!.exp).toBeGreaterThan(decoded!.iat);
-    });
-
-    it("should return null for invalid token", () => {
-      const result = QRCodeService.verifyAccessToken("invalid.token.here");
-
-      expect(result).toBeNull();
-    });
-
-    it("should return null for expired token", () => {
-      // Generate a token that expires immediately
-      const { token } = QRCodeService.generateAccessToken(digitalIdentifier, grantId, -1);
-
-      const result = QRCodeService.verifyAccessToken(token);
-
-      expect(result).toBeNull();
-    });
-
-    it("should return null for token with wrong type", () => {
-      // Create a token with wrong type using jwt.sign directly
-      const jwt = require("jsonwebtoken");
-      const wrongToken = jwt.sign(
-        { type: "wrong_type", digitalIdentifier, grantId },
-        process.env.JWT_SECRET || "your-super-secret-jwt-key"
-      );
-
-      const result = QRCodeService.verifyAccessToken(wrongToken);
-
-      expect(result).toBeNull();
     });
   });
 

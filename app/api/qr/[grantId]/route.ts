@@ -7,16 +7,16 @@ import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 /**
  * GET /api/qr/[grantId]
  * Generate and return QR code for authorization grant
+ *
+ * NOTE: This endpoint may not align with the knowledge base specification.
+ * According to the knowledge base, patient QR codes should only contain the digital identifier.
+ * This endpoint appears to be for a different use case.
  */
 export async function GET(request: NextRequest, { params }: { params: { grantId: string } }) {
   try {
     await connectToDatabase();
 
     const { grantId } = params;
-    const { searchParams } = new URL(request.url);
-    const format = searchParams.get("format") || "png"; // png, svg
-    const width = parseInt(searchParams.get("width") || "300");
-    const height = parseInt(searchParams.get("height") || "300");
 
     // Find the authorization grant
     const authGrant = await AuthorizationGrant.findById(grantId);
@@ -40,83 +40,23 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
       return NextResponse.json({ error: "Cannot generate QR code for expired grant" }, { status: 400 });
     }
 
-    // Prepare QR code data
-    const accessScopeArray = Object.entries(authGrant.accessScope)
-      .filter(([_, value]) => value === true)
-      .map(([key, _]) => key);
-
-    const qrData = {
-      grantId: authGrant._id.toString(),
-      userId: authGrant.userId.toString(),
-      organizationId: authGrant.organizationId.toString(),
-      expiresAt: authGrant.grantDetails.expiresAt,
-      accessScope: accessScopeArray,
-    };
-
-    // Generate QR code based on format
-    let qrCodeResult: string;
-    let contentType: string;
-
-    const options = {
-      width,
-      height,
-      margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
-    };
-
-    if (format === "svg") {
-      qrCodeResult = await QRCodeService.generateAuthorizationQRSVG(qrData, options);
-      contentType = "image/svg+xml";
-    } else {
-      qrCodeResult = await QRCodeService.generateAuthorizationQR(qrData, options);
-      contentType = "image/png";
-
-      // Convert data URL to buffer for PNG
-      const base64Data = qrCodeResult.replace(/^data:image\/png;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-
-      // Log QR code generation
-      await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, authGrant.userId.toString(), {
-        action: "QR_CODE_GENERATED",
-        grantId: authGrant._id.toString(),
-        format,
-        width,
-        height,
-      });
-
-      return new NextResponse(buffer, {
-        headers: {
-          "Content-Type": contentType,
-          "Content-Length": buffer.length.toString(),
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-    }
-
-    // Log QR code generation
+    // Log the attempt
     await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, authGrant.userId.toString(), {
-      action: "QR_CODE_GENERATED",
+      action: "QR_CODE_GENERATION_REQUESTED",
       grantId: authGrant._id.toString(),
-      format,
-      width,
-      height,
+      note: "This endpoint may not align with knowledge base specification",
     });
 
-    return new NextResponse(qrCodeResult, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
+    return NextResponse.json(
+      {
+        message: "This endpoint is under review for compliance with knowledge base specification",
+        grantId: authGrant._id.toString(),
+        status: authGrant.grantDetails.status,
       },
-    });
+      { status: 501 } // Not Implemented
+    );
   } catch (error) {
-    console.error("Error generating QR code:", error);
+    console.error("Error in QR code generation endpoint:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -124,6 +64,10 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
 /**
  * POST /api/qr/[grantId]
  * Validate and process scanned QR code
+ *
+ * NOTE: This endpoint may not align with the knowledge base specification.
+ * According to the knowledge base, QR codes should only contain the digital identifier,
+ * and the authorization flow should go through /api/v1/authorizations/request
  */
 export async function POST(request: NextRequest, { params }: { params: { grantId: string } }) {
   try {
@@ -137,15 +81,17 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
       return NextResponse.json({ error: "Missing scannedData or scannedBy" }, { status: 400 });
     }
 
-    // Validate QR code data
-    const validatedQRData = QRCodeService.validateQRCodeData(scannedData);
-    if (!validatedQRData) {
-      return NextResponse.json({ error: "Invalid QR code data" }, { status: 400 });
-    }
-
-    // Verify grantId matches
-    if (validatedQRData.grantId !== grantId) {
-      return NextResponse.json({ error: "QR code grant ID does not match requested grant" }, { status: 400 });
+    // Try to validate as patient QR code (per knowledge base)
+    const patientQRData = QRCodeService.validatePatientQRCode(scannedData);
+    if (patientQRData) {
+      return NextResponse.json(
+        {
+          message: "This appears to be a patient QR code. Please use /api/v1/authorizations/request endpoint instead.",
+          digitalIdentifier: patientQRData.digitalIdentifier,
+          suggestedEndpoint: "/api/v1/authorizations/request",
+        },
+        { status: 400 }
+      );
     }
 
     // Find and validate the grant
@@ -173,20 +119,21 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
 
     // Log the access
     await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, authGrant.userId.toString(), {
-      action: "QR_CODE_SCANNED",
+      action: "QR_CODE_SCAN_ATTEMPTED",
       grantId: authGrant._id.toString(),
       scannedBy,
-      accessScope: Object.entries(authGrant.accessScope)
-        .filter(([_, value]) => value === true)
-        .map(([key, _]) => key),
-      organizationId: authGrant.organizationId.toString(),
+      note: "Endpoint under review for knowledge base compliance",
     });
+
+    // Generate JWT access token for this specific grant
+    const accessTokenData = QRCodeService.generateAccessToken(authGrant.userId.toString(), authGrant._id.toString());
 
     return NextResponse.json({
       success: true,
+      message: "Access token generated (endpoint under review for compliance)",
       data: {
-        grant: authGrant,
-        accessToken: QRCodeService.generateAccessToken(),
+        grantId: authGrant._id.toString(),
+        accessToken: accessTokenData,
         validUntil: authGrant.grantDetails.expiresAt,
         accessScope: authGrant.accessScope,
       },
