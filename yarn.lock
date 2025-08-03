@@ -823,6 +823,13 @@
   resolved "https://registry.npmjs.org/@types/d3-timer/-/d3-timer-3.0.2.tgz"
   integrity sha512-Ps3T8E8dZDam6fUyNiMkekK3XUsaUEik+idO9/YjPtfj2qruF8tFBXS7XhtE4iIXBLxhmLjP3SXpLhVf21I9Lw==
 
+"@types/mongoose@^5.11.96":
+  version "5.11.96"
+  resolved "https://registry.npmjs.org/@types/mongoose/-/mongoose-5.11.96.tgz"
+  integrity sha512-keiY22ljJtXyM7osgScmZOHV6eL5VFUD5tQumlu+hjS++HND5nM8jNEdj5CSWfKIJpVwQfPuwQ2SfBqUnCAVRw==
+  dependencies:
+    mongoose "*"
+
 "@types/node@^22":
   version "22.17.0"
   resolved "https://registry.npmjs.org/@types/node/-/node-22.17.0.tgz"
@@ -1472,7 +1479,7 @@ mongodb@~6.18.0:
     bson "^6.10.4"
     mongodb-connection-string-url "^3.0.0"
 
-mongoose@^8.17.0:
+mongoose@*, mongoose@^8.17.0:
   version "8.17.0"
   resolved "https://registry.npmjs.org/mongoose/-/mongoose-8.17.0.tgz"
   integrity sha512-mxW6TBPHViORfNYOFXCVOnT4d5aRr+CgDxTs1ViYXfuHzNpkelgJQrQa+Lz6hofoEQISnKlXv1L3ZnHyJRkhfA==

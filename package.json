@@ -7,7 +7,9 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "format": "prettier --write \"**/*.ts\" \"**/*.tsx\""
+    "format": "prettier --write \"**/*.ts\" \"**/*.tsx\"",
+    "db:health": "curl -s http://localhost:3000/api/health | jq",
+    "db:test": "node -e \"require('./lib/mongodb.ts').then(db => console.log('DB Connected:', db.connection.readyState === 1))\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -38,6 +40,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@types/mongoose": "^5.11.96",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
