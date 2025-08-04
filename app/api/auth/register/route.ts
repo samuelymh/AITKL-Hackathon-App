@@ -23,6 +23,8 @@ const RegisterSchema = z.object({
     .object({
       bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
       knownAllergies: z.array(z.string()).optional(),
+      smokingStatus: z.enum(["never", "current", "former"]).optional(),
+      additionalNotes: z.string().max(1000).optional(),
       emergencyContact: z
         .object({
           name: z.string().optional(),

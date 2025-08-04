@@ -8,6 +8,7 @@ import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/P
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
 import { AccessControl } from "@/components/patient/AccessControl";
+import { MedicalInformation } from "@/components/patient/MedicalInformation";
 
 function WelcomeCard() {
   const { user } = useAuth();
@@ -192,13 +193,25 @@ export default function DashboardPage() {
           </Card>
         </DoctorOrAdmin>
 
-        <PatientOnly>
+                <PatientOnly>
           {user && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <QRCodeManager user={user} className="xl:col-span-1" />
-              <div className="space-y-6">
-                <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
-                <AccessControl userId={user.digitalIdentifier || user.id} />
+            <div className="space-y-6">
+              {/* Medical Information Completion - Show first if incomplete */}
+              <MedicalInformation 
+                userId={user.digitalIdentifier || user.id} 
+              />
+              
+              {/* QR Code and Authorization Management */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <QRCodeManager user={user} className="xl:col-span-1" />
+                <div className="space-y-6">
+                  <AuthorizationRequests 
+                    userId={user.digitalIdentifier || user.id} 
+                  />
+                  <AccessControl 
+                    userId={user.digitalIdentifier || user.id} 
+                  />
+                </div>
               </div>
             </div>
           )}

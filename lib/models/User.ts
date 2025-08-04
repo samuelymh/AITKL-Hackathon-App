@@ -23,6 +23,8 @@ export interface IUser extends IBaseDocument {
   medicalInfo: {
     bloodType?: string;
     knownAllergies?: EncryptedFieldType[]; // Encrypted PHI
+    smokingStatus?: "never" | "current" | "former";
+    additionalNotes?: string;
     emergencyContact?: {
       name: EncryptedFieldType; // Encrypted PII
       phone: EncryptedFieldType; // Encrypted PII
@@ -141,6 +143,16 @@ const userSchemaFields = {
         maxlength: 100,
       },
     ],
+    smokingStatus: {
+      type: String,
+      enum: ["never", "current", "former"],
+      default: "never",
+    },
+    additionalNotes: {
+      type: String,
+      maxlength: 1000,
+      trim: true,
+    },
     emergencyContact: {
       name: {
         type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
