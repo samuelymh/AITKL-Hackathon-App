@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import {
-  generateToken,
-  generateRefreshToken,
-  verifyPassword,
-  AuthErrors,
-  UserRole,
-} from "@/lib/auth";
+import { generateToken, generateRefreshToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
 
@@ -26,9 +20,9 @@ async function loginHandler(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Find user by email
+      // Find user by searchableEmail for login
       const user = await User.findOne({
-        "personalInfo.contact.email": email,
+        "personalInfo.contact.searchableEmail": email.toLowerCase().trim(),
         auditDeletedDateTime: { $exists: false }, // Exclude soft-deleted users
       });
 
@@ -42,16 +36,11 @@ async function loginHandler(request: NextRequest) {
         user.auth?.accountLockedUntil &&
         new Date() < new Date(user.auth.accountLockedUntil)
       ) {
-        throw new Error(
-          "Account temporarily locked due to multiple failed login attempts",
-        );
+        throw new Error("Account temporarily locked due to multiple failed login attempts");
       }
 
       // Verify password
-      const isValidPassword = await verifyPassword(
-        password,
-        user.auth?.passwordHash || "",
-      );
+      const isValidPassword = await verifyPassword(password, user.auth?.passwordHash || "");
 
       if (!isValidPassword) {
         // Increment login attempts
@@ -61,9 +50,7 @@ async function loginHandler(request: NextRequest) {
           // Lock account after 5 failed attempts for 15 minutes
           if (user.auth.loginAttempts >= 5) {
             user.auth.accountLocked = true;
-            user.auth.accountLockedUntil = new Date(
-              Date.now() + 15 * 60 * 1000,
-            ); // 15 minutes
+            user.auth.accountLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
           }
 
           AuditHelper.applyAudit(user, "update", "system-login-attempt");
@@ -93,13 +80,10 @@ async function loginHandler(request: NextRequest) {
         tokenVersion: user.auth?.tokenVersion || 1,
       });
 
-      const refreshToken = generateRefreshToken(
-        user._id.toString(),
-        user.auth?.tokenVersion || 1,
-      );
+      const refreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
 
       return {
-        user: user.toPublicJSON(),
+        user: await user.toPublicJSON(),
         accessToken: token,
         refreshToken,
         tokenType: "Bearer",
@@ -109,18 +93,14 @@ async function loginHandler(request: NextRequest) {
     }, "User Login");
 
     if (!result.success) {
-      const status =
-        result.error?.includes("credentials") ||
-        result.error?.includes("locked")
-          ? 401
-          : 500;
+      const status = result.error?.includes("credentials") || result.error?.includes("locked") ? 401 : 500;
       return NextResponse.json(
         {
           success: false,
           error: result.error || "Login failed",
           timestamp: result.timestamp,
         },
-        { status },
+        { status }
       );
     }
 
@@ -140,7 +120,7 @@ async function loginHandler(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -150,7 +130,7 @@ async function loginHandler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Login failed",
         timestamp: new Date(),
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
