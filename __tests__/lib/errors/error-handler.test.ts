@@ -109,14 +109,14 @@ describe("ErrorHandler", () => {
         value: "development",
         writable: true,
       });
-      
+
       const genericError = new Error("Something went wrong");
 
       const result = ErrorHandler.handleError(genericError);
 
       expect(result.error).toBe("Something went wrong");
       expect(result.statusCode).toBe(500);
-      
+
       // Restore original NODE_ENV
       if (originalDescriptor) {
         Object.defineProperty(process.env, "NODE_ENV", originalDescriptor);
