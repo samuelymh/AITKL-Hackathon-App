@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useAIAnalysis } from "@/hooks/use-ai-analysis";
+import AIDocumentAnalysis from "./ai-document-analysis";
+import { DocumentAnalysis } from "@/lib/services/gemini-service";
 
 import {
   ArrowLeft,
@@ -18,6 +21,7 @@ import {
   Activity,
   X,
   Loader2,
+  Brain,
 } from "lucide-react";
 
 interface UploadDocsProps {
@@ -80,6 +84,13 @@ export default function UploadDocs({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  const {
+    isAnalyzing,
+    analysis: aiAnalysis,
+    showAnalysis,
+    analyzeDocuments,
+  } = useAIAnalysis({ userId });
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -99,6 +110,10 @@ export default function UploadDocs({
   const handleShareSummary = () => {
     // This would generate a QR code for the care summary
     alert("QR code generated for care summary sharing!");
+  };
+
+  const handleAnalyzeDocuments = async () => {
+    await analyzeDocuments(uploadedFiles.map(file => file.id));
   };
 
   const uploadFile = async (file: File) => {
@@ -350,6 +365,38 @@ export default function UploadDocs({
                   </div>
                 </div>
               ))}
+              
+              {/* AI Analysis Button */}
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-purple-600" />
+                      AI Document Analysis
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Get AI-powered insights from your medical documents
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleAnalyzeDocuments}
+                    disabled={isAnalyzing}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4 mr-2" />
+                        Analyze Documents
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -366,111 +413,6 @@ export default function UploadDocs({
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Key Findings */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-600" />
-                    Key Findings
-                  </h4>
-                  <div className="grid gap-3">
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Hypertension Detected</p>
-                          <p className="text-xs text-gray-600">Blood pressure readings consistently above 140/90 mmHg</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Elevated Cholesterol</p>
-                          <p className="text-xs text-gray-600">LDL levels at 160 mg/dL, above recommended range</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Normal Kidney Function</p>
-                          <p className="text-xs text-gray-600">Creatinine levels within normal range (0.7-1.3 mg/dL)</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recommendations */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Pill className="w-4 h-4 text-blue-600" />
-                    AI Recommendations
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-purple-600">1</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Schedule Follow-up Appointment</p>
-                        <p className="text-xs text-gray-600">Recommended within 2-4 weeks to monitor blood pressure</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-purple-600">2</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Lifestyle Modifications</p>
-                        <p className="text-xs text-gray-600">Reduce sodium intake, increase physical activity, consider DASH diet</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-purple-600">3</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Medication Review</p>
-                        <p className="text-xs text-gray-600">Current Lisinopril dosage appears effective, continue as prescribed</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Risk Assessment */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-red-600" />
-                    Risk Assessment
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 bg-red-50 rounded-lg border border-red-200 text-center">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-xs font-bold text-red-600">H</span>
-                      </div>
-                      <p className="text-xs font-medium text-gray-900">High Risk</p>
-                      <p className="text-xs text-gray-600">Cardiovascular</p>
-                    </div>
-                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-xs font-bold text-yellow-600">M</span>
-                      </div>
-                      <p className="text-xs font-medium text-gray-900">Medium Risk</p>
-                      <p className="text-xs text-gray-600">Diabetes</p>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200 text-center">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <span className="text-xs font-bold text-green-600">L</span>
-                      </div>
-                      <p className="text-xs font-medium text-gray-900">Low Risk</p>
-                      <p className="text-xs text-gray-600">Kidney Disease</p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Document Summary */}
                 <div className="space-y-3">
                   <h4 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -491,6 +433,15 @@ export default function UploadDocs({
           )}
         </CardContent>
       </Card>
+
+      {/* AI Document Analysis Results */}
+      {showAnalysis && aiAnalysis && (
+        <AIDocumentAnalysis
+          analysis={aiAnalysis}
+          documentsAnalyzed={uploadedFiles.length}
+          onRefresh={handleAnalyzeDocuments}
+        />
+      )}
 
       {/* AI-Generated Care Timeline */}
       {showTimeline && (
@@ -534,15 +485,6 @@ export default function UploadDocs({
               })}
             </CardContent>
           </Card>
-
-          {/* Share Summary Button */}
-          <Button
-            onClick={handleShareSummary}
-            className="w-full bg-blue-600 hover:bg-blue-700 h-12"
-          >
-            <Share2 className="w-5 h-5 mr-2" />
-            Share Summary as QR Code
-          </Button>
         </>
       )}
     </div>
