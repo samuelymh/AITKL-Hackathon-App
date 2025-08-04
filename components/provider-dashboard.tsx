@@ -1,350 +1,372 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building2, Users, Clock, CheckCircle, Eye } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { QrCode, FileText, CheckCircle, XCircle, ArrowRight, RotateCcw, UserCheck, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
 import QRScanner from "@/components/qr-scanner";
-import AuthorizationRequest from "@/components/authorization-request";
+
+interface AuthorizationRequestData {
+  grantId: string;
+  status: string;
+  expiresAt: string;
+  patient: {
+    name: string;
+    digitalIdentifier: string;
+  };
+  organization: {
+    name: string;
+    type: string;
+  };
+  accessScope: {
+    canViewMedicalHistory: boolean;
+    canViewPrescriptions: boolean;
+    canCreateEncounters: boolean;
+    canViewAuditLogs: boolean;
+  };
+  timeWindowHours: number;
+}
 
 interface ProviderDashboardProps {
-  readonly organizationId: string;
-  readonly userId: string; // Healthcare provider user ID
-  readonly userName?: string;
-  readonly className?: string;
+  organizationId: string;
+  practitionerId?: string;
+  organizationName?: string;
+  organizationType?: string;
 }
 
-interface QRCodeData {
-  type: string;
-  digitalIdentifier: string;
-  patientName?: string;
-  issuedAt: string;
-  expiresAt?: string;
-  version: string;
-}
+export function ProviderDashboard({
+  organizationId,
+  practitionerId,
+  organizationName = "Healthcare Organization",
+  organizationType = "Hospital",
+}: Readonly<ProviderDashboardProps>) {
+  const [recentRequests, setRecentRequests] = useState<
+    AuthorizationRequestData[]
+  >([]);
+  const [activeTab, setActiveTab] = useState("scan");
 
-type WorkflowStep = "scan" | "request" | "completed";
+  const handleAuthorizationCreated = (data: AuthorizationRequestData) => {
+    setRecentRequests((prev) => [data, ...prev.slice(0, 9)]); // Keep last 10 requests
 
-interface CompletedRequest {
-  requestId: string;
-  patientId: string;
-  timestamp: Date;
-  status: "pending" | "approved" | "denied";
-}
-
-export function ProviderDashboard({ organizationId, userId, userName, className }: ProviderDashboardProps) {
-  const [currentStep, setCurrentStep] = useState<WorkflowStep>("scan");
-  const [scannedQRData, setScannedQRData] = useState<QRCodeData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [completedRequest, setCompletedRequest] = useState<CompletedRequest | null>(null);
-
-  const handleScanSuccess = (qrData: QRCodeData) => {
-    setScannedQRData(qrData);
-    setError(null);
-    setCurrentStep("request");
+    // Show success notification and switch to requests tab
+    setTimeout(() => {
+      setActiveTab("requests");
+    }, 2000);
   };
 
-  const handleScanError = (errorMessage: string) => {
-    setError(errorMessage);
-    setScannedQRData(null);
+  const handleScanError = (error: string) => {
+    console.error("QR Scan Error:", error);
+    // Handle error display
   };
 
-  const handleRequestSuccess = (requestId: string) => {
-    const request: CompletedRequest = {
-      requestId,
-      patientId: scannedQRData?.digitalIdentifier || "",
-      timestamp: new Date(),
-      status: "pending",
-    };
-    setCompletedRequest(request);
-    setCurrentStep("completed");
-    setError(null);
-  };
-
-  const handleRequestError = (errorMessage: string) => {
-    setError(errorMessage);
-  };
-
-  const resetWorkflow = () => {
-    setCurrentStep("scan");
-    setScannedQRData(null);
-    setError(null);
-    setCompletedRequest(null);
-  };
-
-  const getStepStatus = (step: WorkflowStep) => {
-    if (currentStep === step) return "current";
-    if (
-      (step === "scan" && (currentStep === "request" || currentStep === "completed")) ||
-      (step === "request" && currentStep === "completed")
-    ) {
-      return "completed";
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
+            Pending
+          </Badge>
+        );
+      case "ACTIVE":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Active
+          </Badge>
+        );
+      case "EXPIRED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-gray-50 text-gray-700 border-gray-200"
+          >
+            Expired
+          </Badge>
+        );
+      case "REVOKED":
+        return (
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
+            Revoked
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
-    return "upcoming";
   };
 
-  const getStepClassName = (step: WorkflowStep): string => {
-    const status = getStepStatus(step);
-    if (status === "completed") return "bg-green-500 text-white";
-    if (status === "current") return "bg-primary text-primary-foreground";
-    return "bg-muted text-muted-foreground";
+  const formatPermissions = (
+    accessScope: AuthorizationRequestData["accessScope"],
+  ) => {
+    const permissions = [];
+    if (accessScope.canViewMedicalHistory) permissions.push("Medical History");
+    if (accessScope.canViewPrescriptions) permissions.push("Prescriptions");
+    if (accessScope.canCreateEncounters) permissions.push("Create Encounters");
+    if (accessScope.canViewAuditLogs) permissions.push("Audit Logs");
+    return permissions;
   };
 
   return (
-    <div className={cn("w-full max-w-4xl mx-auto space-y-6", className)}>
+    <div className="container mx-auto p-6 max-w-6xl">
       {/* Header */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5" />
-            Patient Access Request System
-          </CardTitle>
-          <CardDescription>
-            Scan patient QR code and request access to health records
-            {userName && (
-              <span className="block mt-1 text-xs">
-                Logged in as: <span className="font-medium">{userName}</span>
-              </span>
-            )}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      {/* Progress Steps */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            {/* Step 1: Scan QR Code */}
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                  getStepClassName("scan")
-                )}
-              >
-                {getStepStatus("scan") === "completed" ? (
-                  <CheckCircle className="w-4 h-4" />
-                ) : (
-                  <QrCode className="w-4 h-4" />
-                )}
-              </div>
-              <div className="text-sm">
-                <div className="font-medium">Scan QR Code</div>
-                <div className="text-muted-foreground">Capture patient identifier</div>
-              </div>
-            </div>
-
-            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-
-            {/* Step 2: Create Request */}
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                  getStepClassName("request")
-                )}
-              >
-                {getStepStatus("request") === "completed" ? (
-                  <CheckCircle className="w-4 h-4" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-              </div>
-              <div className="text-sm">
-                <div className="font-medium">Create Request</div>
-                <div className="text-muted-foreground">Specify access needs</div>
-              </div>
-            </div>
-
-            <ArrowRight className="w-4 h-4 text-muted-foreground" />
-
-            {/* Step 3: Awaiting Approval */}
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                  getStepStatus("completed") === "current"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                <Clock className="w-4 h-4" />
-              </div>
-              <div className="text-sm">
-                <div className="font-medium">Patient Approval</div>
-                <div className="text-muted-foreground">Awaiting response</div>
-              </div>
-            </div>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <Building2 className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">{organizationName}</h1>
+            <p className="text-muted-foreground">
+              {organizationType} Provider Portal
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Error Display */}
-      {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        </div>
+      </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Current Step */}
-        <div className="space-y-4">
-          {currentStep === "scan" && (
-            <QRScanner
-              onScanSuccess={handleScanSuccess}
-              onScanError={handleScanError}
-              organizationId={organizationId}
-              requestedBy={userId}
-            />
-          )}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="scan" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            QR Scanner
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Authorization Requests
+            {recentRequests.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {recentRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Active Access
+          </TabsTrigger>
+        </TabsList>
 
-          {currentStep === "request" && scannedQRData && (
-            <AuthorizationRequest
-              scannedQRData={scannedQRData}
-              organizationId={organizationId}
-              requestedBy={userId}
-              onRequestSuccess={handleRequestSuccess}
-              onRequestError={handleRequestError}
-            />
-          )}
+        {/* QR Scanner Tab */}
+        <TabsContent value="scan" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* QR Scanner */}
+            <div className="md:col-span-1">
+              <QRScanner
+                organizationId={organizationId}
+                requestingPractitionerId={practitionerId}
+                onAuthorizationCreated={handleAuthorizationCreated}
+                onError={handleScanError}
+              />
+            </div>
 
-          {currentStep === "completed" && completedRequest && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  Request Submitted Successfully
-                </CardTitle>
-                <CardDescription>Authorization request has been sent to the patient</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Request ID:</span>
-                    <code className="text-xs bg-background px-2 py-1 rounded">{completedRequest.requestId}</code>
+            {/* Instructions */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>How to Use</CardTitle>
+                  <CardDescription>
+                    Follow these steps to request patient access
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm flex items-center justify-center font-semibold">
+                        1
+                      </div>
+                      <div>
+                        <p className="font-medium">Ask Patient for QR Code</p>
+                        <p className="text-sm text-muted-foreground">
+                          Patient opens their health app and displays their QR
+                          code
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm flex items-center justify-center font-semibold">
+                        2
+                      </div>
+                      <div>
+                        <p className="font-medium">Scan QR Code</p>
+                        <p className="text-sm text-muted-foreground">
+                          Click "Start Camera" and position the QR code in the
+                          frame
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm flex items-center justify-center font-semibold">
+                        3
+                      </div>
+                      <div>
+                        <p className="font-medium">Wait for Patient Approval</p>
+                        <p className="text-sm text-muted-foreground">
+                          Patient receives notification and approves access
+                          request
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm flex items-center justify-center font-semibold">
+                        4
+                      </div>
+                      <div>
+                        <p className="font-medium">Access Patient Records</p>
+                        <p className="text-sm text-muted-foreground">
+                          Once approved, access patient data according to
+                          granted permissions
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Status:</span>
-                    <Badge variant="outline" className="bg-yellow-50 border-yellow-200 text-yellow-800">
-                      Pending Patient Approval
-                    </Badge>
+
+                  <Separator />
+
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-700 font-medium">
+                      Security Note
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      All access requests are encrypted and logged. Patient
+                      approval is required for each session.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Submitted:</span>
-                    <span className="text-sm text-muted-foreground">{completedRequest.timestamp.toLocaleString()}</span>
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
-                <Separator />
-
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    The patient will receive a notification about your access request. You will be notified via email
-                    and in-app notification once they respond.
-                  </p>
-                </div>
-
-                <Button onClick={resetWorkflow} variant="outline" className="w-full">
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Process Another Patient
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Right Column - Context/History */}
-        <div className="space-y-4">
-          {/* Current QR Data Display (when available) */}
-          {scannedQRData && currentStep !== "scan" && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Scanned Patient Data</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Digital ID:</span>
-                  <code className="text-xs bg-muted px-1 rounded">
-                    {scannedQRData.digitalIdentifier.substring(0, 12)}...
-                  </code>
-                </div>
-                {scannedQRData.patientName && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Patient:</span>
-                    <span>{scannedQRData.patientName}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">QR Issued:</span>
-                  <span>{new Date(scannedQRData.issuedAt).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Instructions */}
+        {/* Authorization Requests Tab */}
+        <TabsContent value="requests" className="space-y-6">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Instructions</CardTitle>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Authorization Requests
+              </CardTitle>
+              <CardDescription>
+                Track the status of your recent patient access requests
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              {currentStep === "scan" && (
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Ask the patient to display their QR code</li>
-                  <li>Click "Start Scanning" to activate camera</li>
-                  <li>Position the QR code within the frame</li>
-                  <li>Wait for automatic recognition</li>
-                </ol>
-              )}
-
-              {currentStep === "request" && (
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Specify the purpose of access request</li>
-                  <li>Select appropriate urgency level</li>
-                  <li>Choose required permissions</li>
-                  <li>Set request expiry time</li>
-                  <li>Submit the authorization request</li>
-                </ol>
-              )}
-
-              {currentStep === "completed" && (
-                <div className="space-y-2">
-                  <p>
-                    <strong>Next Steps:</strong>
+            <CardContent>
+              {recentRequests.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No authorization requests yet</p>
+                  <p className="text-sm">
+                    Scan a patient QR code to get started
                   </p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Patient will receive notification</li>
-                    <li>You'll get email when they respond</li>
-                    <li>Check notifications for real-time updates</li>
-                    <li>Access granted records in patient portal</li>
-                  </ul>
                 </div>
+              ) : (
+                <ScrollArea className="h-96">
+                  <div className="space-y-4">
+                    {recentRequests.map((request, index) => (
+                      <div
+                        key={request.grantId}
+                        className="border rounded-lg p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold">
+                              {request.patient.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              ID: {request.patient.digitalIdentifier}
+                            </p>
+                          </div>
+                          {getStatusBadge(request.status)}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Grant ID</p>
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {request.grantId}
+                            </code>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Duration</p>
+                            <p>{request.timeWindowHours}h</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Requested Permissions
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {formatPermissions(request.accessScope).map(
+                              (permission) => (
+                                <Badge
+                                  key={permission}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {permission}
+                                </Badge>
+                              ),
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground">
+                          Expires:{" "}
+                          {new Date(request.expiresAt).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Quick Actions */}
-          {currentStep !== "scan" && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={resetWorkflow} variant="outline" size="sm" className="w-full">
-                  <RotateCcw className="h-3 w-3 mr-2" />
-                  Start Over
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+        {/* Active Access Tab */}
+        <TabsContent value="active" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Active Patient Access
+              </CardTitle>
+              <CardDescription>
+                Currently active authorization grants
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No active access sessions</p>
+                <p className="text-sm">
+                  Approved authorization requests will appear here
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

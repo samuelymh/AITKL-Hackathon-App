@@ -64,7 +64,8 @@ async function validateEncryptedUserModel() {
     const emailMatch = foundUser.personalInfo.contact.email === testUserData.personalInfo.contact.email;
     const phoneMatch = foundUser.personalInfo.contact.phone === testUserData.personalInfo.contact.phone;
     const nameMatch =
-      foundUser.getFullName() === `${testUserData.personalInfo.firstName} ${testUserData.personalInfo.lastName}`;
+      (await foundUser.getFullName()) ===
+      `${testUserData.personalInfo.firstName} ${testUserData.personalInfo.lastName}`;
 
     if (emailMatch && phoneMatch && nameMatch) {
       console.log("✅ Data integrity verified - all fields match");
@@ -94,7 +95,7 @@ async function validateEncryptedUserModel() {
 
     // Test public JSON conversion
     console.log("\n📄 Testing public JSON conversion...");
-    const publicData = foundUser.toPublicJSON();
+    const publicData = await foundUser.toPublicJSON();
     console.log("✅ Public JSON created successfully");
     console.log(`   Public name: ${publicData.name}`);
     console.log(`   Has emergency contact: ${publicData.hasEmergencyContact}`);

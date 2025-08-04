@@ -88,7 +88,7 @@ const TokenSchema = new Schema<ITokenDocument>(
   {
     timestamps: false, // We manage our own timestamps
     versionKey: false,
-  }
+  },
 );
 
 // Compound indexes for efficient queries

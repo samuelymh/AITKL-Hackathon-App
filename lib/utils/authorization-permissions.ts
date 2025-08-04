@@ -11,7 +11,7 @@ export class AuthorizationPermissions {
   static async canRequestGrant(
     practitionerId: string,
     organizationId: string,
-    accessScope: string[]
+    accessScope: string[],
   ): Promise<{ allowed: boolean; error?: string }> {
     const practitioner = await Practitioner.findById(practitionerId);
 
@@ -36,17 +36,24 @@ export class AuthorizationPermissions {
     }
 
     // Validate access scope permissions using centralized permission mapper
-    const validation = PermissionMapper.validateAccessScopes(practitioner, accessScope);
+    const validation = PermissionMapper.validateAccessScopes(
+      practitioner,
+      accessScope,
+    );
 
     if (!validation.valid) {
       const errors = [];
 
       if (validation.invalidScopes.length > 0) {
-        errors.push(`Invalid access scopes: ${validation.invalidScopes.join(", ")}`);
+        errors.push(
+          `Invalid access scopes: ${validation.invalidScopes.join(", ")}`,
+        );
       }
 
       if (validation.missingPermissions.length > 0) {
-        errors.push(`Missing permissions for scopes: ${validation.missingPermissions.join(", ")}`);
+        errors.push(
+          `Missing permissions for scopes: ${validation.missingPermissions.join(", ")}`,
+        );
       }
 
       return {
@@ -64,7 +71,7 @@ export class AuthorizationPermissions {
   static async canPerformAction(
     practitionerId: string,
     action: "approve" | "deny" | "revoke",
-    grantOrganizationId: string
+    grantOrganizationId: string,
   ): Promise<{ allowed: boolean; error?: string }> {
     const practitioner = await Practitioner.findById(practitionerId);
 
@@ -81,7 +88,10 @@ export class AuthorizationPermissions {
     }
 
     // Validate grant action permission using centralized permission mapper
-    const validation = PermissionMapper.validateGrantAction(practitioner, action);
+    const validation = PermissionMapper.validateGrantAction(
+      practitioner,
+      action,
+    );
 
     if (!validation.allowed) {
       return validation;
@@ -95,7 +105,9 @@ export class AuthorizationPermissions {
  * Grant state transition utilities
  */
 export class GrantStateManager {
-  private static readonly ALLOWED_TRANSITIONS: { [key: string]: { [key: string]: string } } = {
+  private static readonly ALLOWED_TRANSITIONS: {
+    [key: string]: { [key: string]: string };
+  } = {
     PENDING: { approve: "ACTIVE", deny: "REVOKED" },
     ACTIVE: { revoke: "REVOKED" },
   };

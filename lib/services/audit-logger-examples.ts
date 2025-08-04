@@ -28,7 +28,7 @@ export async function enhancedLoginRoute(request: NextRequest) {
       SecurityEventType.LOGIN_SUCCESS, // Will be updated to FAILURE if login fails
       request,
       undefined, // userId not known yet
-      { email, loginMethod: "password" }
+      { email, loginMethod: "password" },
     );
 
     // Your existing login logic here...
@@ -40,12 +40,17 @@ export async function enhancedLoginRoute(request: NextRequest) {
 
     if (loginSuccessful) {
       // Log successful login
-      await auditLogger.logSecurityEvent(SecurityEventType.LOGIN_SUCCESS, request, user.id, {
-        email,
-        role: user.role,
-        loginMethod: "password",
-        duration: Date.now() - startTime,
-      });
+      await auditLogger.logSecurityEvent(
+        SecurityEventType.LOGIN_SUCCESS,
+        request,
+        user.id,
+        {
+          email,
+          role: user.role,
+          loginMethod: "password",
+          duration: Date.now() - startTime,
+        },
+      );
 
       // Also log as API request
       await auditLogger.logFromRequest(
@@ -54,7 +59,7 @@ export async function enhancedLoginRoute(request: NextRequest) {
         "LOGIN",
         "auth",
         { userId: user.id, role: user.role },
-        Date.now() - startTime
+        Date.now() - startTime,
       );
 
       return NextResponse.json({
@@ -66,18 +71,23 @@ export async function enhancedLoginRoute(request: NextRequest) {
       errorMessage = "Invalid credentials";
 
       // Log failed login
-      await auditLogger.logSecurityEvent(SecurityEventType.LOGIN_FAILURE, request, undefined, {
-        email,
-        reason: "invalid_credentials",
-        duration: Date.now() - startTime,
-      });
+      await auditLogger.logSecurityEvent(
+        SecurityEventType.LOGIN_FAILURE,
+        request,
+        undefined,
+        {
+          email,
+          reason: "invalid_credentials",
+          duration: Date.now() - startTime,
+        },
+      );
 
       return NextResponse.json(
         {
           success: false,
           error: errorMessage,
         },
-        { status: statusCode }
+        { status: statusCode },
       );
     }
   } catch (error) {
@@ -92,7 +102,7 @@ export async function enhancedLoginRoute(request: NextRequest) {
       "auth",
       { error: errorMessage },
       Date.now() - startTime,
-      errorMessage
+      errorMessage,
     );
 
     return NextResponse.json(
@@ -100,7 +110,7 @@ export async function enhancedLoginRoute(request: NextRequest) {
         success: false,
         error: errorMessage,
       },
-      { status: statusCode }
+      { status: statusCode },
     );
   }
 }
@@ -165,7 +175,14 @@ export async function enhancedUserRoute(request: NextRequest) {
     }
 
     // Log the API request
-    await auditLogger.logFromRequest(request, statusCode, action, "users", auditDetails, Date.now() - startTime);
+    await auditLogger.logFromRequest(
+      request,
+      statusCode,
+      action,
+      "users",
+      auditDetails,
+      Date.now() - startTime,
+    );
 
     // If this is a data modification, log it as such
     if (["POST", "PUT", "DELETE"].includes(method)) {
@@ -177,7 +194,7 @@ export async function enhancedUserRoute(request: NextRequest) {
           action,
           resource: "users",
           details: auditDetails,
-        }
+        },
       );
     }
 
@@ -196,7 +213,7 @@ export async function enhancedUserRoute(request: NextRequest) {
       "users",
       { error: errorMessage },
       Date.now() - startTime,
-      errorMessage
+      errorMessage,
     );
 
     return NextResponse.json(
@@ -204,7 +221,7 @@ export async function enhancedUserRoute(request: NextRequest) {
         success: false,
         error: errorMessage,
       },
-      { status: statusCode }
+      { status: statusCode },
     );
   }
 }
@@ -218,7 +235,7 @@ export function withAuditLogging(
     resource: string;
     action?: string;
     logSecurity?: boolean;
-  }
+  },
 ) {
   return async (request: NextRequest): Promise<NextResponse> => {
     const startTime = Date.now();
@@ -240,7 +257,7 @@ export function withAuditLogging(
           responseHeaders: Object.fromEntries(response.headers.entries()),
           contentLength: response.headers.get("content-length"),
         },
-        Date.now() - startTime
+        Date.now() - startTime,
       );
 
       // Log security events if required
@@ -253,13 +270,14 @@ export function withAuditLogging(
             resource: options.resource,
             action: options.action || request.method,
             statusCode: response.status,
-          }
+          },
         );
       }
 
       return response;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
 
       // Log the error
       await auditLogger.logFromRequest(
@@ -269,7 +287,7 @@ export function withAuditLogging(
         options.resource,
         { error: errorMessage },
         Date.now() - startTime,
-        errorMessage
+        errorMessage,
       );
 
       return NextResponse.json(
@@ -277,7 +295,7 @@ export function withAuditLogging(
           success: false,
           error: errorMessage,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   };
@@ -306,9 +324,13 @@ export async function getAuditLogsForDashboard(request: NextRequest) {
     const action = url.searchParams.get("action") || undefined;
     const resource = url.searchParams.get("resource") || undefined;
 
-    const startDate = url.searchParams.get("startDate") ? new Date(url.searchParams.get("startDate")!) : undefined;
+    const startDate = url.searchParams.get("startDate")
+      ? new Date(url.searchParams.get("startDate")!)
+      : undefined;
 
-    const endDate = url.searchParams.get("endDate") ? new Date(url.searchParams.get("endDate")!) : undefined;
+    const endDate = url.searchParams.get("endDate")
+      ? new Date(url.searchParams.get("endDate")!)
+      : undefined;
 
     const result = await auditLogger.queryLogs({
       page,
@@ -321,17 +343,24 @@ export async function getAuditLogsForDashboard(request: NextRequest) {
     });
 
     // Log this audit query itself
-    await auditLogger.logFromRequest(request, 200, "QUERY_AUDIT_LOGS", "audit", {
-      filters: { userId, action, resource, startDate, endDate },
-      resultsCount: result.logs.length,
-    });
+    await auditLogger.logFromRequest(
+      request,
+      200,
+      "QUERY_AUDIT_LOGS",
+      "audit",
+      {
+        filters: { userId, action, resource, startDate, endDate },
+        resultsCount: result.logs.length,
+      },
+    );
 
     return NextResponse.json({
       success: true,
       data: result,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     await auditLogger.logFromRequest(
       request,
@@ -340,7 +369,7 @@ export async function getAuditLogsForDashboard(request: NextRequest) {
       "audit",
       { error: errorMessage },
       0,
-      errorMessage
+      errorMessage,
     );
 
     return NextResponse.json(
@@ -348,7 +377,7 @@ export async function getAuditLogsForDashboard(request: NextRequest) {
         success: false,
         error: errorMessage,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

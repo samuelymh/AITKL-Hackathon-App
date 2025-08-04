@@ -18,7 +18,11 @@ describe("ErrorHandler", () => {
         name: "ZodError",
         errors: [
           { path: ["userId"], message: "Required", code: "invalid_type" },
-          { path: ["organizationId"], message: "Required", code: "invalid_type" },
+          {
+            path: ["organizationId"],
+            message: "Required",
+            code: "invalid_type",
+          },
         ],
       };
 
@@ -82,7 +86,10 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle ValidationError", () => {
-      const validationError = new ValidationError("Validation failed", { field: "userId", issue: "required" });
+      const validationError = new ValidationError("Validation failed", {
+        field: "userId",
+        issue: "required",
+      });
 
       const result = ErrorHandler.handleError(validationError);
 
@@ -92,12 +99,23 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle generic errors", () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+      });
+
       const genericError = new Error("Something went wrong");
 
       const result = ErrorHandler.handleError(genericError);
 
       expect(result.error).toBe("Something went wrong");
       expect(result.statusCode).toBe(500);
+
+      // Restore original NODE_ENV
+      if (originalDescriptor) {
+        Object.defineProperty(process.env, "NODE_ENV", originalDescriptor);
+      }
     });
   });
 

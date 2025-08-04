@@ -1,4 +1,7 @@
-import { TokenStorageService, TokenStorageConfig } from "../services/token-storage-service";
+import {
+  TokenStorageService,
+  TokenStorageConfig,
+} from "../services/token-storage-service";
 
 /**
  * Service initialization configuration
@@ -47,7 +50,10 @@ export class ServiceConfigManager {
   /**
    * Initialize all services with environment-specific configuration
    */
-  static initialize(config?: Partial<ServiceConfig>, environment?: string): void {
+  static initialize(
+    config?: Partial<ServiceConfig>,
+    environment?: string,
+  ): void {
     if (this.isInitialized) {
       console.warn("ServiceConfigManager: Services already initialized");
       return;
@@ -69,7 +75,9 @@ export class ServiceConfigManager {
     TokenStorageService.initialize(this.currentConfig.tokenStorage);
 
     this.isInitialized = true;
-    console.log(`ServiceConfigManager: Initialized services for ${env} environment`);
+    console.log(
+      `ServiceConfigManager: Initialized services for ${env} environment`,
+    );
   }
 
   /**

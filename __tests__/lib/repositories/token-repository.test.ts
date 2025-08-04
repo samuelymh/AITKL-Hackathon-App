@@ -17,7 +17,8 @@ jest.mock("../../../lib/models/Token", () => ({
   },
 }));
 
-const extractTokenValues = (tokens: StoredToken[]): string[] => tokens.map((t) => t.token);
+const extractTokenValues = (tokens: StoredToken[]): string[] =>
+  tokens.map((t) => t.token);
 
 describe("Token Repositories", () => {
   const mockToken = "test-token-12345";
@@ -25,7 +26,9 @@ describe("Token Repositories", () => {
   const mockUserId = "507f1f77bcf86cd799439012";
   const mockOrganizationId = "507f1f77bcf86cd799439013";
 
-  const createMockStoredToken = (overrides: Partial<StoredToken> = {}): StoredToken => ({
+  const createMockStoredToken = (
+    overrides: Partial<StoredToken> = {},
+  ): StoredToken => ({
     token: mockToken,
     grantId: mockGrantId,
     userId: mockUserId,
@@ -103,7 +106,11 @@ describe("Token Repositories", () => {
         const token = createMockStoredToken();
         await repository.storeToken(token);
 
-        const result = await repository.revokeToken(mockToken, "admin", "test revocation");
+        const result = await repository.revokeToken(
+          mockToken,
+          "admin",
+          "test revocation",
+        );
 
         expect(result).toBe(true);
 
@@ -131,7 +138,10 @@ describe("Token Repositories", () => {
         await repository.storeToken(token2);
         await repository.storeToken(token3);
 
-        const revokedCount = await repository.revokeTokensForGrant(mockGrantId, "admin");
+        const revokedCount = await repository.revokeTokensForGrant(
+          mockGrantId,
+          "admin",
+        );
 
         expect(revokedCount).toBe(2);
 
@@ -159,7 +169,10 @@ describe("Token Repositories", () => {
         await repository.storeToken(token2);
         await repository.storeToken(token3);
 
-        const revokedCount = await repository.revokeTokensForUser(mockUserId, "admin");
+        const revokedCount = await repository.revokeTokensForUser(
+          mockUserId,
+          "admin",
+        );
 
         expect(revokedCount).toBe(2);
 
@@ -223,7 +236,10 @@ describe("Token Repositories", () => {
 
     describe("getTokenStats", () => {
       it("should return accurate token statistics", async () => {
-        const activeToken = createMockStoredToken({ token: "active", tokenType: "access" });
+        const activeToken = createMockStoredToken({
+          token: "active",
+          tokenType: "access",
+        });
         const revokedToken = createMockStoredToken({
           token: "revoked",
           tokenType: "qr",

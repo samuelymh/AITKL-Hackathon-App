@@ -68,23 +68,6 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     if (savedToken && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-
-        // Check if any of the user fields contain encrypted objects
-        const hasEncryptedFields =
-          (typeof parsedUser.firstName === "object" && parsedUser.firstName?.data) ||
-          (typeof parsedUser.lastName === "object" && parsedUser.lastName?.data) ||
-          (typeof parsedUser.email === "object" && parsedUser.email?.data) ||
-          (typeof parsedUser.phone === "object" && parsedUser.phone?.data);
-
-        if (hasEncryptedFields) {
-          console.warn("Encrypted user data found in localStorage, clearing...");
-          localStorage.removeItem("auth-token");
-          localStorage.removeItem("auth-refresh-token");
-          localStorage.removeItem("auth-user");
-          setIsLoading(false);
-          return;
-        }
-
         // Ensure user has a valid role property and phone number
         const userWithRole = {
           ...parsedUser,
@@ -155,20 +138,44 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
     const { data } = await response.json();
 
-    // Update tokens
+    // Ensure user has a valid role property and phone number
+    const userWithRole = {
+      ...data.user,
+      role: data.user.role || "patient",
+      phone: data.user.phone || "",
+    };
+
+    // Update tokens and user data
     setToken(data.accessToken);
     setRefreshToken(data.refreshToken);
+    setUser(userWithRole); // Update user data from refresh response
     localStorage.setItem("auth-token", data.accessToken);
     localStorage.setItem("auth-refresh-token", data.refreshToken);
+    localStorage.setItem("auth-user", JSON.stringify(userWithRole));
   };
 
   const logout = () => {
+    // Clear all state
     setUser(null);
     setToken(null);
     setRefreshToken(null);
-    localStorage.removeItem("auth-token");
-    localStorage.removeItem("auth-refresh-token");
-    localStorage.removeItem("auth-user");
+
+    // Clear localStorage with error handling
+    try {
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("auth-refresh-token");
+      localStorage.removeItem("auth-user");
+
+      // Also clear any potential legacy keys if they exist
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+    } catch (error) {
+      console.error("Error clearing localStorage during logout:", error);
+      // Even if localStorage fails, continue with logout
+    }
+
+    // Redirect to login page
     router.push("/login");
   };
 

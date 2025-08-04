@@ -75,7 +75,7 @@ export async function processBatch<T, R>(
   items: T[],
   processor: (item: T) => Promise<R>,
   batchSize: number = 10,
-  concurrency: number = 5
+  concurrency: number = 5,
 ): Promise<R[]> {
   const results: R[] = [];
   const semaphore = new Semaphore(concurrency);
@@ -89,7 +89,7 @@ export async function processBatch<T, R>(
         } finally {
           semaphore.release();
         }
-      })
+      }),
     );
 
     const batchResults = await Promise.all(batchPromises);
@@ -139,7 +139,7 @@ export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
   baseDelay: number = 1000,
-  maxDelay: number = 10000
+  maxDelay: number = 10000,
 ): Promise<T> {
   let lastError: Error | undefined;
 
@@ -154,7 +154,10 @@ export async function retryWithBackoff<T>(
       }
 
       const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
-      console.warn(`Operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, error);
+      console.warn(
+        `Operation failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
+        error,
+      );
 
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -206,7 +209,9 @@ export class PerformanceTimer {
 
   checkpoint(checkpointLabel: string): void {
     const duration = performance.now() - this.startTime;
-    console.log(`⏱️  ${this.label} - ${checkpointLabel}: ${duration.toFixed(2)}ms`);
+    console.log(
+      `⏱️  ${this.label} - ${checkpointLabel}: ${duration.toFixed(2)}ms`,
+    );
   }
 }
 
@@ -218,12 +223,17 @@ export function safeStringify(obj: any, space?: number): string {
     obj,
     (key, value) => {
       // Don't expose internal encryption structure in logs
-      if (value && typeof value === "object" && "data" in value && "iv" in value) {
+      if (
+        value &&
+        typeof value === "object" &&
+        "data" in value &&
+        "iv" in value
+      ) {
         return "[ENCRYPTED]";
       }
       return value;
     },
-    space
+    space,
   );
 }
 

@@ -5,7 +5,6 @@ import User from "@/lib/models/User";
 import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
-import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -24,6 +23,8 @@ const RegisterSchema = z.object({
     .object({
       bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
       knownAllergies: z.array(z.string()).optional(),
+      smokingStatus: z.enum(["never", "current", "former"]).optional(),
+      additionalNotes: z.string().max(1000).optional(),
       emergencyContact: z
         .object({
           name: z.string().optional(),
@@ -54,10 +55,9 @@ async function registerHandler(request: NextRequest) {
     const validatedData: RegisterData = RegisterSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Check if user already exists using searchable email hash
-      const emailHash = createSearchableEmailHash(validatedData.personalInfo.contact.email);
+      // Check if user already exists using searchableEmail for uniqueness
       const existingUser = await User.findOne({
-        "personalInfo.contact.searchableEmail": emailHash,
+        "personalInfo.contact.searchableEmail": validatedData.personalInfo.contact.email.toLowerCase().trim(),
       });
 
       if (existingUser) {
@@ -99,7 +99,7 @@ async function registerHandler(request: NextRequest) {
         userId: savedUser._id.toString(),
         digitalIdentifier: savedUser.digitalIdentifier,
         role: validatedData.role as UserRole,
-        email: publicUser.email,
+        email: validatedData.personalInfo.contact.email,
         tokenVersion: 1,
       });
 

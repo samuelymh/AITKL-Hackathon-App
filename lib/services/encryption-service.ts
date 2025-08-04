@@ -26,15 +26,19 @@ export class EncryptionService {
   private constructor() {
     this.config = {
       algorithm: "aes-256-gcm",
-      keyDerivationSalt: process.env.ENCRYPTION_SALT || "default-salt-change-in-production",
-      masterKey: process.env.ENCRYPTION_MASTER_KEY || "default-key-change-in-production-must-be-32-chars-long",
+      keyDerivationSalt:
+        process.env.ENCRYPTION_SALT || "default-salt-change-in-production",
+      masterKey:
+        process.env.ENCRYPTION_MASTER_KEY ||
+        "default-key-change-in-production-must-be-32-chars-long",
       keyRotationEnabled: process.env.KEY_ROTATION_ENABLED === "true",
       keyVersion: parseInt(process.env.CURRENT_KEY_VERSION || "1"),
     };
 
     if (
       process.env.NODE_ENV === "production" &&
-      (this.config.masterKey.includes("default") || this.config.keyDerivationSalt.includes("default"))
+      (this.config.masterKey.includes("default") ||
+        this.config.keyDerivationSalt.includes("default"))
     ) {
       throw new Error("Production encryption keys must be properly configured");
     }
@@ -57,7 +61,11 @@ export class EncryptionService {
     }
 
     const keyMaterial = `${this.config.masterKey}-v${keyVersion}`;
-    const derivedKey = (await scryptAsync(keyMaterial, this.config.keyDerivationSalt, 32)) as Buffer;
+    const derivedKey = (await scryptAsync(
+      keyMaterial,
+      this.config.keyDerivationSalt,
+      32,
+    )) as Buffer;
 
     this.derivedKeys.set(keyVersion, derivedKey);
     return derivedKey;
@@ -124,7 +132,9 @@ export class EncryptionService {
    * Encrypt multiple fields in a batch operation
    * More efficient for encrypting entire documents
    */
-  public async encryptFields(fields: Record<string, string>): Promise<Record<string, EncryptedField>> {
+  public async encryptFields(
+    fields: Record<string, string>,
+  ): Promise<Record<string, EncryptedField>> {
     const encrypted: Record<string, EncryptedField> = {};
 
     for (const [fieldName, value] of Object.entries(fields)) {
@@ -139,7 +149,9 @@ export class EncryptionService {
   /**
    * Decrypt multiple fields in a batch operation
    */
-  public async decryptFields(encryptedFields: Record<string, EncryptedField>): Promise<Record<string, string>> {
+  public async decryptFields(
+    encryptedFields: Record<string, EncryptedField>,
+  ): Promise<Record<string, string>> {
     const decrypted: Record<string, string> = {};
 
     for (const [fieldName, encryptedField] of Object.entries(encryptedFields)) {
@@ -155,13 +167,18 @@ export class EncryptionService {
    * Check if a field needs re-encryption (key rotation)
    */
   public needsReEncryption(encryptedField: EncryptedField): boolean {
-    return this.config.keyRotationEnabled && encryptedField.keyVersion < this.config.keyVersion;
+    return (
+      this.config.keyRotationEnabled &&
+      encryptedField.keyVersion < this.config.keyVersion
+    );
   }
 
   /**
    * Re-encrypt a field with the current key version
    */
-  public async reEncryptField(encryptedField: EncryptedField): Promise<EncryptedField> {
+  public async reEncryptField(
+    encryptedField: EncryptedField,
+  ): Promise<EncryptedField> {
     const decrypted = await this.decryptField(encryptedField);
     return await this.encryptField(decrypted);
   }

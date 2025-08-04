@@ -5,7 +5,10 @@
  * This demonstrates the end-to-end encryption flow
  */
 
-import { encryptionService, encryptionUtils } from "../lib/services/encryption-service";
+import {
+  encryptionService,
+  encryptionUtils,
+} from "../lib/services/encryption-service";
 
 async function validateEncryption() {
   console.log("🔐 Testing Encryption System...\n");
@@ -42,7 +45,9 @@ async function validateEncryption() {
 
     // Encrypt allergies array
     const encryptedAllergies = await Promise.all(
-      patientData.allergies.map((allergy) => encryptionService.encryptField(allergy))
+      patientData.allergies.map((allergy) =>
+        encryptionService.encryptField(allergy),
+      ),
     );
 
     console.log("   Patient data encrypted successfully ✅");
@@ -50,13 +55,18 @@ async function validateEncryption() {
     console.log(`   Encrypted allergies: ${encryptedAllergies.length}`);
 
     // Decrypt batch
-    const decryptedBatch = await encryptionService.decryptFields(encryptedBatch);
+    const decryptedBatch =
+      await encryptionService.decryptFields(encryptedBatch);
     const decryptedAllergies = await Promise.all(
-      encryptedAllergies.map((encrypted) => encryptionService.decryptField(encrypted))
+      encryptedAllergies.map((encrypted) =>
+        encryptionService.decryptField(encrypted),
+      ),
     );
 
     console.log("   Decrypted data:");
-    console.log(`     Name: ${decryptedBatch.firstName} ${decryptedBatch.lastName}`);
+    console.log(
+      `     Name: ${decryptedBatch.firstName} ${decryptedBatch.lastName}`,
+    );
     console.log(`     Email: ${decryptedBatch.email}`);
     console.log(`     Phone: ${decryptedBatch.phone}`);
     console.log(`     Allergies: [${decryptedAllergies.join(", ")}]`);
@@ -66,7 +76,8 @@ async function validateEncryption() {
       decryptedBatch.lastName === patientData.lastName &&
       decryptedBatch.email === patientData.email &&
       decryptedBatch.phone === patientData.phone &&
-      JSON.stringify(decryptedAllergies) === JSON.stringify(patientData.allergies);
+      JSON.stringify(decryptedAllergies) ===
+        JSON.stringify(patientData.allergies);
     console.log(`   ✅ Data integrity: ${dataMatches}\n`);
 
     // Test 3: Encryption detection
@@ -74,25 +85,40 @@ async function validateEncryption() {
     const plaintext = "This is plaintext";
     const encryptedText = await encryptionService.encryptField(plaintext);
 
-    console.log(`   Plaintext detected as encrypted: ${encryptionUtils.isEncrypted(plaintext)}`);
-    console.log(`   Encrypted detected as encrypted: ${encryptionUtils.isEncrypted(encryptedText)}`);
+    console.log(
+      `   Plaintext detected as encrypted: ${encryptionUtils.isEncrypted(plaintext)}`,
+    );
+    console.log(
+      `   Encrypted detected as encrypted: ${encryptionUtils.isEncrypted(encryptedText)}`,
+    );
     console.log(`   ✅ Detection working correctly\n`);
 
     // Test 4: Concurrent operations
     console.log("4. Testing concurrent encryption operations:");
     const startTime = Date.now();
-    const testValues = Array.from({ length: 10 }, (_, i) => `Patient-${i}-Data`);
+    const testValues = Array.from(
+      { length: 10 },
+      (_, i) => `Patient-${i}-Data`,
+    );
 
-    const concurrentEncryptions = await Promise.all(testValues.map((value) => encryptionService.encryptField(value)));
+    const concurrentEncryptions = await Promise.all(
+      testValues.map((value) => encryptionService.encryptField(value)),
+    );
 
     const concurrentDecryptions = await Promise.all(
-      concurrentEncryptions.map((encrypted) => encryptionService.decryptField(encrypted))
+      concurrentEncryptions.map((encrypted) =>
+        encryptionService.decryptField(encrypted),
+      ),
     );
 
     const concurrentTime = Date.now() - startTime;
-    const allMatch = concurrentDecryptions.every((decrypted, index) => decrypted === testValues[index]);
+    const allMatch = concurrentDecryptions.every(
+      (decrypted, index) => decrypted === testValues[index],
+    );
 
-    console.log(`   Processed ${testValues.length} items in ${concurrentTime}ms`);
+    console.log(
+      `   Processed ${testValues.length} items in ${concurrentTime}ms`,
+    );
     console.log(`   ✅ All concurrent operations successful: ${allMatch}\n`);
 
     // Test 5: Error handling
@@ -101,7 +127,10 @@ async function validateEncryption() {
       await encryptionService.encryptField("");
       console.log("   ❌ Should have thrown error for empty string");
     } catch (error) {
-      console.log("   ✅ Empty string error handled correctly:", (error as Error).message);
+      console.log(
+        "   ✅ Empty string error handled correctly:",
+        (error as Error).message,
+      );
     }
 
     try {
@@ -113,7 +142,10 @@ async function validateEncryption() {
       });
       console.log("   ❌ Should have thrown error for invalid data");
     } catch (error) {
-      console.log("   ✅ Invalid data error handled correctly:", (error as Error).message);
+      console.log(
+        "   ✅ Invalid data error handled correctly:",
+        (error as Error).message,
+      );
     }
 
     console.log("\n🎉 All encryption tests passed!");

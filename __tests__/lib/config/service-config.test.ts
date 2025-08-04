@@ -53,7 +53,7 @@ describe("ServiceConfigManager", () => {
             cleanupIntervalMinutes: 30,
           },
         },
-        "development"
+        "development",
       );
 
       expect(TokenStorageService.initialize).toHaveBeenCalledWith({
@@ -64,13 +64,17 @@ describe("ServiceConfigManager", () => {
     });
 
     it("should not reinitialize if already initialized", () => {
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
 
       ServiceConfigManager.initialize(undefined, "development");
       ServiceConfigManager.initialize(undefined, "development");
 
       expect(TokenStorageService.initialize).toHaveBeenCalledTimes(1);
-      expect(consoleSpy).toHaveBeenCalledWith("ServiceConfigManager: Services already initialized");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "ServiceConfigManager: Services already initialized",
+      );
 
       consoleSpy.mockRestore();
     });

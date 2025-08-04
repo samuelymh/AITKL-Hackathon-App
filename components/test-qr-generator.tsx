@@ -1,186 +1,275 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Download, RefreshCw, QrCode, User, Calendar } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-interface TestQRGeneratorProps {
-  readonly className?: string;
-}
-
-interface MockQRData {
+interface TestQRData {
   type: string;
   digitalIdentifier: string;
-  patientName?: string;
-  issuedAt: string;
-  expiresAt?: string;
   version: string;
+  timestamp: string;
 }
 
-export function TestQRGenerator({ className }: TestQRGeneratorProps) {
-  const [qrImageUrl, setQrImageUrl] = useState<string>("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mockData, setMockData] = useState<MockQRData>({
+export function TestQRGenerator() {
+  const [qrData, setQrData] = useState<TestQRData>({
     type: "health_access_request",
-    digitalIdentifier: "patient_" + Math.random().toString(36).substring(2, 11),
-    patientName: "John Doe",
-    issuedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+    digitalIdentifier: "",
     version: "1.0",
+    timestamp: "",
   });
+  const [qrCodeURL, setQrCodeURL] = useState<string>("");
+  const [customIdentifier, setCustomIdentifier] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateQRCode = async () => {
+  // Generate a random digital identifier
+  const generateRandomHID = () => {
+    const uuid = crypto.randomUUID();
+    return `HID_${uuid}`;
+  };
+
+  // Generate QR data string
+  const generateQRString = (data: TestQRData) => {
+    return JSON.stringify(data);
+  };
+
+  // Generate QR code using external service (for testing purposes)
+  const generateQRCode = async (data: string) => {
     setIsGenerating(true);
-    setError(null);
-
     try {
-      // Call the patient QR generation endpoint
-      const response = await fetch(
-        "/api/patient/qr?" +
-          new URLSearchParams({
-            format: "png",
-            width: "300",
-            height: "300",
-          }),
-        {
-          method: "GET",
-          headers: {
-            // In a real app, this would be handled by authentication
-            "X-Mock-Patient-Data": JSON.stringify(mockData),
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setQrImageUrl(url);
-    } catch (err) {
-      console.error("QR generation error:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate QR code");
+      // Using a free QR code generation service for testing
+      const encodedData = encodeURIComponent(data);
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
+      setQrCodeURL(qrUrl);
+    } catch (error) {
+      console.error("Failed to generate QR code:", error);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const copyQRData = () => {
-    const qrDataString = JSON.stringify(mockData, null, 2);
-    navigator.clipboard.writeText(qrDataString);
+  // Initialize with random data
+  useEffect(() => {
+    const initialData: TestQRData = {
+      type: "health_access_request",
+      digitalIdentifier: generateRandomHID(),
+      version: "1.0",
+      timestamp: new Date().toISOString(),
+    };
+    setQrData(initialData);
+
+    const qrString = generateQRString(initialData);
+    generateQRCode(qrString);
+  }, []);
+
+  const handleRefresh = () => {
+    const newData: TestQRData = {
+      type: "health_access_request",
+      digitalIdentifier: customIdentifier || generateRandomHID(),
+      version: "1.0",
+      timestamp: new Date().toISOString(),
+    };
+    setQrData(newData);
+
+    const qrString = generateQRString(newData);
+    generateQRCode(qrString);
+  };
+
+  const handleCustomGenerate = () => {
+    if (!customIdentifier.trim()) return;
+
+    const newData: TestQRData = {
+      type: "health_access_request",
+      digitalIdentifier: customIdentifier.trim(),
+      version: "1.0",
+      timestamp: new Date().toISOString(),
+    };
+    setQrData(newData);
+
+    const qrString = generateQRString(newData);
+    generateQRCode(qrString);
   };
 
   const downloadQR = () => {
-    if (qrImageUrl) {
-      const link = document.createElement("a");
-      link.href = qrImageUrl;
-      link.download = `patient_qr_${mockData.digitalIdentifier}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    if (!qrCodeURL) return;
+
+    const link = document.createElement("a");
+    link.href = qrCodeURL;
+    link.download = `patient-qr-${qrData.digitalIdentifier}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const regenerateData = () => {
-    setMockData({
-      ...mockData,
-      digitalIdentifier: "patient_" + Math.random().toString(36).substring(2, 11),
-      issuedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-    setQrImageUrl("");
+  const copyQRData = () => {
+    const qrString = generateQRString(qrData);
+    navigator.clipboard.writeText(qrString);
   };
-
-  // Auto-generate on mount
-  useEffect(() => {
-    generateQRCode();
-  }, [mockData.digitalIdentifier]);
 
   return (
-    <Card className={cn("w-full max-w-md mx-auto", className)}>
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">Test QR Generator</CardTitle>
-        <CardDescription>Generate mock patient QR codes for testing the scanner</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <QrCode className="h-5 w-5" />
+          Test QR Code Generator
+        </CardTitle>
+        <CardDescription>
+          Generate test patient QR codes for scanning demo
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Mock Patient Data */}
-        <div className="space-y-3">
-          <Label htmlFor="patientName">Patient Name</Label>
-          <Input
-            id="patientName"
-            value={mockData.patientName || ""}
-            onChange={(e) => setMockData({ ...mockData, patientName: e.target.value })}
-            placeholder="Enter patient name"
-          />
-        </div>
-
-        {/* Digital Identifier Display */}
-        <div className="space-y-2">
-          <Label>Digital Identifier</Label>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs bg-muted p-2 rounded font-mono">{mockData.digitalIdentifier}</code>
-            <Button onClick={regenerateData} size="sm" variant="outline" className="px-2">
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-
-        {/* QR Code Display */}
-        <div className="space-y-3">
-          {qrImageUrl ? (
-            <div className="flex flex-col items-center space-y-3">
-              <div className="border-2 border-dashed border-border rounded-lg p-4">
-                <img src={qrImageUrl} alt="Patient QR Code" className="w-48 h-48 object-contain" />
+      <CardContent className="space-y-6">
+        {/* Generated QR Code */}
+        <div className="text-center">
+          {qrCodeURL ? (
+            <div className="space-y-4">
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
+                <img
+                  src={qrCodeURL}
+                  alt="Patient QR Code"
+                  className="w-64 h-64 mx-auto"
+                />
               </div>
 
-              <div className="flex gap-2">
-                <Button onClick={downloadQR} size="sm" variant="outline">
-                  <Download className="h-3 w-3 mr-1" />
+              <div className="flex gap-2 justify-center">
+                <Button onClick={downloadQR} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
-                <Button onClick={copyQRData} size="sm" variant="outline">
-                  <Copy className="h-3 w-3 mr-1" />
+                <Button onClick={copyQRData} variant="outline" size="sm">
                   Copy Data
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                {isGenerating ? "Generating QR..." : "No QR code"}
-              </div>
+            <div className="w-64 h-64 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+              {isGenerating ? (
+                <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+              ) : (
+                <QrCode className="h-8 w-8 text-gray-400" />
+              )}
             </div>
           )}
         </div>
 
-        {/* Error Display */}
-        {error && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>}
+        <Separator />
 
-        {/* Generate Button */}
-        <Button onClick={generateQRCode} disabled={isGenerating} className="w-full">
-          {isGenerating ? "Generating..." : "Generate New QR Code"}
-        </Button>
+        {/* QR Data Information */}
+        <div className="space-y-4">
+          <h3 className="font-semibold flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Patient Information
+          </h3>
 
-        {/* QR Data Preview */}
-        <div className="space-y-2">
-          <Label>QR Code Content</Label>
-          <div className="text-xs bg-muted p-2 rounded font-mono overflow-x-auto">
-            <pre>{JSON.stringify(mockData, null, 2)}</pre>
+          <div className="bg-muted p-4 rounded-lg space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <Label className="text-muted-foreground">Type</Label>
+                <p className="font-mono">{qrData.type}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Version</Label>
+                <p className="font-mono">{qrData.version}</p>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-muted-foreground">
+                Digital Identifier (HID)
+              </Label>
+              <div className="flex items-center gap-2 mt-1">
+                <code className="text-sm bg-background px-2 py-1 rounded border flex-1">
+                  {qrData.digitalIdentifier}
+                </code>
+                <Badge variant="outline">
+                  {qrData.digitalIdentifier.startsWith("HID_")
+                    ? "Valid"
+                    : "Custom"}
+                </Badge>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Timestamp
+              </Label>
+              <p className="text-sm font-mono">
+                {new Date(qrData.timestamp).toLocaleString()}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Status Info */}
-        <div className="flex gap-2 text-xs">
-          <Badge variant="outline">Version {mockData.version}</Badge>
-          <Badge variant="outline">{mockData.type}</Badge>
+        <Separator />
+
+        {/* Controls */}
+        <div className="space-y-4">
+          <h3 className="font-semibold">Generate New QR Code</h3>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="customId">
+                Custom Digital Identifier (Optional)
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="customId"
+                  placeholder="Enter custom HID or leave empty for random"
+                  value={customIdentifier}
+                  onChange={(e) => setCustomIdentifier(e.target.value)}
+                />
+                <Button
+                  onClick={handleCustomGenerate}
+                  disabled={!customIdentifier.trim() || isGenerating}
+                  variant="outline"
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleRefresh}
+              disabled={isGenerating}
+              className="w-full"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`}
+              />
+              Generate Random QR Code
+            </Button>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-800 mb-2">How to Test</h4>
+          <ol className="text-sm text-blue-700 space-y-1">
+            <li>1. Generate a QR code above</li>
+            <li>2. Go to the QR Scanning Demo page</li>
+            <li>3. Click "Start Camera" and scan this QR code</li>
+            <li>4. Watch the authorization request flow in action</li>
+          </ol>
+        </div>
+
+        {/* Raw Data */}
+        <div className="space-y-2">
+          <Label className="text-muted-foreground">Raw QR Data (JSON)</Label>
+          <div className="bg-gray-900 text-green-400 p-3 rounded-lg text-xs font-mono overflow-x-auto">
+            {generateQRString(qrData)}
+          </div>
         </div>
       </CardContent>
     </Card>

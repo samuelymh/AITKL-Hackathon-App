@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import AuthorizationGrant, { GrantStatus } from "@/lib/models/AuthorizationGrant";
+import AuthorizationGrant, {
+  GrantStatus,
+} from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
-import { AuthorizationPermissions, GrantStateManager } from "@/lib/utils/authorization-permissions";
-import { AuthorizationError, NotFoundError, GrantActionError, ErrorHandler } from "@/lib/errors/custom-errors";
+import {
+  AuthorizationPermissions,
+  GrantStateManager,
+} from "@/lib/utils/authorization-permissions";
+import {
+  AuthorizationError,
+  NotFoundError,
+  GrantActionError,
+  ErrorHandler,
+} from "@/lib/errors/custom-errors";
 import { z } from "zod";
 
 // Validation schemas
@@ -23,7 +33,10 @@ const ApprovalActionSchema = z.object({
  * POST /api/authorization/[grantId]/action
  * Approve, deny, or revoke an authorization grant
  */
-export async function POST(request: NextRequest, { params }: { params: { grantId: string } }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { grantId: string } },
+) {
   try {
     await connectToDatabase();
 
@@ -46,10 +59,20 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
     const updatedGrant = await performGrantAction(authGrant, action, actionBy);
 
     // Log the action for audit purposes
-    await logGrantAction(request, authGrant, updatedGrant, validatedData, currentStatus);
+    await logGrantAction(
+      request,
+      authGrant,
+      updatedGrant,
+      validatedData,
+      currentStatus,
+    );
 
     // Prepare response
-    await updatedGrant.populate(["userId", "organizationId", "requestingPractitionerId"]);
+    await updatedGrant.populate([
+      "userId",
+      "organizationId",
+      "requestingPractitionerId",
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -64,7 +87,9 @@ export async function POST(request: NextRequest, { params }: { params: { grantId
     console.error(`Error performing authorization action:`, error);
 
     const errorResponse = ErrorHandler.handleError(error);
-    return NextResponse.json(errorResponse, { status: errorResponse.statusCode });
+    return NextResponse.json(errorResponse, {
+      status: errorResponse.statusCode,
+    });
   }
 }
 
@@ -82,15 +107,22 @@ async function findAndValidateGrant(grantId: string) {
 /**
  * Validate that the user has permission to perform the action
  */
-async function validateActionPermissions(actionBy: string, action: string, authGrant: any) {
+async function validateActionPermissions(
+  actionBy: string,
+  action: string,
+  authGrant: any,
+) {
   const permissionCheck = await AuthorizationPermissions.canPerformAction(
     actionBy,
     action as "approve" | "deny" | "revoke",
-    authGrant.organizationId.toString()
+    authGrant.organizationId.toString(),
   );
 
   if (!permissionCheck.allowed) {
-    throw new AuthorizationError(permissionCheck.error || "Insufficient permissions to perform this action");
+    throw new AuthorizationError(
+      permissionCheck.error ||
+        "Insufficient permissions to perform this action",
+    );
   }
 }
 
@@ -104,13 +136,15 @@ function validateStateTransition(currentStatus: GrantStatus, action: string) {
     throw new GrantActionError(
       `Cannot ${action} a grant with status ${currentStatus}`,
       currentStatus,
-      GrantStateManager.getAllowedActions(currentStatus)
+      GrantStateManager.getAllowedActions(currentStatus),
     );
   }
 }
 
 // Action map for cleaner and more maintainable grant actions
-const actionMap: { [key: string]: (grant: any, actionBy: string) => Promise<any> } = {
+const actionMap: {
+  [key: string]: (grant: any, actionBy: string) => Promise<any>;
+} = {
   approve: (grant, actionBy) => grant.approve(actionBy),
   deny: (grant, actionBy) => grant.deny(actionBy),
   revoke: (grant, actionBy) => grant.revoke(actionBy),
@@ -119,14 +153,18 @@ const actionMap: { [key: string]: (grant: any, actionBy: string) => Promise<any>
 /**
  * Perform the grant action using the model methods
  */
-async function performGrantAction(authGrant: any, action: string, actionBy: string) {
+async function performGrantAction(
+  authGrant: any,
+  action: string,
+  actionBy: string,
+) {
   const grantAction = actionMap[action];
 
   if (!grantAction) {
     throw new GrantActionError(
       `Invalid action: ${action}`,
       authGrant.grantDetails.status,
-      GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
+      GrantStateManager.getAllowedActions(authGrant.grantDetails.status),
     );
   }
 
@@ -136,7 +174,7 @@ async function performGrantAction(authGrant: any, action: string, actionBy: stri
     throw new GrantActionError(
       modelError.message,
       authGrant.grantDetails.status,
-      GrantStateManager.getAllowedActions(authGrant.grantDetails.status)
+      GrantStateManager.getAllowedActions(authGrant.grantDetails.status),
     );
   }
 }
@@ -149,25 +187,33 @@ async function logGrantAction(
   authGrant: any,
   updatedGrant: any,
   validatedData: z.infer<typeof ApprovalActionSchema>,
-  currentStatus: GrantStatus
+  currentStatus: GrantStatus,
 ) {
-  await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authGrant.userId.toString(), {
-    action: `AUTHORIZATION_${validatedData.action.toUpperCase()}D`,
-    grantId: authGrant._id.toString(),
-    organizationId: authGrant.organizationId.toString(),
-    actionBy: validatedData.actionBy,
-    reason: validatedData.reason,
-    previousStatus: currentStatus,
-    newStatus: updatedGrant.grantDetails.status,
-    metadata: validatedData.metadata,
-  });
+  await auditLogger.logSecurityEvent(
+    SecurityEventType.DATA_MODIFICATION,
+    request,
+    authGrant.userId.toString(),
+    {
+      action: `AUTHORIZATION_${validatedData.action.toUpperCase()}D`,
+      grantId: authGrant._id.toString(),
+      organizationId: authGrant.organizationId.toString(),
+      actionBy: validatedData.actionBy,
+      reason: validatedData.reason,
+      previousStatus: currentStatus,
+      newStatus: updatedGrant.grantDetails.status,
+      metadata: validatedData.metadata,
+    },
+  );
 }
 
 /**
  * GET /api/authorization/[grantId]/action
  * Get grant details and available actions
  */
-export async function GET(request: NextRequest, { params }: { params: { grantId: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { grantId: string } },
+) {
   try {
     await connectToDatabase();
 
@@ -181,7 +227,10 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
     ]);
 
     if (!authGrant) {
-      return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Authorization grant not found" },
+        { status: 404 },
+      );
     }
 
     const currentStatus = authGrant.grantDetails.status;
@@ -200,7 +249,10 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
     });
   } catch (error) {
     console.error("Error fetching authorization grant:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 

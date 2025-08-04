@@ -1,334 +1,417 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Scanner } from "@yudiel/react-qr-scanner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useRef } from "react";
+import {
+  Camera,
+  StopCircle,
+  RotateCcw,
+  Scan,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Camera, CameraOff, CheckCircle, XCircle, AlertTriangle, Scan, User, Calendar, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-interface QRScannerProps {
-  readonly onScanSuccess: (data: QRCodeData) => void;
-  readonly onScanError?: (error: string) => void;
-  readonly className?: string;
-  readonly organizationId: string;
-  readonly requestedBy: string; // User ID of the healthcare provider
-}
+// QR Scanner library (@yudiel/react-qr-scanner)
+import { Scanner } from "@yudiel/react-qr-scanner";
 
 interface QRCodeData {
   type: string;
   digitalIdentifier: string;
-  patientName?: string;
-  issuedAt: string;
-  expiresAt?: string;
   version: string;
+  timestamp: string;
 }
 
-interface ScanResult {
-  success: boolean;
-  data?: QRCodeData;
-  error?: string;
-  timestamp: Date;
+interface AuthorizationRequestData {
+  grantId: string;
+  status: string;
+  expiresAt: string;
+  patient: {
+    name: string;
+    digitalIdentifier: string;
+  };
+  organization: {
+    name: string;
+    type: string;
+  };
+  accessScope: {
+    canViewMedicalHistory: boolean;
+    canViewPrescriptions: boolean;
+    canCreateEncounters: boolean;
+    canViewAuditLogs: boolean;
+  };
+  timeWindowHours: number;
 }
 
-export function QRScanner({ onScanSuccess, onScanError, className, organizationId, requestedBy }: QRScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt">("prompt");
-  const [isProcessing, setIsProcessing] = useState(false);
+interface QRScannerProps {
+  organizationId: string;
+  requestingPractitionerId?: string;
+  onAuthorizationCreated?: (data: AuthorizationRequestData) => void;
+  onError?: (error: string) => void;
+  className?: string;
+}
+
+type ScanState = "idle" | "scanning" | "processing" | "success" | "error";
+
+export function QRScanner({
+  organizationId,
+  requestingPractitionerId,
+  onAuthorizationCreated,
+  onError,
+  className = "",
+}: Readonly<QRScannerProps>) {
+  const [scanState, setScanState] = useState<ScanState>("idle");
+  const [scannedData, setScannedData] = useState<QRCodeData | null>(null);
+  const [authRequestData, setAuthRequestData] =
+    useState<AuthorizationRequestData | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">(
+    "environment",
+  );
+
   const scannerRef = useRef<any>(null);
 
-  // Check camera permissions on mount
-  useEffect(() => {
-    checkCameraPermissions();
-  }, []);
+  // Default access scope - can be made configurable
+  const defaultAccessScope = {
+    canViewMedicalHistory: true,
+    canViewPrescriptions: true,
+    canCreateEncounters: false,
+    canViewAuditLogs: false,
+  };
 
-  const checkCameraPermissions = async () => {
+  const handleScan = async (data: string | null) => {
+    if (!data || scanState === "processing") return;
+
     try {
-      const permissions = await navigator.permissions.query({ name: "camera" as PermissionName });
-      setCameraPermission(permissions.state);
+      setScanState("processing");
+      setErrorMessage("");
 
-      permissions.addEventListener("change", () => {
-        setCameraPermission(permissions.state);
+      // Parse and validate QR code data
+      const qrData = JSON.parse(data) as QRCodeData;
+
+      // Validate QR code structure
+      if (
+        qrData.type !== "health_access_request" ||
+        !qrData.digitalIdentifier
+      ) {
+        throw new Error(
+          "Invalid QR code format. Please scan a valid patient QR code.",
+        );
+      }
+
+      setScannedData(qrData);
+
+      // Create authorization request
+      const response = await fetch("/api/v1/authorizations/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scannedQRData: data,
+          organizationId,
+          requestingPractitionerId,
+          accessScope: defaultAccessScope,
+          timeWindowHours: 24,
+          requestMetadata: {
+            deviceInfo: {
+              userAgent: navigator.userAgent,
+              screen: {
+                width: screen.width,
+                height: screen.height,
+              },
+            },
+          },
+        }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Failed to create authorization request",
+        );
+      }
+
+      if (result.success) {
+        setAuthRequestData(result.data);
+        setScanState("success");
+        onAuthorizationCreated?.(result.data);
+      } else {
+        throw new Error("Failed to process authorization request");
+      }
     } catch (error) {
-      console.warn("Camera permissions check not supported:", error);
+      console.error("QR Scan Error:", error);
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to process QR code";
+      setErrorMessage(errorMsg);
+      setScanState("error");
+      onError?.(errorMsg);
     }
   };
 
-  const validateQRCode = (data: string): { isValid: boolean; parsedData?: QRCodeData; error?: string } => {
-    try {
-      const parsed = JSON.parse(data);
-
-      // Validate QR code structure according to knowledge base
-      if (parsed.type !== "health_access_request") {
-        return { isValid: false, error: "Invalid QR code type. Expected health access request." };
-      }
-
-      if (!parsed.digitalIdentifier) {
-        return { isValid: false, error: "Missing digital identifier in QR code." };
-      }
-
-      if (!parsed.issuedAt) {
-        return { isValid: false, error: "Missing issue timestamp in QR code." };
-      }
-
-      // Check if QR code has expired (if expiresAt is present)
-      if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
-        return { isValid: false, error: "QR code has expired." };
-      }
-
-      // Validate version compatibility
-      if (parsed.version && !["1.0", "1.1"].includes(parsed.version)) {
-        return { isValid: false, error: "Unsupported QR code version." };
-      }
-
-      return { isValid: true, parsedData: parsed };
-    } catch (error) {
-      console.error("QR validation error:", error);
-      return { isValid: false, error: "Invalid QR code format. Unable to parse data." };
-    }
+  const handleError = (error: any) => {
+    console.error("Camera Error:", error);
+    setErrorMessage(
+      "Camera access failed. Please check permissions and try again.",
+    );
+    setScanState("error");
   };
 
-  const handleScan = useCallback(
-    async (result: any) => {
-      if (!result || isProcessing) return;
-
-      setIsProcessing(true);
-
-      try {
-        const scannedData = result.text || result;
-
-        // Validate the QR code
-        const validation = validateQRCode(scannedData);
-
-        if (!validation.isValid) {
-          const errorResult: ScanResult = {
-            success: false,
-            error: validation.error,
-            timestamp: new Date(),
-          };
-          setScanResult(errorResult);
-          setError(validation.error || "Invalid QR code");
-          onScanError?.(validation.error || "Invalid QR code");
-          return;
-        }
-
-        // Successful scan
-        const successResult: ScanResult = {
-          success: true,
-          data: validation.parsedData,
-          timestamp: new Date(),
-        };
-
-        setScanResult(successResult);
-        setError(null);
-
-        // Stop scanning after successful scan
-        setIsScanning(false);
-
-        // Trigger success callback
-        onScanSuccess(validation.parsedData!);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to process QR code";
-        const errorResult: ScanResult = {
-          success: false,
-          error: errorMessage,
-          timestamp: new Date(),
-        };
-        setScanResult(errorResult);
-        setError(errorMessage);
-        onScanError?.(errorMessage);
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [onScanSuccess, onScanError, isProcessing]
-  );
-
-  const handleError = useCallback(
-    (error: any) => {
-      console.error("QR Scanner error:", error);
-      const errorMessage = error?.message || "Camera access failed";
-      setError(errorMessage);
-      onScanError?.(errorMessage);
-    },
-    [onScanError]
-  );
-
-  const startScanning = async () => {
-    try {
-      setError(null);
-      setScanResult(null);
-      setIsScanning(true);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to start camera";
-      setError(errorMessage);
-      onScanError?.(errorMessage);
-    }
+  const startScanning = () => {
+    setScanState("scanning");
+    setScannedData(null);
+    setAuthRequestData(null);
+    setErrorMessage("");
+    setIsCameraReady(false);
   };
 
   const stopScanning = () => {
-    setIsScanning(false);
+    setScanState("idle");
+    setIsCameraReady(false);
   };
 
   const resetScanner = () => {
-    setScanResult(null);
-    setError(null);
-    setIsScanning(false);
+    setScanState("idle");
+    setScannedData(null);
+    setAuthRequestData(null);
+    setErrorMessage("");
+    setIsCameraReady(false);
   };
 
-  return (
-    <Card className={cn("w-full max-w-md mx-auto", className)}>
-      <CardHeader className="text-center">
-        <CardTitle className="flex items-center justify-center gap-2">
-          <Scan className="h-5 w-5" />
-          Patient QR Scanner
-        </CardTitle>
-        <CardDescription>Scan patient QR code to request access to health records</CardDescription>
-      </CardHeader>
+  const toggleCamera = () => {
+    setFacingMode(facingMode === "environment" ? "user" : "environment");
+  };
 
-      <CardContent className="space-y-4">
-        {/* Camera Permission Status */}
-        {cameraPermission === "denied" && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Camera access denied. Please enable camera permissions in your browser settings.
-            </AlertDescription>
-          </Alert>
-        )}
+  const renderScannerContent = () => {
+    switch (scanState) {
+      case "idle":
+        return (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <Scan className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Ready to Scan</h3>
+            <p className="text-muted-foreground mb-6">
+              Scan the patient's QR code to request access authorization
+            </p>
+            <Button onClick={startScanning} size="lg" className="gap-2">
+              <Camera className="h-4 w-4" />
+              Start Camera
+            </Button>
+          </div>
+        );
 
-        {/* Scanner Area */}
-        <div className="relative">
-          {isScanning ? (
-            <div className="relative aspect-square bg-black rounded-lg overflow-hidden">
+      case "scanning":
+        return (
+          <div className="relative">
+            <div className="aspect-square bg-black rounded-lg overflow-hidden relative">
               <Scanner
-                onScan={handleScan}
+                onScan={(result) => {
+                  if (result) {
+                    handleScan(result[0]?.rawValue || null);
+                  }
+                }}
                 onError={handleError}
                 constraints={{
-                  facingMode: "environment",
+                  facingMode: facingMode,
                 }}
                 styles={{
                   container: { width: "100%", height: "100%" },
                 }}
               />
 
-              {/* Scanner Overlay */}
-              <div className="absolute inset-0 border-2 border-white/20 rounded-lg">
-                <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-lg" />
-                <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-lg" />
-                <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-lg" />
-                <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-lg" />
+              {/* Overlay frame */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-64 h-64 border-2 border-white border-dashed rounded-lg opacity-75"></div>
               </div>
 
-              {isProcessing && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="text-white text-sm">Processing...</div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <Camera className="h-12 w-12 mx-auto text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Camera not active</p>
+              {/* Camera controls */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={toggleCamera}
+                  className="bg-black/50 hover:bg-black/70 text-white border-white/20"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={stopScanning}
+                  className="bg-red-600/80 hover:bg-red-600"
+                >
+                  <StopCircle className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Scanner Controls */}
-        <div className="flex gap-2">
-          {!isScanning ? (
-            <Button onClick={startScanning} className="flex-1" disabled={cameraPermission === "denied"}>
-              <Camera className="h-4 w-4 mr-2" />
-              Start Scanning
-            </Button>
-          ) : (
-            <Button onClick={stopScanning} variant="outline" className="flex-1">
-              <CameraOff className="h-4 w-4 mr-2" />
-              Stop Scanning
-            </Button>
-          )}
-
-          {scanResult && (
-            <Button onClick={resetScanner} variant="ghost" size="sm">
-              Reset
-            </Button>
-          )}
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <Alert variant="destructive">
-            <XCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Scan Result Display */}
-        {scanResult && (
-          <div className="space-y-3">
-            <Separator />
-
-            <div className="flex items-center gap-2">
-              {scanResult.success ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              ) : (
-                <XCircle className="h-4 w-4 text-red-500" />
-              )}
-              <span className="text-sm font-medium">{scanResult.success ? "QR Code Valid" : "Scan Failed"}</span>
-              <Badge variant={scanResult.success ? "default" : "destructive"}>
-                {new Date(scanResult.timestamp).toLocaleTimeString()}
-              </Badge>
-            </div>
-
-            {scanResult.success && scanResult.data && (
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <User className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-medium">Digital ID:</span>
-                  <code className="text-xs bg-muted px-1 rounded">
-                    {scanResult.data.digitalIdentifier.substring(0, 8)}...
-                  </code>
+            {!isCameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                <div className="text-center text-white">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                  <p>Initializing camera...</p>
                 </div>
-
-                {scanResult.data.patientName && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">Patient:</span>
-                    <span>{scanResult.data.patientName}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span className="font-medium">Issued:</span>
-                  <span>{new Date(scanResult.data.issuedAt).toLocaleDateString()}</span>
-                </div>
-
-                {scanResult.data.expiresAt && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">Expires:</span>
-                    <span>{new Date(scanResult.data.expiresAt).toLocaleDateString()}</span>
-                  </div>
-                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Instructions */}
-        <div className="text-xs text-muted-foreground text-center">
-          Position the patient's QR code within the scanner frame
-        </div>
-      </CardContent>
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              Position the QR code within the frame above
+            </p>
+          </div>
+        );
+
+      case "processing":
+        return (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Processing QR Code</h3>
+            <p className="text-muted-foreground">
+              Creating authorization request...
+            </p>
+          </div>
+        );
+
+      case "success":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col items-center justify-center p-6 text-center">
+              <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+              <h3 className="text-lg font-semibold text-green-700 mb-2">
+                Authorization Request Created
+              </h3>
+              <p className="text-muted-foreground">
+                Notification sent to patient for approval
+              </p>
+            </div>
+
+            {authRequestData && (
+              <div className="space-y-4">
+                <Separator />
+
+                {/* Patient Information */}
+                <div>
+                  <h4 className="font-semibold mb-2">Patient Information</h4>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="font-medium">
+                      {authRequestData.patient.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ID: {authRequestData.patient.digitalIdentifier}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Request Details */}
+                <div>
+                  <h4 className="font-semibold mb-2">Request Details</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Grant ID:</span>
+                      <code className="text-sm bg-muted px-2 py-1 rounded">
+                        {authRequestData.grantId}
+                      </code>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Status:</span>
+                      <Badge variant="outline">{authRequestData.status}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Duration:</span>
+                      <span className="text-sm">
+                        {authRequestData.timeWindowHours}h
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Expires:</span>
+                      <span className="text-sm">
+                        {new Date(authRequestData.expiresAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Access Permissions */}
+                <div>
+                  <h4 className="font-semibold mb-2">Requested Permissions</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(authRequestData.accessScope).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className={`text-xs p-2 rounded-lg border ${
+                            value
+                              ? "bg-green-50 border-green-200 text-green-700"
+                              : "bg-gray-50 border-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {key
+                            .replace(/^can/, "")
+                            .replace(/([A-Z])/g, " $1")
+                            .trim()}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button onClick={resetScanner} className="w-full" variant="outline">
+              Scan Another Patient
+            </Button>
+          </div>
+        );
+
+      case "error":
+        return (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <XCircle className="h-16 w-16 text-red-500 mb-4" />
+            <h3 className="text-lg font-semibold text-red-700 mb-2">
+              Scan Failed
+            </h3>
+            <Alert className="mb-4">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+            <div className="flex gap-2">
+              <Button onClick={resetScanner} variant="outline">
+                Try Again
+              </Button>
+              <Button onClick={startScanning}>
+                <Camera className="h-4 w-4 mr-2" />
+                Restart Camera
+              </Button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Scan className="h-5 w-5" />
+          Patient QR Scanner
+        </CardTitle>
+        <CardDescription>
+          Scan patient QR codes to create authorization requests
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{renderScannerContent()}</CardContent>
     </Card>
   );
 }

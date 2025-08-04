@@ -21,13 +21,17 @@ jest.mock("../../../lib/services/permission-mapper", () => ({
 import Practitioner from "../../../lib/models/Practitioner";
 import { PermissionMapper } from "../../../lib/services/permission-mapper";
 
-const mockFindById = Practitioner.findById as jest.MockedFunction<typeof Practitioner.findById>;
-const mockValidateAccessScopes = PermissionMapper.validateAccessScopes as jest.MockedFunction<
-  typeof PermissionMapper.validateAccessScopes
+const mockFindById = Practitioner.findById as jest.MockedFunction<
+  typeof Practitioner.findById
 >;
-const mockValidateGrantAction = PermissionMapper.validateGrantAction as jest.MockedFunction<
-  typeof PermissionMapper.validateGrantAction
->;
+const mockValidateAccessScopes =
+  PermissionMapper.validateAccessScopes as jest.MockedFunction<
+    typeof PermissionMapper.validateAccessScopes
+  >;
+const mockValidateGrantAction =
+  PermissionMapper.validateGrantAction as jest.MockedFunction<
+    typeof PermissionMapper.validateGrantAction
+  >;
 
 describe("AuthorizationPermissions", () => {
   const mockPractitionerId = "507f1f77bcf86cd799439011";
@@ -77,24 +81,27 @@ describe("AuthorizationPermissions", () => {
         invalidScopes: [],
       });
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory", "canCreateEncounters"],
+      );
 
       expect(result.allowed).toBe(true);
-      expect(mockValidateAccessScopes).toHaveBeenCalledWith(mockPractitioner as any, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-      ]);
+      expect(mockValidateAccessScopes).toHaveBeenCalledWith(
+        mockPractitioner as any,
+        ["canViewMedicalHistory", "canCreateEncounters"],
+      );
     });
 
     it("should deny request when practitioner not found", async () => {
       mockFindById.mockResolvedValue(null);
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory"],
+      );
 
       expect(result.allowed).toBe(false);
       expect(result.error).toBe("Practitioner not found");
@@ -105,12 +112,16 @@ describe("AuthorizationPermissions", () => {
       mockPractitioner.organizationId.toString = () => "different-org-id";
       mockFindById.mockResolvedValue(mockPractitioner);
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory"],
+      );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toBe("Practitioner does not belong to the specified organization");
+      expect(result.error).toBe(
+        "Practitioner does not belong to the specified organization",
+      );
     });
 
     it("should deny request when practitioner cannot request grants", async () => {
@@ -119,12 +130,16 @@ describe("AuthorizationPermissions", () => {
       });
       mockFindById.mockResolvedValue(mockPractitioner);
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory"],
+      );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toBe("Practitioner cannot request authorization grants");
+      expect(result.error).toBe(
+        "Practitioner cannot request authorization grants",
+      );
     });
 
     it("should deny request when access scope validation fails with invalid scopes", async () => {
@@ -136,14 +151,16 @@ describe("AuthorizationPermissions", () => {
         invalidScopes: ["invalidScope1", "invalidScope2"],
       });
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-        "invalidScope1",
-        "invalidScope2",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory", "invalidScope1", "invalidScope2"],
+      );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toContain("Invalid access scopes: invalidScope1, invalidScope2");
+      expect(result.error).toContain(
+        "Invalid access scopes: invalidScope1, invalidScope2",
+      );
     });
 
     it("should deny request when access scope validation fails with missing permissions", async () => {
@@ -155,14 +172,16 @@ describe("AuthorizationPermissions", () => {
         invalidScopes: [],
       });
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-        "canViewAuditLogs",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory", "canCreateEncounters", "canViewAuditLogs"],
+      );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toContain("Missing permissions for scopes: canCreateEncounters, canViewAuditLogs");
+      expect(result.error).toContain(
+        "Missing permissions for scopes: canCreateEncounters, canViewAuditLogs",
+      );
     });
 
     it("should deny request with combined invalid scopes and missing permissions", async () => {
@@ -174,15 +193,17 @@ describe("AuthorizationPermissions", () => {
         invalidScopes: ["invalidScope"],
       });
 
-      const result = await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-        "invalidScope",
-      ]);
+      const result = await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory", "canCreateEncounters", "invalidScope"],
+      );
 
       expect(result.allowed).toBe(false);
       expect(result.error).toContain("Invalid access scopes: invalidScope");
-      expect(result.error).toContain("Missing permissions for scopes: canCreateEncounters");
+      expect(result.error).toContain(
+        "Missing permissions for scopes: canCreateEncounters",
+      );
     });
   });
 
@@ -198,11 +219,14 @@ describe("AuthorizationPermissions", () => {
       const result = await AuthorizationPermissions.canPerformAction(
         mockPractitionerId,
         "approve",
-        mockGrantOrganizationId
+        mockGrantOrganizationId,
       );
 
       expect(result.allowed).toBe(true);
-      expect(mockValidateGrantAction).toHaveBeenCalledWith(mockPractitioner as any, "approve");
+      expect(mockValidateGrantAction).toHaveBeenCalledWith(
+        mockPractitioner as any,
+        "approve",
+      );
     });
 
     it("should deny action when practitioner not found", async () => {
@@ -211,7 +235,7 @@ describe("AuthorizationPermissions", () => {
       const result = await AuthorizationPermissions.canPerformAction(
         mockPractitionerId,
         "approve",
-        mockGrantOrganizationId
+        mockGrantOrganizationId,
       );
 
       expect(result.allowed).toBe(false);
@@ -226,11 +250,13 @@ describe("AuthorizationPermissions", () => {
       const result = await AuthorizationPermissions.canPerformAction(
         mockPractitionerId,
         "approve",
-        mockGrantOrganizationId
+        mockGrantOrganizationId,
       );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toBe("Practitioner does not belong to the grant's organization");
+      expect(result.error).toBe(
+        "Practitioner does not belong to the grant's organization",
+      );
     });
 
     it("should deny action when permission validation fails", async () => {
@@ -245,11 +271,13 @@ describe("AuthorizationPermissions", () => {
       const result = await AuthorizationPermissions.canPerformAction(
         mockPractitionerId,
         "approve",
-        mockGrantOrganizationId
+        mockGrantOrganizationId,
       );
 
       expect(result.allowed).toBe(false);
-      expect(result.error).toBe("Practitioner lacks permission to approve authorization grants");
+      expect(result.error).toBe(
+        "Practitioner lacks permission to approve authorization grants",
+      );
     });
 
     it("should test all grant actions", async () => {
@@ -266,11 +294,14 @@ describe("AuthorizationPermissions", () => {
         const result = await AuthorizationPermissions.canPerformAction(
           mockPractitionerId,
           action,
-          mockGrantOrganizationId
+          mockGrantOrganizationId,
         );
 
         expect(result.allowed).toBe(true);
-        expect(mockValidateGrantAction).toHaveBeenCalledWith(mockPractitioner as any, action);
+        expect(mockValidateGrantAction).toHaveBeenCalledWith(
+          mockPractitioner as any,
+          action,
+        );
       }
     });
   });
@@ -285,16 +316,17 @@ describe("AuthorizationPermissions", () => {
         invalidScopes: [],
       });
 
-      await AuthorizationPermissions.canRequestGrant(mockPractitionerId, mockOrganizationId, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-      ]);
+      await AuthorizationPermissions.canRequestGrant(
+        mockPractitionerId,
+        mockOrganizationId,
+        ["canViewMedicalHistory", "canCreateEncounters"],
+      );
 
       expect(mockValidateAccessScopes).toHaveBeenCalledTimes(1);
-      expect(mockValidateAccessScopes).toHaveBeenCalledWith(mockPractitioner as any, [
-        "canViewMedicalHistory",
-        "canCreateEncounters",
-      ]);
+      expect(mockValidateAccessScopes).toHaveBeenCalledWith(
+        mockPractitioner as any,
+        ["canViewMedicalHistory", "canCreateEncounters"],
+      );
     });
 
     it("should properly delegate grant action validation", async () => {
@@ -305,10 +337,17 @@ describe("AuthorizationPermissions", () => {
         allowed: true,
       });
 
-      await AuthorizationPermissions.canPerformAction(mockPractitionerId, "revoke", mockGrantOrganizationId);
+      await AuthorizationPermissions.canPerformAction(
+        mockPractitionerId,
+        "revoke",
+        mockGrantOrganizationId,
+      );
 
       expect(mockValidateGrantAction).toHaveBeenCalledTimes(1);
-      expect(mockValidateGrantAction).toHaveBeenCalledWith(mockPractitioner as any, "revoke");
+      expect(mockValidateGrantAction).toHaveBeenCalledWith(
+        mockPractitioner as any,
+        "revoke",
+      );
     });
   });
 });

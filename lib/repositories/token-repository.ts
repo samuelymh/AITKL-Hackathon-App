@@ -1,4 +1,7 @@
-import { StoredToken, TokenValidationResult } from "../services/token-storage-service";
+import {
+  StoredToken,
+  TokenValidationResult,
+} from "../services/token-storage-service";
 import { Token, ITokenDocument } from "../models/Token";
 
 /**
@@ -19,17 +22,29 @@ export interface ITokenRepository {
   /**
    * Revoke a specific token
    */
-  revokeToken(tokenValue: string, revokedBy: string, reason?: string): Promise<boolean>;
+  revokeToken(
+    tokenValue: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<boolean>;
 
   /**
    * Revoke all tokens for a specific grant
    */
-  revokeTokensForGrant(grantId: string, revokedBy: string, reason?: string): Promise<number>;
+  revokeTokensForGrant(
+    grantId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number>;
 
   /**
    * Revoke all tokens for a specific user
    */
-  revokeTokensForUser(userId: string, revokedBy: string, reason?: string): Promise<number>;
+  revokeTokensForUser(
+    userId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number>;
 
   /**
    * Get all tokens for a grant (for audit purposes)
@@ -113,7 +128,11 @@ export class MongoTokenRepository implements ITokenRepository {
     };
   }
 
-  async revokeToken(tokenValue: string, revokedBy: string, reason?: string): Promise<boolean> {
+  async revokeToken(
+    tokenValue: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<boolean> {
     const tokenDoc = await Token.findOne({ token: tokenValue });
 
     if (!tokenDoc) {
@@ -124,7 +143,11 @@ export class MongoTokenRepository implements ITokenRepository {
     return true;
   }
 
-  async revokeTokensForGrant(grantId: string, revokedBy: string, reason?: string): Promise<number> {
+  async revokeTokensForGrant(
+    grantId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
     const tokens = await Token.find({
       grantId,
       isRevoked: false,
@@ -139,7 +162,11 @@ export class MongoTokenRepository implements ITokenRepository {
     return revokedCount;
   }
 
-  async revokeTokensForUser(userId: string, revokedBy: string, reason?: string): Promise<number> {
+  async revokeTokensForUser(
+    userId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
     const tokens = await Token.find({
       userId,
       isRevoked: false,
@@ -193,7 +220,10 @@ export class MongoTokenRepository implements ITokenRepository {
 
     const active = total - revoked - expired;
 
-    const typeStats = { access: 0, qr: 0, scan: 0 } as Record<StoredToken["tokenType"], number>;
+    const typeStats = { access: 0, qr: 0, scan: 0 } as Record<
+      StoredToken["tokenType"],
+      number
+    >;
     byType.forEach((item: { _id: StoredToken["tokenType"]; count: number }) => {
       typeStats[item._id] = item.count;
     });
@@ -273,7 +303,11 @@ export class InMemoryTokenRepository implements ITokenRepository {
     };
   }
 
-  async revokeToken(tokenValue: string, revokedBy: string, reason?: string): Promise<boolean> {
+  async revokeToken(
+    tokenValue: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<boolean> {
     const storedToken = this.tokens.get(tokenValue);
 
     if (!storedToken) {
@@ -292,7 +326,11 @@ export class InMemoryTokenRepository implements ITokenRepository {
     return true;
   }
 
-  async revokeTokensForGrant(grantId: string, revokedBy: string, reason?: string): Promise<number> {
+  async revokeTokensForGrant(
+    grantId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
     let revokedCount = 0;
 
     for (const [tokenValue, storedToken] of this.tokens.entries()) {
@@ -305,7 +343,11 @@ export class InMemoryTokenRepository implements ITokenRepository {
     return revokedCount;
   }
 
-  async revokeTokensForUser(userId: string, revokedBy: string, reason?: string): Promise<number> {
+  async revokeTokensForUser(
+    userId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
     let revokedCount = 0;
 
     for (const [tokenValue, storedToken] of this.tokens.entries()) {
@@ -357,7 +399,10 @@ export class InMemoryTokenRepository implements ITokenRepository {
       active: 0,
       revoked: 0,
       expired: 0,
-      byType: { access: 0, qr: 0, scan: 0 } as Record<StoredToken["tokenType"], number>,
+      byType: { access: 0, qr: 0, scan: 0 } as Record<
+        StoredToken["tokenType"],
+        number
+      >,
     };
 
     for (const storedToken of this.tokens.values()) {

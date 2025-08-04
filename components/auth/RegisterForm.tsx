@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 
 const RegisterSchema = z
@@ -18,10 +24,15 @@ const RegisterSchema = z
       dateOfBirth: z.string().min(1, "Date of birth is required"),
       contact: z.object({
         email: z.string().email("Invalid email address"),
-        phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+        phone: z
+          .string()
+          .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
       }),
     }),
-    password: z.string().min(8, "Password must be at least 8 characters").max(128),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(128),
     confirmPassword: z.string(),
     role: z.enum(["patient", "doctor", "pharmacist"]).default("patient"),
   })
@@ -125,12 +136,18 @@ export function RegisterForm() {
               <Input
                 placeholder="First Name"
                 value={formData.personalInfo.firstName}
-                onChange={(e) => handleInputChange("personalInfo.firstName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("personalInfo.firstName", e.target.value)
+                }
                 disabled={isLoading}
-                className={errors["personalInfo.firstName"] ? "border-red-500" : ""}
+                className={
+                  errors["personalInfo.firstName"] ? "border-red-500" : ""
+                }
               />
               {errors["personalInfo.firstName"] && (
-                <p className="text-sm text-red-600 mt-1">{errors["personalInfo.firstName"]}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {errors["personalInfo.firstName"]}
+                </p>
               )}
             </div>
 
@@ -138,12 +155,18 @@ export function RegisterForm() {
               <Input
                 placeholder="Last Name"
                 value={formData.personalInfo.lastName}
-                onChange={(e) => handleInputChange("personalInfo.lastName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("personalInfo.lastName", e.target.value)
+                }
                 disabled={isLoading}
-                className={errors["personalInfo.lastName"] ? "border-red-500" : ""}
+                className={
+                  errors["personalInfo.lastName"] ? "border-red-500" : ""
+                }
               />
               {errors["personalInfo.lastName"] && (
-                <p className="text-sm text-red-600 mt-1">{errors["personalInfo.lastName"]}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {errors["personalInfo.lastName"]}
+                </p>
               )}
             </div>
           </div>
@@ -153,12 +176,18 @@ export function RegisterForm() {
               type="date"
               placeholder="Date of Birth"
               value={formData.personalInfo.dateOfBirth}
-              onChange={(e) => handleInputChange("personalInfo.dateOfBirth", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("personalInfo.dateOfBirth", e.target.value)
+              }
               disabled={isLoading}
-              className={errors["personalInfo.dateOfBirth"] ? "border-red-500" : ""}
+              className={
+                errors["personalInfo.dateOfBirth"] ? "border-red-500" : ""
+              }
             />
             {errors["personalInfo.dateOfBirth"] && (
-              <p className="text-sm text-red-600 mt-1">{errors["personalInfo.dateOfBirth"]}</p>
+              <p className="text-sm text-red-600 mt-1">
+                {errors["personalInfo.dateOfBirth"]}
+              </p>
             )}
           </div>
 
@@ -167,12 +196,18 @@ export function RegisterForm() {
               type="email"
               placeholder="Email"
               value={formData.personalInfo.contact.email}
-              onChange={(e) => handleInputChange("personalInfo.contact.email", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("personalInfo.contact.email", e.target.value)
+              }
               disabled={isLoading}
-              className={errors["personalInfo.contact.email"] ? "border-red-500" : ""}
+              className={
+                errors["personalInfo.contact.email"] ? "border-red-500" : ""
+              }
             />
             {errors["personalInfo.contact.email"] && (
-              <p className="text-sm text-red-600 mt-1">{errors["personalInfo.contact.email"]}</p>
+              <p className="text-sm text-red-600 mt-1">
+                {errors["personalInfo.contact.email"]}
+              </p>
             )}
           </div>
 
@@ -181,17 +216,26 @@ export function RegisterForm() {
               type="tel"
               placeholder="Phone Number"
               value={formData.personalInfo.contact.phone}
-              onChange={(e) => handleInputChange("personalInfo.contact.phone", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("personalInfo.contact.phone", e.target.value)
+              }
               disabled={isLoading}
-              className={errors["personalInfo.contact.phone"] ? "border-red-500" : ""}
+              className={
+                errors["personalInfo.contact.phone"] ? "border-red-500" : ""
+              }
             />
             {errors["personalInfo.contact.phone"] && (
-              <p className="text-sm text-red-600 mt-1">{errors["personalInfo.contact.phone"]}</p>
+              <p className="text-sm text-red-600 mt-1">
+                {errors["personalInfo.contact.phone"]}
+              </p>
             )}
           </div>
 
           <div>
-            <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)}>
+            <Select
+              value={formData.role}
+              onValueChange={(value) => handleInputChange("role", value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
@@ -212,7 +256,9 @@ export function RegisterForm() {
               disabled={isLoading}
               className={errors.password ? "border-red-500" : ""}
             />
-            {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
+            {errors.password && (
+              <p className="text-sm text-red-600 mt-1">{errors.password}</p>
+            )}
           </div>
 
           <div>
@@ -220,11 +266,17 @@ export function RegisterForm() {
               type="password"
               placeholder="Confirm Password"
               value={formData.confirmPassword}
-              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("confirmPassword", e.target.value)
+              }
               disabled={isLoading}
               className={errors.confirmPassword ? "border-red-500" : ""}
             />
-            {errors.confirmPassword && <p className="text-sm text-red-600 mt-1">{errors.confirmPassword}</p>}
+            {errors.confirmPassword && (
+              <p className="text-sm text-red-600 mt-1">
+                {errors.confirmPassword}
+              </p>
+            )}
           </div>
 
           {apiError && (

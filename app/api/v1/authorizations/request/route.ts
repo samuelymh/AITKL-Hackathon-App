@@ -34,29 +34,45 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!scannedQRData || !organizationId) {
-      return NextResponse.json({ error: "Missing required fields: scannedQRData and organizationId" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields: scannedQRData and organizationId" },
+        { status: 400 },
+      );
     }
 
     // Extract and validate QR code data
     const qrCodeData = QRCodeService.validatePatientQRCode(scannedQRData);
     if (!qrCodeData) {
-      await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, "unknown", {
-        action: "INVALID_QR_CODE_SCAN",
-        organizationId,
-        error: "Invalid QR code format or expired",
-      });
+      await auditLogger.logSecurityEvent(
+        SecurityEventType.SUSPICIOUS_ACTIVITY,
+        request,
+        "unknown",
+        {
+          action: "INVALID_QR_CODE_SCAN",
+          organizationId,
+          error: "Invalid QR code format or expired",
+        },
+      );
 
-      return NextResponse.json({ error: "Invalid or expired QR code" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid or expired QR code" },
+        { status: 400 },
+      );
     }
 
     // Find the patient by digital identifier
     const patient = await User.findByDigitalId(qrCodeData.digitalIdentifier);
     if (!patient) {
-      await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, "unknown", {
-        action: "PATIENT_NOT_FOUND",
-        digitalIdentifier: qrCodeData.digitalIdentifier,
-        organizationId,
-      });
+      await auditLogger.logSecurityEvent(
+        SecurityEventType.SUSPICIOUS_ACTIVITY,
+        request,
+        "unknown",
+        {
+          action: "PATIENT_NOT_FOUND",
+          digitalIdentifier: qrCodeData.digitalIdentifier,
+          organizationId,
+        },
+      );
 
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
@@ -64,7 +80,10 @@ export async function POST(request: NextRequest) {
     // Validate organization exists
     const organization = await Organization.findById(organizationId);
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     }
 
     // Check for existing active grant
@@ -88,12 +107,15 @@ export async function POST(request: NextRequest) {
             accessScope: existingGrant.accessScope,
           },
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     // Prepare request metadata
-    const clientIP = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    const clientIP =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
     const requestMeta = {
@@ -118,19 +140,24 @@ export async function POST(request: NextRequest) {
       requestMeta,
       scope,
       timeWindowHours,
-      requestingPractitionerId
+      requestingPractitionerId,
     );
 
     // Log the authorization request
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, patient._id.toString(), {
-      action: "AUTHORIZATION_REQUEST_CREATED",
-      grantId: authGrant._id.toString(),
-      organizationId: organizationId,
-      requestingPractitionerId: requestingPractitionerId,
-      digitalIdentifier: qrCodeData.digitalIdentifier,
-      accessScope: scope,
-      timeWindowHours: timeWindowHours,
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.DATA_ACCESS,
+      request,
+      patient._id.toString(),
+      {
+        action: "AUTHORIZATION_REQUEST_CREATED",
+        grantId: authGrant._id.toString(),
+        organizationId: organizationId,
+        requestingPractitionerId: requestingPractitionerId,
+        digitalIdentifier: qrCodeData.digitalIdentifier,
+        accessScope: scope,
+        timeWindowHours: timeWindowHours,
+      },
+    );
 
     // TODO: Send push notification to patient
     // await notificationService.sendAuthorizationRequest(patient._id, authGrant._id);
@@ -155,17 +182,25 @@ export async function POST(request: NextRequest) {
           timeWindowHours: authGrant.grantDetails.timeWindowHours,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error creating authorization request:", error);
 
     // Log the error
-    await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, "system", {
-      action: "AUTHORIZATION_REQUEST_ERROR",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.SUSPICIOUS_ACTIVITY,
+      request,
+      "system",
+      {
+        action: "AUTHORIZATION_REQUEST_ERROR",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    );
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

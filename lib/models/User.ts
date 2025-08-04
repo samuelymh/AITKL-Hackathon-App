@@ -1,5 +1,5 @@
 import mongoose, { Model } from "mongoose";
-import { randomUUID, createHash } from "crypto";
+import { randomUUID } from "crypto";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
 import { encryptionPlugin, EncryptedFieldType } from "../services/encryption-plugin";
@@ -14,7 +14,6 @@ export interface IUser extends IBaseDocument {
     contact: {
       email: EncryptedFieldType; // Encrypted PII
       phone: EncryptedFieldType; // Encrypted PII
-      searchableEmail?: string; // Hashed email for lookup
       verified: {
         email: boolean;
         phone: boolean;
@@ -24,6 +23,8 @@ export interface IUser extends IBaseDocument {
   medicalInfo: {
     bloodType?: string;
     knownAllergies?: EncryptedFieldType[]; // Encrypted PHI
+    smokingStatus?: "never" | "current" | "former";
+    additionalNotes?: string;
     emergencyContact?: {
       name: EncryptedFieldType; // Encrypted PII
       phone: EncryptedFieldType; // Encrypted PII
@@ -99,18 +100,17 @@ const userSchemaFields = {
       email: {
         type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
         required: true,
+        lowercase: true,
         trim: true,
         // Note: validation will be applied to decrypted values
       },
       searchableEmail: {
         type: String,
-        required: false,
+        required: false, // Will be set by pre-save middleware
         unique: true,
-        sparse: true, // Only create index for non-null values
         lowercase: true,
         trim: true,
-        index: true,
-        // This field stores a hashed version of the email for lookup purposes
+        // This field stores the email in a hashed/searchable format for uniqueness
       },
       phone: {
         type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
@@ -143,6 +143,16 @@ const userSchemaFields = {
         maxlength: 100,
       },
     ],
+    smokingStatus: {
+      type: String,
+      enum: ["never", "current", "former"],
+      default: "never",
+    },
+    additionalNotes: {
+      type: String,
+      maxlength: 1000,
+      trim: true,
+    },
     emergencyContact: {
       name: {
         type: mongoose.Schema.Types.Mixed, // Support both string and encrypted object
@@ -212,8 +222,7 @@ const UserSchema = createExtendedSchema(userSchemaFields, {
   collection: "users",
 });
 
-// Pre-save middleware for data validation and transformation
-// IMPORTANT: This must run BEFORE the encryption plugin
+// Pre-save middleware for data validation and transformation (BEFORE encryption)
 UserSchema.pre("save", function (next) {
   // Generate digital identifier if not provided or empty
   if (!this.digitalIdentifier || (typeof this.digitalIdentifier === "string" && this.digitalIdentifier.trim() === "")) {
@@ -226,20 +235,19 @@ UserSchema.pre("save", function (next) {
     this.digitalIdentifier = `HID_${digitalId}`;
   }
 
-  // Set searchableEmail for lookup purposes BEFORE encryption
-  const userDoc = this as any;
-  const emailValue = userDoc.personalInfo?.contact?.email;
-  if (emailValue && typeof emailValue === "string" && userDoc.personalInfo?.contact) {
-    // Hash the email for searchable purposes while keeping it private
-    userDoc.personalInfo.contact.searchableEmail = createHash("sha256")
-      .update(emailValue.toLowerCase().trim())
-      .digest("hex");
+  // Handle searchable email for uniqueness (BEFORE encryption)
+  if ((this.personalInfo as any)?.contact?.email) {
+    const email = (this.personalInfo as any).contact.email;
+    // If it's a string (not yet encrypted), use it for searchableEmail
+    if (typeof email === "string") {
+      (this.personalInfo as any).contact.searchableEmail = email.toLowerCase().trim();
+    }
   }
 
   next();
 });
 
-// Apply encryption plugin to the schema
+// Apply encryption plugin to the schema (AFTER our pre-save middleware)
 UserSchema.plugin(encryptionPlugin, {
   encryptedFields: [
     "personalInfo.firstName",
@@ -278,33 +286,9 @@ UserSchema.statics = {
 UserSchema.methods = {
   // Get full name
   getFullName: async function () {
-    // Helper function to safely get decrypted value
-    const getDecryptedValue = async (value: any): Promise<string> => {
-      if (!value) return "";
-
-      // If it's already a string, return it
-      if (typeof value === "string") return value;
-
-      // If it's an encrypted object, try to decrypt it
-      if (typeof value === "object" && value.data && value.iv) {
-        try {
-          const { encryptionService } = await import("../services/encryption-service");
-          return await encryptionService.decryptField(value);
-        } catch (error) {
-          console.warn("Failed to decrypt field in getFullName:", error);
-          return ""; // Return empty string instead of encrypted object
-        }
-      }
-
-      return String(value);
-    };
-
-    const [firstName, lastName] = await Promise.all([
-      getDecryptedValue(this.personalInfo.firstName),
-      getDecryptedValue(this.personalInfo.lastName),
-    ]);
-
-    return `${firstName} ${lastName}`.trim();
+    const firstName = (await this.decryptField("personalInfo.firstName")) || this.personalInfo.firstName;
+    const lastName = (await this.decryptField("personalInfo.lastName")) || this.personalInfo.lastName;
+    return `${firstName} ${lastName}`;
   },
 
   // Check if contact info is verified
@@ -330,45 +314,62 @@ UserSchema.methods = {
   toPublicJSON: async function () {
     const role = this.auth?.role || "patient";
 
-    // Helper function to safely get decrypted value
-    const getDecryptedValue = async (value: any): Promise<string> => {
-      if (!value) return "";
+    // Import encryption service for direct decryption
+    const { encryptionService, encryptionUtils } = await import("../services/encryption-service");
 
-      // If it's already a string, return it
-      if (typeof value === "string") return value;
-
-      // If it's an encrypted object, try to decrypt it
-      if (typeof value === "object" && value.data && value.iv) {
-        try {
-          const { encryptionService } = await import("../services/encryption-service");
-          return await encryptionService.decryptField(value);
-        } catch (error) {
-          console.warn("Failed to decrypt field in toPublicJSON:", error);
-          return ""; // Return empty string instead of encrypted object
+    // Helper function to decrypt a field safely
+    const safeDecrypt = async (fieldPath: string, field: any): Promise<string | null> => {
+      try {
+        // Always try direct decryption first if field is encrypted
+        if (encryptionUtils.isEncrypted(field)) {
+          const decrypted = await encryptionService.decryptField(field);
+          console.log(`Direct decryption for ${fieldPath}: success`);
+          return decrypted;
         }
-      }
 
-      return String(value);
+        // If not encrypted and is a string, return as-is
+        if (typeof field === "string") {
+          console.log(`Field ${fieldPath} is plaintext string`);
+          return field;
+        }
+
+        // Try plugin method as fallback
+        if (typeof this.decryptField === "function") {
+          const decrypted = await this.decryptField(fieldPath);
+          console.log(`Plugin decryption for ${fieldPath}:`, decrypted ? "success" : "null");
+          return decrypted;
+        }
+
+        console.log(`Field ${fieldPath} could not be decrypted, type:`, typeof field);
+      } catch (error) {
+        console.warn(`Failed to decrypt ${fieldPath}:`, error);
+      }
+      return null;
     };
 
-    const [firstName, lastName, email, phone] = await Promise.all([
-      getDecryptedValue(this.personalInfo.firstName),
-      getDecryptedValue(this.personalInfo.lastName),
-      getDecryptedValue(this.personalInfo.contact.email),
-      getDecryptedValue(this.personalInfo.contact.phone),
-    ]);
+    // Try to get decrypted values
+    const firstName = (await safeDecrypt("personalInfo.firstName", this.personalInfo.firstName)) || "User";
+
+    const lastName = (await safeDecrypt("personalInfo.lastName", this.personalInfo.lastName)) || "Name";
+
+    const email =
+      (await safeDecrypt("personalInfo.contact.email", this.personalInfo.contact.email)) ||
+      this.personalInfo.contact.searchableEmail || // Use searchableEmail as primary fallback
+      "user@example.com";
+
+    const phone = (await safeDecrypt("personalInfo.contact.phone", this.personalInfo.contact.phone)) || "+000000000";
 
     return {
       id: this._id.toString(),
       digitalIdentifier: this.digitalIdentifier,
-      firstName,
-      lastName,
-      email,
-      phone,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phone: phone,
       role: role,
       emailVerified: this.auth?.emailVerified || false,
       phoneVerified: this.auth?.phoneVerified || false,
-      name: `${firstName} ${lastName}`.trim(),
+      name: `${firstName} ${lastName}`,
       age: this.getAge(),
       bloodType: this.medicalInfo.bloodType,
       hasEmergencyContact: !!this.medicalInfo.emergencyContact?.name,

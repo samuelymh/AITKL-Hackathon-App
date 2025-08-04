@@ -5,7 +5,6 @@ import User from "@/lib/models/User";
 import { generateToken, generateRefreshToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
-import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -21,16 +20,22 @@ async function loginHandler(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Find user by searchable email hash
-      const emailHash = createSearchableEmailHash(email);
+      // Find user by searchableEmail for login
       const user = await User.findOne({
-        "personalInfo.contact.searchableEmail": emailHash,
+        "personalInfo.contact.searchableEmail": email.toLowerCase().trim(),
         auditDeletedDateTime: { $exists: false }, // Exclude soft-deleted users
-      });
+      }).select("+auth.passwordHash"); // Explicitly include password hash
+
+      console.log("🔍 Debug - Login attempt for:", email.toLowerCase().trim());
+      console.log("🔍 Debug - User found:", !!user);
 
       if (!user) {
+        console.log("❌ Debug - No user found");
         throw new Error(AuthErrors.INVALID_CREDENTIALS);
       }
+
+      console.log("✅ Debug - User found:", user.digitalIdentifier);
+      console.log("🔍 Debug - User has password hash:", !!user.auth?.passwordHash);
 
       // Check if account is locked
       if (
@@ -42,15 +47,18 @@ async function loginHandler(request: NextRequest) {
       }
 
       // Verify password
+      console.log("🔑 Debug - Verifying password...");
       const isValidPassword = await verifyPassword(password, user.auth?.passwordHash || "");
+      console.log("🔑 Debug - Password valid:", isValidPassword);
 
       if (!isValidPassword) {
+        console.log("❌ Debug - Password verification failed");
         // Increment login attempts
         if (user.auth) {
           user.auth.loginAttempts = (user.auth.loginAttempts || 0) + 1;
 
-          // Lock account after 5 failed attempts for 15 minutes
-          if (user.auth.loginAttempts >= 5) {
+          // Lock account after 10 failed attempts for 15 minutes
+          if (user.auth.loginAttempts >= 10) {
             user.auth.accountLocked = true;
             user.auth.accountLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
           }
@@ -74,19 +82,18 @@ async function loginHandler(request: NextRequest) {
       }
 
       // Generate JWT tokens
-      const publicUser = await user.toPublicJSON();
       const token = generateToken({
         userId: user._id.toString(),
         digitalIdentifier: user.digitalIdentifier,
         role: (user.auth?.role as UserRole) || UserRole.PATIENT,
-        email: publicUser.email,
+        email: user.personalInfo.contact.email as any,
         tokenVersion: user.auth?.tokenVersion || 1,
       });
 
       const refreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
 
       return {
-        user: publicUser,
+        user: await user.toPublicJSON(),
         accessToken: token,
         refreshToken,
         tokenType: "Bearer",

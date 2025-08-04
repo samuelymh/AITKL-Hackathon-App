@@ -26,7 +26,7 @@ describe("TokenStorageService", () => {
         mockOrganizationId,
         "access",
         expiresAt,
-        { source: "test" }
+        { source: "test" },
       );
 
       const validation = await TokenStorageService.validateToken(mockToken);
@@ -45,8 +45,22 @@ describe("TokenStorageService", () => {
       const grantId1 = "grant-1";
       const grantId2 = "grant-2";
 
-      await TokenStorageService.storeToken(token1, grantId1, mockUserId, mockOrganizationId, "access", expiresAt);
-      await TokenStorageService.storeToken(token2, grantId2, mockUserId, mockOrganizationId, "qr", expiresAt);
+      await TokenStorageService.storeToken(
+        token1,
+        grantId1,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
+      await TokenStorageService.storeToken(
+        token2,
+        grantId2,
+        mockUserId,
+        mockOrganizationId,
+        "qr",
+        expiresAt,
+      );
 
       const validation1 = await TokenStorageService.validateToken(token1);
       const validation2 = await TokenStorageService.validateToken(token2);
@@ -62,7 +76,8 @@ describe("TokenStorageService", () => {
 
   describe("validateToken", () => {
     it("should return invalid for non-existent token", async () => {
-      const validation = await TokenStorageService.validateToken("non-existent-token");
+      const validation =
+        await TokenStorageService.validateToken("non-existent-token");
 
       expect(validation.isValid).toBe(false);
       expect(validation.error).toBe("Token not found");
@@ -71,7 +86,14 @@ describe("TokenStorageService", () => {
     it("should return invalid for expired token", async () => {
       const expiresAt = new Date(Date.now() - 1000); // Expired 1 second ago
 
-      await TokenStorageService.storeToken(mockToken, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
+      await TokenStorageService.storeToken(
+        mockToken,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
 
       const validation = await TokenStorageService.validateToken(mockToken);
 
@@ -82,9 +104,20 @@ describe("TokenStorageService", () => {
     it("should return invalid for revoked token", async () => {
       const expiresAt = new Date(Date.now() + 3600000);
 
-      await TokenStorageService.storeToken(mockToken, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
+      await TokenStorageService.storeToken(
+        mockToken,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
 
-      await TokenStorageService.revokeToken(mockToken, "admin", "Manual revocation");
+      await TokenStorageService.revokeToken(
+        mockToken,
+        "admin",
+        "Manual revocation",
+      );
 
       const validation = await TokenStorageService.validateToken(mockToken);
 
@@ -95,7 +128,14 @@ describe("TokenStorageService", () => {
     it("should return valid for active token", async () => {
       const expiresAt = new Date(Date.now() + 3600000);
 
-      await TokenStorageService.storeToken(mockToken, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
+      await TokenStorageService.storeToken(
+        mockToken,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
 
       const validation = await TokenStorageService.validateToken(mockToken);
 
@@ -109,9 +149,20 @@ describe("TokenStorageService", () => {
     it("should revoke a token successfully", async () => {
       const expiresAt = new Date(Date.now() + 3600000);
 
-      await TokenStorageService.storeToken(mockToken, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
+      await TokenStorageService.storeToken(
+        mockToken,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
 
-      const revoked = await TokenStorageService.revokeToken(mockToken, "admin", "Security audit");
+      const revoked = await TokenStorageService.revokeToken(
+        mockToken,
+        "admin",
+        "Security audit",
+      );
 
       expect(revoked).toBe(true);
 
@@ -121,7 +172,10 @@ describe("TokenStorageService", () => {
     });
 
     it("should return false for non-existent token", async () => {
-      const revoked = await TokenStorageService.revokeToken("non-existent", "admin");
+      const revoked = await TokenStorageService.revokeToken(
+        "non-existent",
+        "admin",
+      );
       expect(revoked).toBe(false);
     });
   });
@@ -134,18 +188,35 @@ describe("TokenStorageService", () => {
       const token3 = "token-3";
 
       // Store tokens for two different grants
-      await TokenStorageService.storeToken(token1, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
-      await TokenStorageService.storeToken(token2, mockGrantId, mockUserId, mockOrganizationId, "qr", expiresAt);
+      await TokenStorageService.storeToken(
+        token1,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
+      await TokenStorageService.storeToken(
+        token2,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "qr",
+        expiresAt,
+      );
       await TokenStorageService.storeToken(
         token3,
         "different-grant",
         mockUserId,
         mockOrganizationId,
         "access",
-        expiresAt
+        expiresAt,
       );
 
-      const revokedCount = await TokenStorageService.revokeTokensForGrant(mockGrantId, "admin");
+      const revokedCount = await TokenStorageService.revokeTokensForGrant(
+        mockGrantId,
+        "admin",
+      );
 
       expect(revokedCount).toBe(2);
 
@@ -169,11 +240,35 @@ describe("TokenStorageService", () => {
       const differentUserId = "different-user";
 
       // Store tokens for two different users
-      await TokenStorageService.storeToken(token1, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
-      await TokenStorageService.storeToken(token2, "grant-2", mockUserId, mockOrganizationId, "qr", expiresAt);
-      await TokenStorageService.storeToken(token3, "grant-3", differentUserId, mockOrganizationId, "access", expiresAt);
+      await TokenStorageService.storeToken(
+        token1,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
+      await TokenStorageService.storeToken(
+        token2,
+        "grant-2",
+        mockUserId,
+        mockOrganizationId,
+        "qr",
+        expiresAt,
+      );
+      await TokenStorageService.storeToken(
+        token3,
+        "grant-3",
+        differentUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
 
-      const revokedCount = await TokenStorageService.revokeTokensForUser(mockUserId, "admin");
+      const revokedCount = await TokenStorageService.revokeTokensForUser(
+        mockUserId,
+        "admin",
+      );
 
       expect(revokedCount).toBe(2);
 
@@ -194,18 +289,33 @@ describe("TokenStorageService", () => {
       const token1 = "token-1";
       const token2 = "token-2";
 
-      await TokenStorageService.storeToken(token1, mockGrantId, mockUserId, mockOrganizationId, "access", expiresAt);
-      await TokenStorageService.storeToken(token2, mockGrantId, mockUserId, mockOrganizationId, "qr", expiresAt);
+      await TokenStorageService.storeToken(
+        token1,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "access",
+        expiresAt,
+      );
+      await TokenStorageService.storeToken(
+        token2,
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "qr",
+        expiresAt,
+      );
       await TokenStorageService.storeToken(
         "token-3",
         "different-grant",
         mockUserId,
         mockOrganizationId,
         "access",
-        expiresAt
+        expiresAt,
       );
 
-      const grantTokens = await TokenStorageService.getTokensForGrant(mockGrantId);
+      const grantTokens =
+        await TokenStorageService.getTokensForGrant(mockGrantId);
 
       expect(grantTokens).toHaveLength(2);
       expect(grantTokens.map((t) => t.token)).toContain(token1);
@@ -224,7 +334,7 @@ describe("TokenStorageService", () => {
         mockUserId,
         mockOrganizationId,
         "access",
-        expiredTime
+        expiredTime,
       );
       await TokenStorageService.storeToken(
         "valid-token",
@@ -232,7 +342,7 @@ describe("TokenStorageService", () => {
         mockUserId,
         mockOrganizationId,
         "access",
-        futureTime
+        futureTime,
       );
 
       const cleanedCount = await TokenStorageService.cleanupExpiredTokens();
@@ -240,8 +350,10 @@ describe("TokenStorageService", () => {
       expect(cleanedCount).toBe(1);
 
       // Expired token should be completely removed
-      const expiredValidation = await TokenStorageService.validateToken("expired-token");
-      const validValidation = await TokenStorageService.validateToken("valid-token");
+      const expiredValidation =
+        await TokenStorageService.validateToken("expired-token");
+      const validValidation =
+        await TokenStorageService.validateToken("valid-token");
 
       expect(expiredValidation.isValid).toBe(false);
       expect(expiredValidation.error).toBe("Token not found"); // Completely removed
@@ -261,16 +373,23 @@ describe("TokenStorageService", () => {
         mockUserId,
         mockOrganizationId,
         "access",
-        futureTime
+        futureTime,
       );
-      await TokenStorageService.storeToken("active-qr", mockGrantId, mockUserId, mockOrganizationId, "qr", futureTime);
+      await TokenStorageService.storeToken(
+        "active-qr",
+        mockGrantId,
+        mockUserId,
+        mockOrganizationId,
+        "qr",
+        futureTime,
+      );
       await TokenStorageService.storeToken(
         "revoked-token",
         mockGrantId,
         mockUserId,
         mockOrganizationId,
         "access",
-        futureTime
+        futureTime,
       );
       await TokenStorageService.storeToken(
         "expired-token",
@@ -278,7 +397,7 @@ describe("TokenStorageService", () => {
         mockUserId,
         mockOrganizationId,
         "scan",
-        expiredTime
+        expiredTime,
       );
 
       // Revoke one token
