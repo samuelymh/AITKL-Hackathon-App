@@ -5,6 +5,7 @@ import User from "@/lib/models/User";
 import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
+import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -53,9 +54,10 @@ async function registerHandler(request: NextRequest) {
     const validatedData: RegisterData = RegisterSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Check if user already exists
+      // Check if user already exists using searchable email hash
+      const emailHash = createSearchableEmailHash(validatedData.personalInfo.contact.email);
       const existingUser = await User.findOne({
-        "personalInfo.contact.email": validatedData.personalInfo.contact.email,
+        "personalInfo.contact.searchableEmail": emailHash,
       });
 
       if (existingUser) {
@@ -90,14 +92,14 @@ async function registerHandler(request: NextRequest) {
 
       const savedUser = await user.save();
 
-      const publicUser = savedUser.toPublicJSON();
+      const publicUser = await savedUser.toPublicJSON();
 
       // Generate JWT tokens
       const token = generateToken({
         userId: savedUser._id.toString(),
         digitalIdentifier: savedUser.digitalIdentifier,
         role: validatedData.role as UserRole,
-        email: validatedData.personalInfo.contact.email,
+        email: publicUser.email,
         tokenVersion: 1,
       });
 

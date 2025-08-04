@@ -5,6 +5,7 @@ import User from "@/lib/models/User";
 import { generateToken, generateRefreshToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
+import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -20,9 +21,10 @@ async function loginHandler(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Find user by email
+      // Find user by searchable email hash
+      const emailHash = createSearchableEmailHash(email);
       const user = await User.findOne({
-        "personalInfo.contact.email": email,
+        "personalInfo.contact.searchableEmail": emailHash,
         auditDeletedDateTime: { $exists: false }, // Exclude soft-deleted users
       });
 
@@ -72,18 +74,19 @@ async function loginHandler(request: NextRequest) {
       }
 
       // Generate JWT tokens
+      const publicUser = await user.toPublicJSON();
       const token = generateToken({
         userId: user._id.toString(),
         digitalIdentifier: user.digitalIdentifier,
         role: (user.auth?.role as UserRole) || UserRole.PATIENT,
-        email: user.personalInfo.contact.email,
+        email: publicUser.email,
         tokenVersion: user.auth?.tokenVersion || 1,
       });
 
       const refreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
 
       return {
-        user: user.toPublicJSON(),
+        user: publicUser,
         accessToken: token,
         refreshToken,
         tokenType: "Bearer",
