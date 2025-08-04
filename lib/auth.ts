@@ -1,21 +1,21 @@
-import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
+import { NextRequest } from 'next/server';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 // JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
 const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || "your-super-secret-refresh-key";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m"; // Short-lived access token
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d"; // Long-lived refresh token
+  process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m'; // Short-lived access token
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // Long-lived refresh token
 
 // User roles for authorization
 export enum UserRole {
-  PATIENT = "patient",
-  DOCTOR = "doctor",
-  PHARMACIST = "pharmacist",
-  ADMIN = "admin",
-  SYSTEM = "system",
+  PATIENT = 'patient',
+  DOCTOR = 'doctor',
+  PHARMACIST = 'pharmacist',
+  ADMIN = 'admin',
+  SYSTEM = 'system',
 }
 
 // JWT Payload interface
@@ -50,19 +50,19 @@ export interface AuthContext {
  * Generate JWT access token for authenticated user
  */
 export function generateToken(
-  payload: Omit<JWTPayload, "iat" | "exp">,
+  payload: Omit<JWTPayload, 'iat' | 'exp'>
 ): string {
   // Add security claims
   const securePayload = {
     ...payload,
     tokenVersion: payload.tokenVersion || 1,
-    iss: process.env.JWT_ISSUER || "health-app",
-    aud: process.env.JWT_AUDIENCE || "health-app-users",
+    iss: process.env.JWT_ISSUER || 'health-app',
+    aud: process.env.JWT_AUDIENCE || 'health-app-users',
   };
 
   return jwt.sign(securePayload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
-    algorithm: "HS256",
+    algorithm: 'HS256',
   } as jwt.SignOptions);
 }
 
@@ -71,7 +71,7 @@ export function generateToken(
  */
 export function generateRefreshToken(
   userId: string,
-  tokenVersion: number = 1,
+  tokenVersion: number = 1
 ): string {
   const payload: RefreshTokenPayload = {
     userId,
@@ -80,7 +80,7 @@ export function generateRefreshToken(
 
   return jwt.sign(payload, JWT_REFRESH_SECRET, {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
-    algorithm: "HS256",
+    algorithm: 'HS256',
   } as jwt.SignOptions);
 }
 
@@ -90,20 +90,20 @@ export function generateRefreshToken(
 export function verifyToken(token: string): JWTPayload | null {
   try {
     const payload = jwt.verify(token, JWT_SECRET, {
-      algorithms: ["HS256"],
-      issuer: process.env.JWT_ISSUER || "health-app",
-      audience: process.env.JWT_AUDIENCE || "health-app-users",
+      algorithms: ['HS256'],
+      issuer: process.env.JWT_ISSUER || 'health-app',
+      audience: process.env.JWT_AUDIENCE || 'health-app-users',
     }) as JWTPayload;
 
     // Validate required claims
     if (!payload.userId || !payload.role || !payload.email) {
-      console.error("JWT missing required claims");
+      console.error('JWT missing required claims');
       return null;
     }
 
     return payload;
   } catch (error) {
-    console.error("JWT verification failed:", error);
+    console.error('JWT verification failed:', error);
     return null;
   }
 }
@@ -114,10 +114,10 @@ export function verifyToken(token: string): JWTPayload | null {
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
   try {
     return jwt.verify(token, JWT_REFRESH_SECRET, {
-      algorithms: ["HS256"],
+      algorithms: ['HS256'],
     }) as RefreshTokenPayload;
   } catch (error) {
-    console.error("Refresh token verification failed:", error);
+    console.error('Refresh token verification failed:', error);
     return null;
   }
 }
@@ -135,7 +135,7 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(
   password: string,
-  hash: string,
+  hash: string
 ): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
@@ -144,13 +144,13 @@ export async function verifyPassword(
  * Extract authentication context from NextRequest
  */
 export function getAuthContext(request: NextRequest): AuthContext | null {
-  const authHeader = request.headers.get("authorization");
+  const authHeader = request.headers.get('authorization');
 
-  if (!authHeader?.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return null;
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
   const payload = verifyToken(token);
 
   if (!payload) {
@@ -171,11 +171,11 @@ export function getAuthContext(request: NextRequest): AuthContext | null {
  */
 export function getCurrentUserId(request?: NextRequest): string {
   if (!request) {
-    return "system";
+    return 'system';
   }
 
   const authContext = getAuthContext(request);
-  return authContext?.userId || "anonymous";
+  return authContext?.userId || 'anonymous';
 }
 
 /**
@@ -183,14 +183,14 @@ export function getCurrentUserId(request?: NextRequest): string {
  */
 export function requireAuth(allowedRoles?: UserRole[]) {
   return (
-    authContext: AuthContext | null,
+    authContext: AuthContext | null
   ): { success: true } | { success: false; error: string; status: number } => {
     if (!authContext?.isAuthenticated) {
-      return { success: false, error: "Authentication required", status: 401 };
+      return { success: false, error: 'Authentication required', status: 401 };
     }
 
     if (allowedRoles && !allowedRoles.includes(authContext.role)) {
-      return { success: false, error: "Insufficient permissions", status: 403 };
+      return { success: false, error: 'Insufficient permissions', status: 403 };
     }
 
     return { success: true };
@@ -202,10 +202,10 @@ export function requireAuth(allowedRoles?: UserRole[]) {
  */
 export function createSystemAuthContext(): AuthContext {
   return {
-    userId: "system",
-    digitalIdentifier: "SYSTEM_USER",
+    userId: 'system',
+    digitalIdentifier: 'SYSTEM_USER',
     role: UserRole.SYSTEM,
-    email: "system@internal.app",
+    email: 'system@internal.app',
     isAuthenticated: true,
   };
 }
@@ -216,28 +216,28 @@ export function createSystemAuthContext(): AuthContext {
 export function hasPermission(
   userRole: UserRole,
   operation: string,
-  resource: string,
+  resource: string
 ): boolean {
   const permissions: Record<UserRole, Record<string, string[]>> = {
     [UserRole.ADMIN]: {
-      "*": ["*"], // Admin has all permissions
+      '*': ['*'], // Admin has all permissions
     },
     [UserRole.DOCTOR]: {
-      users: ["read", "update"],
-      prescriptions: ["create", "read", "update"],
-      medical_records: ["create", "read", "update"],
+      users: ['read', 'update'],
+      prescriptions: ['create', 'read', 'update'],
+      medical_records: ['create', 'read', 'update'],
     },
     [UserRole.PHARMACIST]: {
-      prescriptions: ["read", "update"],
-      medications: ["read", "update"],
+      prescriptions: ['read', 'update'],
+      medications: ['read', 'update'],
     },
     [UserRole.PATIENT]: {
-      users: ["read", "update"], // Can only update own profile
-      medical_records: ["read"], // Can only read own records
-      prescriptions: ["read"], // Can only read own prescriptions
+      users: ['read', 'update'], // Can only update own profile
+      medical_records: ['read'], // Can only read own records
+      prescriptions: ['read'], // Can only read own prescriptions
     },
     [UserRole.SYSTEM]: {
-      "*": ["*"], // System has all permissions
+      '*': ['*'], // System has all permissions
     },
   };
 
@@ -245,14 +245,14 @@ export function hasPermission(
   if (!userPermissions) return false;
 
   // Check if user has global permissions
-  if (userPermissions["*"]?.includes("*")) return true;
+  if (userPermissions['*']?.includes('*')) return true;
 
   // Check resource-specific permissions
   const resourcePermissions = userPermissions[resource];
   if (!resourcePermissions) return false;
 
   return (
-    resourcePermissions.includes(operation) || resourcePermissions.includes("*")
+    resourcePermissions.includes(operation) || resourcePermissions.includes('*')
   );
 }
 
@@ -260,10 +260,10 @@ export function hasPermission(
  * Error responses for authentication failures
  */
 export const AuthErrors = {
-  INVALID_TOKEN: "Invalid or expired token",
-  MISSING_TOKEN: "Authorization token required",
-  INSUFFICIENT_PERMISSIONS: "Insufficient permissions for this operation",
-  INVALID_CREDENTIALS: "Invalid email or password",
-  USER_NOT_FOUND: "User not found",
-  EMAIL_ALREADY_EXISTS: "Email already registered",
+  INVALID_TOKEN: 'Invalid or expired token',
+  MISSING_TOKEN: 'Authorization token required',
+  INSUFFICIENT_PERMISSIONS: 'Insufficient permissions for this operation',
+  INVALID_CREDENTIALS: 'Invalid email or password',
+  USER_NOT_FOUND: 'User not found',
+  EMAIL_ALREADY_EXISTS: 'Email already registered',
 } as const;
