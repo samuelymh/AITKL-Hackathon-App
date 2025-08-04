@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MedicalProfileSummaryProps {
   userId: string;
@@ -31,35 +32,76 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
     hasMedicalConditions: false,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
     const loadProfileStatus = async () => {
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        // In a real implementation, this would fetch from the API
-        // const response = await fetch(`/api/patient/${userId}/medical-info`);
-        // const data = await response.json();
+        const response = await fetch("/api/patient/medical-info", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-        // Simulate API call - for demo, showing incomplete profile
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            const medicalInfo = data.data;
 
-        // Mock data showing partial completion
+            // Calculate completion based on actual data
+            const hasBloodType = !!medicalInfo.bloodType;
+            const hasEmergencyContact = !!(medicalInfo.emergencyContact?.name && medicalInfo.emergencyContact?.phone);
+            const hasAllergies = medicalInfo.foodAllergies?.length > 0 || medicalInfo.drugAllergies?.length > 0;
+            const hasMedicalConditions =
+              medicalInfo.knownMedicalConditions?.length > 0 || medicalInfo.currentMedications?.length > 0;
+
+            const completedFields = [hasBloodType, hasEmergencyContact, hasAllergies, hasMedicalConditions].filter(
+              Boolean
+            ).length;
+            const completionPercentage = Math.round((completedFields / 4) * 100);
+
+            setProfileStatus({
+              completionPercentage,
+              hasBloodType,
+              hasEmergencyContact,
+              hasAllergies,
+              hasMedicalConditions,
+              lastUpdated: medicalInfo.lastUpdated ? new Date(medicalInfo.lastUpdated) : undefined,
+            });
+          }
+        } else {
+          // Set default incomplete status if API fails
+          setProfileStatus({
+            completionPercentage: 0,
+            hasBloodType: false,
+            hasEmergencyContact: false,
+            hasAllergies: false,
+            hasMedicalConditions: false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load medical profile status:", error);
+        // Set default incomplete status on error
         setProfileStatus({
-          completionPercentage: 25, // Indicating incomplete profile
+          completionPercentage: 0,
           hasBloodType: false,
           hasEmergencyContact: false,
           hasAllergies: false,
           hasMedicalConditions: false,
         });
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Failed to load medical profile status:", error);
+      } finally {
         setIsLoading(false);
       }
     };
 
     loadProfileStatus();
-  }, [userId]);
+  }, [userId, token]);
 
   if (isLoading) {
     return (

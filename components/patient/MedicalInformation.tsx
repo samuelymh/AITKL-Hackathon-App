@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MedicalInformation {
   bloodType: string;
@@ -112,33 +113,51 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const { toast } = useToast();
+  const { token } = useAuth();
 
   // Load existing medical information
   useEffect(() => {
     const loadMedicalInfo = async () => {
-      try {
-        // In a real implementation, this would fetch from the API
-        // const response = await fetch(`/api/patient/${userId}/medical-info`);
-        // const data = await response.json();
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // For now, using empty state (indicating incomplete profile)
+      if (!token) {
         setIsLoading(false);
-        calculateCompletion(medicalInfo);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/patient/medical-info", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setMedicalInfo(data.data);
+            calculateCompletion(data.data);
+          }
+        } else {
+          console.error("Failed to load medical information:", response.statusText);
+        }
       } catch (error) {
         console.error("Failed to load medical information:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load medical information. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
         setIsLoading(false);
       }
     };
 
     loadMedicalInfo();
-  }, [userId]);
+  }, [userId, token, toast]);
 
   // Calculate completion percentage
   const calculateCompletion = (info: MedicalInformation) => {
@@ -197,30 +216,51 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
   // Save medical information
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      // In a real implementation, this would call the API
-      // await updateMedicalInformation(userId, medicalInfo);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setHasChanges(false);
-      setMedicalInfo((prev) => ({ ...prev, lastUpdated: new Date() }));
-
+    if (!token) {
       toast({
-        title: "Medical Information Saved",
-        description: "Your medical information has been updated successfully.",
+        title: "Error",
+        description: "Authentication required. Please login again.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/patient/medical-info", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(medicalInfo),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setHasChanges(false);
+        setMedicalInfo((prev) => ({
+          ...prev,
+          lastUpdated: data.data.lastUpdated ? new Date(data.data.lastUpdated) : new Date(),
+        }));
+
+        toast({
+          title: "Medical Information Saved",
+          description: "Your medical information has been updated successfully.",
+        });
+      } else {
+        throw new Error(data.error || "Failed to save medical information");
+      }
     } catch (error) {
       console.error("Failed to save medical information:", error);
       toast({
         title: "Error",
-        description: "Failed to save medical information. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save medical information. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -331,8 +371,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <div>
             <Label className="text-sm">Food Allergies</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {medicalInfo.foodAllergies.map((allergy, index) => (
-                <Badge key={index} variant="outline" className="bg-red-50">
+              {medicalInfo.foodAllergies.map((allergy) => (
+                <Badge key={`food-${allergy}`} variant="outline" className="bg-red-50">
                   {allergy}
                   <button
                     onClick={() => removeFromArrayField("foodAllergies", allergy)}
@@ -363,8 +403,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <div>
             <Label className="text-sm">Drug Allergies</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {medicalInfo.drugAllergies.map((allergy, index) => (
-                <Badge key={index} variant="outline" className="bg-red-50">
+              {medicalInfo.drugAllergies.map((allergy) => (
+                <Badge key={`drug-${allergy}`} variant="outline" className="bg-red-50">
                   {allergy}
                   <button
                     onClick={() => removeFromArrayField("drugAllergies", allergy)}
@@ -404,8 +444,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <div>
             <Label className="text-sm">Known Medical Conditions</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {medicalInfo.knownMedicalConditions.map((condition, index) => (
-                <Badge key={index} variant="outline" className="bg-blue-50">
+              {medicalInfo.knownMedicalConditions.map((condition) => (
+                <Badge key={`condition-${condition}`} variant="outline" className="bg-blue-50">
                   {condition}
                   <button
                     onClick={() => removeFromArrayField("knownMedicalConditions", condition)}
@@ -444,8 +484,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
           <div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {medicalInfo.currentMedications.map((medication, index) => (
-                <Badge key={index} variant="outline" className="bg-green-50">
+              {medicalInfo.currentMedications.map((medication) => (
+                <Badge key={`medication-${medication}`} variant="outline" className="bg-green-50">
                   {medication}
                   <button
                     onClick={() => removeFromArrayField("currentMedications", medication)}
@@ -482,8 +522,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
           <div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {medicalInfo.pastSurgicalHistory.map((surgery, index) => (
-                <Badge key={index} variant="outline" className="bg-purple-50">
+              {medicalInfo.pastSurgicalHistory.map((surgery) => (
+                <Badge key={`surgery-${surgery}`} variant="outline" className="bg-purple-50">
                   {surgery}
                   <button
                     onClick={() => removeFromArrayField("pastSurgicalHistory", surgery)}
