@@ -1,6 +1,9 @@
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
-import { QRCodeGenerationError, TokenGenerationError } from "@/lib/errors/custom-errors";
+import {
+  QRCodeGenerationError,
+  TokenGenerationError,
+} from "@/lib/errors/custom-errors";
 
 export interface QRCodeData {
   digitalIdentifier: string; // The patient's unique HID
@@ -24,7 +27,10 @@ export class QRCodeService {
    * Generate patient identification QR code (contains only digitalIdentifier)
    * This is the QR code patients show at healthcare facilities
    */
-  static async generatePatientQR(digitalIdentifier: string, options: QRCodeGenerationOptions = {}): Promise<string> {
+  static async generatePatientQR(
+    digitalIdentifier: string,
+    options: QRCodeGenerationOptions = {},
+  ): Promise<string> {
     try {
       // Create the payload for the QR code according to knowledge base specification
       const qrPayload = {
@@ -62,7 +68,10 @@ export class QRCodeService {
   /**
    * Generate patient identification QR code as SVG
    */
-  static async generatePatientQRSVG(digitalIdentifier: string, options: QRCodeGenerationOptions = {}): Promise<string> {
+  static async generatePatientQRSVG(
+    digitalIdentifier: string,
+    options: QRCodeGenerationOptions = {},
+  ): Promise<string> {
     try {
       const qrPayload = {
         type: "health_access_request",
@@ -99,11 +108,16 @@ export class QRCodeService {
   /**
    * Validate and extract digital identifier from scanned QR code
    */
-  static validatePatientQRCode(data: string): { digitalIdentifier: string; timestamp: string } | null {
+  static validatePatientQRCode(
+    data: string,
+  ): { digitalIdentifier: string; timestamp: string } | null {
     try {
       const parsed = JSON.parse(data);
 
-      if (parsed.type !== "health_access_request" || !parsed.digitalIdentifier) {
+      if (
+        parsed.type !== "health_access_request" ||
+        !parsed.digitalIdentifier
+      ) {
         return null;
       }
 
@@ -115,7 +129,8 @@ export class QRCodeService {
       // Validate timestamp (QR codes older than 24 hours might be considered stale)
       const qrTimestamp = new Date(parsed.timestamp);
       const now = new Date();
-      const hoursDiff = (now.getTime() - qrTimestamp.getTime()) / (1000 * 60 * 60);
+      const hoursDiff =
+        (now.getTime() - qrTimestamp.getTime()) / (1000 * 60 * 60);
 
       if (hoursDiff > 24) {
         console.warn("QR code is older than 24 hours");
@@ -142,7 +157,7 @@ export class QRCodeService {
   static generateAccessToken(
     digitalIdentifier: string,
     grantId: string,
-    expiresInSeconds: number = 3600
+    expiresInSeconds: number = 3600,
   ): { token: string; expiresAt: Date } {
     try {
       const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
@@ -176,9 +191,13 @@ export class QRCodeService {
   static generateShortLivedToken(
     digitalIdentifier: string,
     grantId: string,
-    expiresInSeconds: number = 900
+    expiresInSeconds: number = 900,
   ): { token: string; expiresAt: Date } {
-    return this.generateAccessToken(digitalIdentifier, grantId, expiresInSeconds);
+    return this.generateAccessToken(
+      digitalIdentifier,
+      grantId,
+      expiresInSeconds,
+    );
   }
 
   /**
@@ -203,7 +222,11 @@ export class QRCodeService {
       }) as any;
 
       // Validate QR access token structure
-      if (payload.type !== "qr_access_grant" || !payload.digitalIdentifier || !payload.grantId) {
+      if (
+        payload.type !== "qr_access_grant" ||
+        !payload.digitalIdentifier ||
+        !payload.grantId
+      ) {
         console.error("Invalid QR access token structure");
         return null;
       }
@@ -224,7 +247,10 @@ export class QRCodeService {
   /**
    * Create patient QR code display URL for frontend
    */
-  static createPatientQRURL(digitalIdentifier: string, baseURL: string = ""): string {
+  static createPatientQRURL(
+    digitalIdentifier: string,
+    baseURL: string = "",
+  ): string {
     return `${baseURL}/patient/qr/${digitalIdentifier}`;
   }
 

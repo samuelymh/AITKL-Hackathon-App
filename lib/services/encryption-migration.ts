@@ -34,7 +34,9 @@ export class EncryptionMigration {
   /**
    * Migrate user data from plaintext to encrypted format
    */
-  public static async migrateUserData(options: MigrationOptions = {}): Promise<MigrationResult> {
+  public static async migrateUserData(
+    options: MigrationOptions = {},
+  ): Promise<MigrationResult> {
     const {
       batchSize = this.DEFAULT_BATCH_SIZE,
       dryRun = false,
@@ -50,7 +52,9 @@ export class EncryptionMigration {
     };
 
     console.log(`Starting user data encryption migration...`);
-    console.log(`Batch size: ${batchSize}, Dry run: ${dryRun}, Force re-encrypt: ${forceReEncrypt}`);
+    console.log(
+      `Batch size: ${batchSize}, Dry run: ${dryRun}, Force re-encrypt: ${forceReEncrypt}`,
+    );
 
     try {
       let hasMore = true;
@@ -81,13 +85,21 @@ export class EncryptionMigration {
               if (!currentValue) continue;
 
               // Skip if already encrypted and not forcing re-encryption
-              if (encryptionUtils.isEncrypted(currentValue) && !forceReEncrypt) {
+              if (
+                encryptionUtils.isEncrypted(currentValue) &&
+                !forceReEncrypt
+              ) {
                 continue;
               }
 
               // Skip if it's not a string (unexpected data type)
-              if (!encryptionUtils.isEncrypted(currentValue) && typeof currentValue !== "string") {
-                console.warn(`Field ${fieldPath} for user ${user._id} is not a string: ${typeof currentValue}`);
+              if (
+                !encryptionUtils.isEncrypted(currentValue) &&
+                typeof currentValue !== "string"
+              ) {
+                console.warn(
+                  `Field ${fieldPath} for user ${user._id} is not a string: ${typeof currentValue}`,
+                );
                 continue;
               }
 
@@ -99,15 +111,20 @@ export class EncryptionMigration {
 
                   if (encryptionUtils.isEncrypted(currentValue)) {
                     // Re-encrypt if forced
-                    encryptedValue = await encryptionService.reEncryptField(currentValue);
+                    encryptedValue =
+                      await encryptionService.reEncryptField(currentValue);
                   } else {
                     // Encrypt plaintext
-                    encryptedValue = await encryptionService.encryptField(currentValue);
+                    encryptedValue =
+                      await encryptionService.encryptField(currentValue);
                   }
 
                   this.setNestedValue(updates, fieldPath, encryptedValue);
                 } catch (error) {
-                  console.error(`Failed to encrypt field ${fieldPath} for user ${user._id}:`, error);
+                  console.error(
+                    `Failed to encrypt field ${fieldPath} for user ${user._id}:`,
+                    error,
+                  );
                   result.errors.push({
                     userId: user._id.toString(),
                     error: `Failed to encrypt ${fieldPath}: ${error}`,
@@ -124,12 +141,14 @@ export class EncryptionMigration {
                 await User.updateOne(
                   { _id: user._id },
                   { $set: updates },
-                  { runValidators: false } // Skip validation for encrypted data
+                  { runValidators: false }, // Skip validation for encrypted data
                 );
               }
 
               result.successfullyMigrated++;
-              console.log(`${dryRun ? "[DRY RUN] " : ""}Migrated user: ${user._id}`);
+              console.log(
+                `${dryRun ? "[DRY RUN] " : ""}Migrated user: ${user._id}`,
+              );
             } else {
               result.skipped++;
             }
@@ -172,7 +191,9 @@ export class EncryptionMigration {
   /**
    * Verify migration integrity by checking encrypted data can be decrypted
    */
-  public static async verifyMigration(options: { batchSize?: number } = {}): Promise<{
+  public static async verifyMigration(
+    options: { batchSize?: number } = {},
+  ): Promise<{
     totalChecked: number;
     successful: number;
     failed: Array<{ userId: string; field: string; error: string }>;
@@ -246,12 +267,18 @@ export class EncryptionMigration {
    * Rollback migration (decrypt all encrypted fields back to plaintext)
    * WARNING: This should only be used in development/testing
    */
-  public static async rollbackMigration(options: MigrationOptions = {}): Promise<MigrationResult> {
+  public static async rollbackMigration(
+    options: MigrationOptions = {},
+  ): Promise<MigrationResult> {
     if (process.env.NODE_ENV === "production") {
       throw new Error("Rollback is not allowed in production environment");
     }
 
-    const { batchSize = this.DEFAULT_BATCH_SIZE, dryRun = false, fields = this.ENCRYPTED_FIELDS } = options;
+    const {
+      batchSize = this.DEFAULT_BATCH_SIZE,
+      dryRun = false,
+      fields = this.ENCRYPTED_FIELDS,
+    } = options;
 
     const result: MigrationResult = {
       totalProcessed: 0,
@@ -290,7 +317,8 @@ export class EncryptionMigration {
 
               if (!dryRun) {
                 try {
-                  const decryptedValue = await encryptionService.decryptField(encryptedValue);
+                  const decryptedValue =
+                    await encryptionService.decryptField(encryptedValue);
                   this.setNestedValue(updates, fieldPath, decryptedValue);
                 } catch (error) {
                   result.errors.push({
@@ -355,7 +383,10 @@ export class EncryptionMigration {
 /**
  * CLI utility function for running migrations
  */
-export async function runMigration(command: string, options: MigrationOptions = {}): Promise<void> {
+export async function runMigration(
+  command: string,
+  options: MigrationOptions = {},
+): Promise<void> {
   const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) {
     throw new Error("MONGODB_URI environment variable is required");
@@ -376,7 +407,9 @@ export async function runMigration(command: string, options: MigrationOptions = 
         await EncryptionMigration.rollbackMigration(options);
         break;
       default:
-        throw new Error(`Unknown command: ${command}. Available: migrate, verify, rollback`);
+        throw new Error(
+          `Unknown command: ${command}. Available: migrate, verify, rollback`,
+        );
     }
   } finally {
     await disconnect();

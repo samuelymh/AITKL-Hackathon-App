@@ -3,9 +3,23 @@ import { auditFields } from "./BaseSchema";
 import { z } from "zod";
 
 // Type aliases
-export type PractitionerType = "doctor" | "nurse" | "pharmacist" | "technician" | "admin" | "other";
-export type PractitionerStatus = "active" | "inactive" | "suspended" | "pending_verification";
-export type AvailabilityStatus = "available" | "busy" | "unavailable" | "on-call";
+export type PractitionerType =
+  | "doctor"
+  | "nurse"
+  | "pharmacist"
+  | "technician"
+  | "admin"
+  | "other";
+export type PractitionerStatus =
+  | "active"
+  | "inactive"
+  | "suspended"
+  | "pending_verification";
+export type AvailabilityStatus =
+  | "available"
+  | "busy"
+  | "unavailable"
+  | "on-call";
 export type VerificationStatus = "verified" | "pending" | "expired" | "revoked";
 
 // Zod schema for validation
@@ -13,15 +27,26 @@ export const PractitionerZodSchema = z.object({
   userId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
     message: "Invalid User ID",
   }),
-  organizationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
-    message: "Invalid Organization ID",
-  }),
+  organizationId: z
+    .string()
+    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Invalid Organization ID",
+    }),
 
   // Professional Information
   professionalInfo: z.object({
-    licenseNumber: z.string().min(3, "License number must be at least 3 characters"),
+    licenseNumber: z
+      .string()
+      .min(3, "License number must be at least 3 characters"),
     specialty: z.string().min(2, "Specialty must be at least 2 characters"),
-    practitionerType: z.enum(["doctor", "nurse", "pharmacist", "technician", "admin", "other"] as const),
+    practitionerType: z.enum([
+      "doctor",
+      "nurse",
+      "pharmacist",
+      "technician",
+      "admin",
+      "other",
+    ] as const),
     yearsOfExperience: z.number().min(0).max(70),
     currentPosition: z.string().optional(),
     department: z.string().optional(),
@@ -56,7 +81,9 @@ export const PractitionerZodSchema = z.object({
         .object({
           monday: z.object({ start: z.string(), end: z.string() }).optional(),
           tuesday: z.object({ start: z.string(), end: z.string() }).optional(),
-          wednesday: z.object({ start: z.string(), end: z.string() }).optional(),
+          wednesday: z
+            .object({ start: z.string(), end: z.string() })
+            .optional(),
           thursday: z.object({ start: z.string(), end: z.string() }).optional(),
           friday: z.object({ start: z.string(), end: z.string() }).optional(),
           saturday: z.object({ start: z.string(), end: z.string() }).optional(),
@@ -64,12 +91,16 @@ export const PractitionerZodSchema = z.object({
         })
         .optional(),
       timeZone: z.string().default("UTC"),
-      availability: z.enum(["available", "busy", "unavailable", "on-call"] as const).default("available"),
+      availability: z
+        .enum(["available", "busy", "unavailable", "on-call"] as const)
+        .default("available"),
     })
     .optional(),
 
   // Status and Activity
-  status: z.enum(["active", "inactive", "suspended", "pending_verification"] as const).default("pending_verification"),
+  status: z
+    .enum(["active", "inactive", "suspended", "pending_verification"] as const)
+    .default("pending_verification"),
   lastActiveDate: z.date().optional(),
 
   // Additional metadata
@@ -84,8 +115,10 @@ export const PractitionerZodSchema = z.object({
             issuingBody: z.string(),
             issueDate: z.date(),
             expiryDate: z.date().optional(),
-            verificationStatus: z.enum(["verified", "pending", "expired", "revoked"] as const).default("pending"),
-          })
+            verificationStatus: z
+              .enum(["verified", "pending", "expired", "revoked"] as const)
+              .default("pending"),
+          }),
         )
         .default([]),
       emergencyContact: z
@@ -167,7 +200,9 @@ export interface IPractitioner extends Document {
 
   // Instance methods
   verifyLicense(method: string, notes?: string): Promise<void>;
-  updatePermissions(newPermissions: Partial<IPractitioner["permissions"]>): Promise<void>;
+  updatePermissions(
+    newPermissions: Partial<IPractitioner["permissions"]>,
+  ): Promise<void>;
   updateSchedule(schedule: IPractitioner["schedule"]): Promise<void>;
   isAvailable(): boolean;
   hasPermission(permission: keyof IPractitioner["permissions"]): boolean;
@@ -378,11 +413,14 @@ const PractitionerSchema = new Schema<IPractitioner>(
   {
     timestamps: true,
     collection: "practitioners",
-  }
+  },
 );
 
 // Instance Methods
-PractitionerSchema.methods.verifyLicense = async function (method: string, notes?: string): Promise<void> {
+PractitionerSchema.methods.verifyLicense = async function (
+  method: string,
+  notes?: string,
+): Promise<void> {
   this.verification.isLicenseVerified = true;
   this.verification.licenseVerificationDate = new Date();
   this.verification.licenseVerificationMethod = method;
@@ -393,22 +431,28 @@ PractitionerSchema.methods.verifyLicense = async function (method: string, notes
 };
 
 PractitionerSchema.methods.updatePermissions = async function (
-  newPermissions: Partial<IPractitioner["permissions"]>
+  newPermissions: Partial<IPractitioner["permissions"]>,
 ): Promise<void> {
   Object.assign(this.permissions, newPermissions);
   await this.save();
 };
 
-PractitionerSchema.methods.updateSchedule = async function (schedule: IPractitioner["schedule"]): Promise<void> {
+PractitionerSchema.methods.updateSchedule = async function (
+  schedule: IPractitioner["schedule"],
+): Promise<void> {
   this.schedule = schedule;
   await this.save();
 };
 
 PractitionerSchema.methods.isAvailable = function (): boolean {
-  return this.status === "active" && this.schedule?.availability === "available";
+  return (
+    this.status === "active" && this.schedule?.availability === "available"
+  );
 };
 
-PractitionerSchema.methods.hasPermission = function (permission: keyof IPractitioner["permissions"]): boolean {
+PractitionerSchema.methods.hasPermission = function (
+  permission: keyof IPractitioner["permissions"],
+): boolean {
   return this.permissions[permission] === true;
 };
 
@@ -435,11 +479,16 @@ PractitionerSchema.methods.getFullProfile = async function (): Promise<any> {
 };
 
 // Static Methods
-PractitionerSchema.statics.findByLicenseNumber = function (licenseNumber: string) {
+PractitionerSchema.statics.findByLicenseNumber = function (
+  licenseNumber: string,
+) {
   return this.findOne({ "professionalInfo.licenseNumber": licenseNumber });
 };
 
-PractitionerSchema.statics.findByOrganization = function (organizationId: string, options: any = {}) {
+PractitionerSchema.statics.findByOrganization = function (
+  organizationId: string,
+  options: any = {},
+) {
   const query = this.find({ organizationId });
 
   if (options.status) {
@@ -476,7 +525,7 @@ PractitionerSchema.statics.findAvailable = function (organizationId?: string) {
 
 PractitionerSchema.statics.getByPermission = function (
   permission: keyof IPractitioner["permissions"],
-  organizationId?: string
+  organizationId?: string,
 ) {
   const query: any = {
     [`permissions.${permission}`]: true,
@@ -572,5 +621,6 @@ PractitionerSchema.index({
 });
 
 export const Practitioner =
-  mongoose.models.Practitioner || mongoose.model<IPractitioner>("Practitioner", PractitionerSchema);
+  mongoose.models.Practitioner ||
+  mongoose.model<IPractitioner>("Practitioner", PractitionerSchema);
 export default Practitioner;

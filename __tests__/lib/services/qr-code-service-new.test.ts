@@ -1,18 +1,27 @@
 import { describe, it, expect, jest } from "@jest/globals";
 import { QRCodeService } from "../../../lib/services/qr-code-service";
-import { QRCodeGenerationError, TokenGenerationError } from "../../../lib/errors/custom-errors";
+import {
+  QRCodeGenerationError,
+  TokenGenerationError,
+} from "../../../lib/errors/custom-errors";
 
-// Mock QRCode module with proper typing
-const mockToDataURL = jest.fn() as jest.MockedFunction<any>;
-const mockToString = jest.fn() as jest.MockedFunction<any>;
-
+// Mock QRCode module
 jest.mock("qrcode", () => ({
-  toDataURL: mockToDataURL,
-  toString: mockToString,
+  toDataURL: jest.fn(),
+  toString: jest.fn(),
 }));
+
+// Import the mocked module after the mock is set up
+import QRCode from "qrcode";
+import jwt from "jsonwebtoken";
+
+// Cast to get typed mock functions
+const mockToDataURL = QRCode.toDataURL as jest.MockedFunction<any>;
+const mockToString = QRCode.toString as jest.MockedFunction<any>;
 
 describe("QRCodeService", () => {
   const mockDigitalIdentifier = "HID_a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+  const mockGrantId = "grant_123456789";
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -23,7 +32,9 @@ describe("QRCodeService", () => {
       const mockDataURL = "data:image/png;base64,mockQRCode";
       mockToDataURL.mockResolvedValue(mockDataURL);
 
-      const result = await QRCodeService.generatePatientQR(mockDigitalIdentifier);
+      const result = await QRCodeService.generatePatientQR(
+        mockDigitalIdentifier,
+      );
 
       expect(result).toBe(mockDataURL);
       expect(mockToDataURL).toHaveBeenCalledWith(
@@ -32,7 +43,7 @@ describe("QRCodeService", () => {
           width: 300,
           height: 300,
           margin: 2,
-        })
+        }),
       );
     });
 
@@ -56,14 +67,16 @@ describe("QRCodeService", () => {
           height: 500,
           margin: 4,
           color: { dark: "#FF0000", light: "#00FF00" },
-        })
+        }),
       );
     });
 
     it("should throw QRCodeGenerationError on failure", async () => {
       mockToDataURL.mockRejectedValue(new Error("QR code generation failed"));
 
-      await expect(QRCodeService.generatePatientQR(mockDigitalIdentifier)).rejects.toThrow(QRCodeGenerationError);
+      await expect(
+        QRCodeService.generatePatientQR(mockDigitalIdentifier),
+      ).rejects.toThrow(QRCodeGenerationError);
     });
 
     it("should include correct payload structure according to knowledge base", async () => {
@@ -89,7 +102,9 @@ describe("QRCodeService", () => {
       const mockSVG = "<svg>mock SVG content</svg>";
       mockToString.mockResolvedValue(mockSVG);
 
-      const result = await QRCodeService.generatePatientQRSVG(mockDigitalIdentifier);
+      const result = await QRCodeService.generatePatientQRSVG(
+        mockDigitalIdentifier,
+      );
 
       expect(result).toBe(mockSVG);
       expect(mockToString).toHaveBeenCalledWith(
@@ -99,14 +114,16 @@ describe("QRCodeService", () => {
           width: 300,
           height: 300,
           margin: 2,
-        })
+        }),
       );
     });
 
     it("should throw QRCodeGenerationError on SVG failure", async () => {
       mockToString.mockRejectedValue(new Error("SVG generation failed"));
 
-      await expect(QRCodeService.generatePatientQRSVG(mockDigitalIdentifier)).rejects.toThrow(QRCodeGenerationError);
+      await expect(
+        QRCodeService.generatePatientQRSVG(mockDigitalIdentifier),
+      ).rejects.toThrow(QRCodeGenerationError);
     });
   });
 
@@ -119,7 +136,9 @@ describe("QRCodeService", () => {
         timestamp: new Date().toISOString(),
       };
 
-      const result = QRCodeService.validatePatientQRCode(JSON.stringify(validQRPayload));
+      const result = QRCodeService.validatePatientQRCode(
+        JSON.stringify(validQRPayload),
+      );
 
       expect(result).toEqual({
         digitalIdentifier: mockDigitalIdentifier,
@@ -135,7 +154,9 @@ describe("QRCodeService", () => {
         timestamp: new Date().toISOString(),
       };
 
-      const result = QRCodeService.validatePatientQRCode(JSON.stringify(invalidQRPayload));
+      const result = QRCodeService.validatePatientQRCode(
+        JSON.stringify(invalidQRPayload),
+      );
 
       expect(result).toBeNull();
     });
@@ -147,13 +168,17 @@ describe("QRCodeService", () => {
         // Missing digitalIdentifier
       };
 
-      const result = QRCodeService.validatePatientQRCode(JSON.stringify(incompleteQRPayload));
+      const result = QRCodeService.validatePatientQRCode(
+        JSON.stringify(incompleteQRPayload),
+      );
 
       expect(result).toBeNull();
     });
 
     it("should accept old QR code (older than 24 hours) but log warning", () => {
-      const oldTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); // 25 hours ago
+      const oldTimestamp = new Date(
+        Date.now() - 25 * 60 * 60 * 1000,
+      ).toISOString(); // 25 hours ago
 
       const oldQRPayload = {
         type: "health_access_request",
@@ -162,9 +187,13 @@ describe("QRCodeService", () => {
         timestamp: oldTimestamp,
       };
 
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
 
-      const result = QRCodeService.validatePatientQRCode(JSON.stringify(oldQRPayload));
+      const result = QRCodeService.validatePatientQRCode(
+        JSON.stringify(oldQRPayload),
+      );
 
       expect(result).toEqual({
         digitalIdentifier: mockDigitalIdentifier,
@@ -184,68 +213,84 @@ describe("QRCodeService", () => {
 
   describe("generateAccessToken", () => {
     it("should generate access token with default expiration", () => {
-      const result = QRCodeService.generateAccessToken();
+      const result = QRCodeService.generateAccessToken(mockDigitalIdentifier, mockGrantId);
 
       expect(result).toMatchObject({
         token: expect.any(String),
         expiresAt: expect.any(Date),
       });
-      expect(result.token).toHaveLength(64); // 32 bytes = 64 hex chars
+      expect(result.token).not.toHaveLength(64); // JWT tokens are much longer
       expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
     });
 
     it("should generate access token with custom expiration", () => {
       const customSeconds = 7200; // 2 hours
       const beforeTime = Date.now();
-      const result = QRCodeService.generateAccessToken(customSeconds);
+      const result = QRCodeService.generateAccessToken(mockDigitalIdentifier, mockGrantId, customSeconds);
 
       const expectedExpiration = new Date(beforeTime + customSeconds * 1000);
       const tolerance = 1000; // 1 second tolerance
 
-      expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(expectedExpiration.getTime() - tolerance);
-      expect(result.expiresAt.getTime()).toBeLessThanOrEqual(expectedExpiration.getTime() + tolerance);
+      expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(
+        expectedExpiration.getTime() - tolerance,
+      );
+      expect(result.expiresAt.getTime()).toBeLessThanOrEqual(
+        expectedExpiration.getTime() + tolerance,
+      );
     });
 
-    it("should throw TokenGenerationError on crypto failure", () => {
-      // Mock crypto failure
-      const originalRandomBytes = require("crypto").randomBytes;
-      require("crypto").randomBytes = jest.fn().mockImplementation(() => {
-        throw new Error("Crypto error");
+    it("should throw TokenGenerationError on JWT failure", () => {
+      // Mock JWT failure by using an invalid secret that will cause jwt.sign to throw
+      const originalEnv = process.env.JWT_SECRET;
+      process.env.JWT_SECRET = ""; // Empty secret should cause error
+      
+      // Use spyOn to mock jwt.sign
+      const jwtSignSpy = jest.spyOn(jwt, 'sign').mockImplementation(() => {
+        throw new Error("JWT signing error");
       });
 
-      expect(() => QRCodeService.generateAccessToken()).toThrow(TokenGenerationError);
+      expect(() => QRCodeService.generateAccessToken(mockDigitalIdentifier, mockGrantId)).toThrow(
+        TokenGenerationError,
+      );
 
-      // Restore original function
-      require("crypto").randomBytes = originalRandomBytes;
+      // Restore
+      jwtSignSpy.mockRestore();
+      if (originalEnv !== undefined) {
+        process.env.JWT_SECRET = originalEnv;
+      }
     });
   });
 
   describe("generateShortLivedToken", () => {
     it("should generate short-lived token with default 15 minutes", () => {
-      const result = QRCodeService.generateShortLivedToken();
+      const result = QRCodeService.generateShortLivedToken(mockDigitalIdentifier, mockGrantId);
 
       expect(result).toMatchObject({
         token: expect.any(String),
         expiresAt: expect.any(Date),
       });
 
-      const expectedDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
+      const expectedDuration = 900 * 1000; // 900 seconds (15 minutes) in milliseconds
       const actualDuration = result.expiresAt.getTime() - Date.now();
       const tolerance = 1000; // 1 second tolerance
 
-      expect(actualDuration).toBeGreaterThanOrEqual(expectedDuration - tolerance);
+      expect(actualDuration).toBeGreaterThanOrEqual(
+        expectedDuration - tolerance,
+      );
       expect(actualDuration).toBeLessThanOrEqual(expectedDuration + tolerance);
     });
 
     it("should generate short-lived token with custom duration", () => {
       const customSeconds = 600; // 10 minutes
-      const result = QRCodeService.generateShortLivedToken(customSeconds);
+      const result = QRCodeService.generateShortLivedToken(mockDigitalIdentifier, mockGrantId, customSeconds);
 
       const expectedDuration = customSeconds * 1000;
       const actualDuration = result.expiresAt.getTime() - Date.now();
       const tolerance = 1000; // 1 second tolerance
 
-      expect(actualDuration).toBeGreaterThanOrEqual(expectedDuration - tolerance);
+      expect(actualDuration).toBeGreaterThanOrEqual(
+        expectedDuration - tolerance,
+      );
       expect(actualDuration).toBeLessThanOrEqual(expectedDuration + tolerance);
     });
   });

@@ -66,7 +66,9 @@ export function useUsers(page = 1, limit = 10) {
   return useQuery<UsersResponse>({
     queryKey: ["users", page, limit],
     queryFn: async () => {
-      return apiClient.get<UsersResponse>(`/api/users?page=${page}&limit=${limit}`);
+      return apiClient.get<UsersResponse>(
+        `/api/users?page=${page}&limit=${limit}`,
+      );
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -141,7 +143,9 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (digitalIdentifier: string) => {
-      return apiClient.delete<{ message: string }>(`/api/users?digitalIdentifier=${digitalIdentifier}`);
+      return apiClient.delete<{ message: string }>(
+        `/api/users?digitalIdentifier=${digitalIdentifier}`,
+      );
     },
     onSuccess: () => {
       // Invalidate users list to refresh
@@ -180,7 +184,9 @@ export function useSearchUsers(searchTerm: string, enabled = true) {
   return useQuery<UsersResponse>({
     queryKey: ["users", "search", searchTerm],
     queryFn: async () => {
-      return apiClient.get<UsersResponse>(`/api/users?search=${encodeURIComponent(searchTerm)}`);
+      return apiClient.get<UsersResponse>(
+        `/api/users?search=${encodeURIComponent(searchTerm)}`,
+      );
     },
     enabled: isAuthenticated && enabled && searchTerm.length > 2,
     staleTime: 30 * 1000, // 30 seconds

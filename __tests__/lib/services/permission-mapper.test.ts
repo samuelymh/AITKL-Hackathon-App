@@ -28,10 +28,18 @@ describe("PermissionMapper", () => {
 
   describe("ACCESS_SCOPE_PERMISSION_MAP", () => {
     it("should contain all expected access scope mappings", () => {
-      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewMedicalHistory).toBe("canAccessPatientRecords");
-      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewPrescriptions).toBe("canAccessPatientRecords");
-      expect(ACCESS_SCOPE_PERMISSION_MAP.canCreateEncounters).toBe("canModifyPatientRecords");
-      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewAuditLogs).toBe("canViewAuditLogs");
+      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewMedicalHistory).toBe(
+        "canAccessPatientRecords",
+      );
+      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewPrescriptions).toBe(
+        "canAccessPatientRecords",
+      );
+      expect(ACCESS_SCOPE_PERMISSION_MAP.canCreateEncounters).toBe(
+        "canModifyPatientRecords",
+      );
+      expect(ACCESS_SCOPE_PERMISSION_MAP.canViewAuditLogs).toBe(
+        "canViewAuditLogs",
+      );
     });
 
     it("should have valid permission keys", () => {
@@ -55,9 +63,15 @@ describe("PermissionMapper", () => {
 
   describe("GRANT_ACTION_PERMISSION_MAP", () => {
     it("should contain all expected grant action mappings", () => {
-      expect(GRANT_ACTION_PERMISSION_MAP.approve).toBe("canApproveAuthorizationGrants");
-      expect(GRANT_ACTION_PERMISSION_MAP.deny).toBe("canApproveAuthorizationGrants");
-      expect(GRANT_ACTION_PERMISSION_MAP.revoke).toBe("canRevokeAuthorizationGrants");
+      expect(GRANT_ACTION_PERMISSION_MAP.approve).toBe(
+        "canApproveAuthorizationGrants",
+      );
+      expect(GRANT_ACTION_PERMISSION_MAP.deny).toBe(
+        "canApproveAuthorizationGrants",
+      );
+      expect(GRANT_ACTION_PERMISSION_MAP.revoke).toBe(
+        "canRevokeAuthorizationGrants",
+      );
     });
   });
 
@@ -127,9 +141,15 @@ describe("PermissionMapper", () => {
         canRevokeAuthorizationGrants: true,
       });
 
-      expect(PermissionMapper.validateGrantAction(practitioner, "approve").allowed).toBe(true);
-      expect(PermissionMapper.validateGrantAction(practitioner, "deny").allowed).toBe(true);
-      expect(PermissionMapper.validateGrantAction(practitioner, "revoke").allowed).toBe(true);
+      expect(
+        PermissionMapper.validateGrantAction(practitioner, "approve").allowed,
+      ).toBe(true);
+      expect(
+        PermissionMapper.validateGrantAction(practitioner, "deny").allowed,
+      ).toBe(true);
+      expect(
+        PermissionMapper.validateGrantAction(practitioner, "revoke").allowed,
+      ).toBe(true);
     });
 
     it("should deny grant actions without proper permissions", () => {
@@ -138,11 +158,17 @@ describe("PermissionMapper", () => {
         canRevokeAuthorizationGrants: false,
       });
 
-      const approveResult = PermissionMapper.validateGrantAction(practitioner, "approve");
+      const approveResult = PermissionMapper.validateGrantAction(
+        practitioner,
+        "approve",
+      );
       expect(approveResult.allowed).toBe(false);
       expect(approveResult.error).toContain("lacks permission to approve");
 
-      const revokeResult = PermissionMapper.validateGrantAction(practitioner, "revoke");
+      const revokeResult = PermissionMapper.validateGrantAction(
+        practitioner,
+        "revoke",
+      );
       expect(revokeResult.allowed).toBe(false);
       expect(revokeResult.error).toContain("lacks permission to revoke");
     });
@@ -150,7 +176,10 @@ describe("PermissionMapper", () => {
     it("should reject invalid grant actions", () => {
       const practitioner = createMockPractitioner();
 
-      const result = PermissionMapper.validateGrantAction(practitioner, "invalidAction");
+      const result = PermissionMapper.validateGrantAction(
+        practitioner,
+        "invalidAction",
+      );
 
       expect(result.allowed).toBe(false);
       expect(result.error).toContain("Invalid grant action");
@@ -164,7 +193,8 @@ describe("PermissionMapper", () => {
         canViewAuditLogs: true,
       });
 
-      const authorizedScopes = PermissionMapper.getAuthorizedScopes(practitioner);
+      const authorizedScopes =
+        PermissionMapper.getAuthorizedScopes(practitioner);
 
       expect(authorizedScopes).toContain("canViewMedicalHistory");
       expect(authorizedScopes).toContain("canViewPrescriptions");
@@ -175,7 +205,8 @@ describe("PermissionMapper", () => {
     it("should return empty array when practitioner has no permissions", () => {
       const practitioner = createMockPractitioner();
 
-      const authorizedScopes = PermissionMapper.getAuthorizedScopes(practitioner);
+      const authorizedScopes =
+        PermissionMapper.getAuthorizedScopes(practitioner);
 
       expect(authorizedScopes).toHaveLength(0);
     });
@@ -187,7 +218,8 @@ describe("PermissionMapper", () => {
         canApproveAuthorizationGrants: true,
       });
 
-      const authorizedActions = PermissionMapper.getAuthorizedGrantActions(practitioner);
+      const authorizedActions =
+        PermissionMapper.getAuthorizedGrantActions(practitioner);
 
       expect(authorizedActions).toContain("approve");
       expect(authorizedActions).toContain("deny");
@@ -197,7 +229,8 @@ describe("PermissionMapper", () => {
     it("should return empty array when practitioner has no grant permissions", () => {
       const practitioner = createMockPractitioner();
 
-      const authorizedActions = PermissionMapper.getAuthorizedGrantActions(practitioner);
+      const authorizedActions =
+        PermissionMapper.getAuthorizedGrantActions(practitioner);
 
       expect(authorizedActions).toHaveLength(0);
     });
@@ -209,7 +242,10 @@ describe("PermissionMapper", () => {
         canAccessPatientRecords: true,
       });
 
-      const hasPatientRead = PermissionMapper.hasPermissionGroup(practitioner, "PATIENT_READ");
+      const hasPatientRead = PermissionMapper.hasPermissionGroup(
+        practitioner,
+        "PATIENT_READ",
+      );
       expect(hasPatientRead).toBe(true);
     });
 
@@ -219,7 +255,10 @@ describe("PermissionMapper", () => {
         // missing canModifyPatientRecords
       });
 
-      const hasPatientWrite = PermissionMapper.hasPermissionGroup(practitioner, "PATIENT_WRITE");
+      const hasPatientWrite = PermissionMapper.hasPermissionGroup(
+        practitioner,
+        "PATIENT_WRITE",
+      );
       expect(hasPatientWrite).toBe(false);
     });
   });
@@ -232,15 +271,22 @@ describe("PermissionMapper", () => {
         "canViewAuditLogs",
       ]);
 
-      expect(requirements.canViewMedicalHistory).toBe("canAccessPatientRecords");
+      expect(requirements.canViewMedicalHistory).toBe(
+        "canAccessPatientRecords",
+      );
       expect(requirements.canCreateEncounters).toBe("canModifyPatientRecords");
       expect(requirements.canViewAuditLogs).toBe("canViewAuditLogs");
     });
 
     it("should ignore invalid scopes", () => {
-      const requirements = PermissionMapper.getPermissionRequirements(["canViewMedicalHistory", "invalidScope"]);
+      const requirements = PermissionMapper.getPermissionRequirements([
+        "canViewMedicalHistory",
+        "invalidScope",
+      ]);
 
-      expect(requirements.canViewMedicalHistory).toBe("canAccessPatientRecords");
+      expect(requirements.canViewMedicalHistory).toBe(
+        "canAccessPatientRecords",
+      );
       expect(requirements.invalidScope).toBeUndefined();
     });
   });
@@ -307,7 +353,9 @@ describe("PermissionMapper", () => {
   });
 
   const validateGroupScopes = (group: readonly string[]): boolean => {
-    return group.every((scope) => ACCESS_SCOPE_PERMISSION_MAP[scope] !== undefined);
+    return group.every(
+      (scope) => ACCESS_SCOPE_PERMISSION_MAP[scope] !== undefined,
+    );
   };
 
   describe("PERMISSION_GROUPS", () => {
@@ -318,7 +366,8 @@ describe("PermissionMapper", () => {
     });
 
     it("should have all scopes in groups mapped to valid permissions", () => {
-      const allGroupsValid = Object.values(PERMISSION_GROUPS).every(validateGroupScopes);
+      const allGroupsValid =
+        Object.values(PERMISSION_GROUPS).every(validateGroupScopes);
       expect(allGroupsValid).toBe(true);
     });
   });

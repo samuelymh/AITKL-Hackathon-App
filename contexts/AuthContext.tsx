@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -68,23 +75,6 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     if (savedToken && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-
-        // Check if any of the user fields contain encrypted objects
-        const hasEncryptedFields =
-          (typeof parsedUser.firstName === "object" && parsedUser.firstName?.data) ||
-          (typeof parsedUser.lastName === "object" && parsedUser.lastName?.data) ||
-          (typeof parsedUser.email === "object" && parsedUser.email?.data) ||
-          (typeof parsedUser.phone === "object" && parsedUser.phone?.data);
-
-        if (hasEncryptedFields) {
-          console.warn("Encrypted user data found in localStorage, clearing...");
-          localStorage.removeItem("auth-token");
-          localStorage.removeItem("auth-refresh-token");
-          localStorage.removeItem("auth-user");
-          setIsLoading(false);
-          return;
-        }
-
         // Ensure user has a valid role property and phone number
         const userWithRole = {
           ...parsedUser,
@@ -214,7 +204,16 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       register,
       refreshAuthToken,
     }),
-    [user, token, refreshToken, isLoading, login, logout, register, refreshAuthToken]
+    [
+      user,
+      token,
+      refreshToken,
+      isLoading,
+      login,
+      logout,
+      register,
+      refreshAuthToken,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

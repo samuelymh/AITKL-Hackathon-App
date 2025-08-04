@@ -81,7 +81,9 @@ export function LoginForm() {
               disabled={isLoading}
               className={errors.email ? "border-red-500" : ""}
             />
-            {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
+            {errors.email && (
+              <p className="text-sm text-red-600 mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div>
@@ -93,7 +95,9 @@ export function LoginForm() {
               disabled={isLoading}
               className={errors.password ? "border-red-500" : ""}
             />
-            {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
+            {errors.password && (
+              <p className="text-sm text-red-600 mt-1">{errors.password}</p>
+            )}
           </div>
 
           {apiError && (

@@ -71,14 +71,19 @@ function RoleBasedHeader({ user }: { readonly user: any }) {
           {user.firstName} {user.lastName}
         </p>
       </div>
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}
+      >
         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
       </span>
     </div>
   );
 }
 
-export function ProtectedLayout({ children, requiredRoles }: ProtectedLayoutProps) {
+export function ProtectedLayout({
+  children,
+  requiredRoles,
+}: ProtectedLayoutProps) {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
@@ -113,7 +118,9 @@ export function ProtectedLayout({ children, requiredRoles }: ProtectedLayoutProp
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-blue-600">Health Records System</h1>
+              <h1 className="text-xl font-semibold text-blue-600">
+                Health Records System
+              </h1>
             </div>
             <div className="flex items-center gap-4">
               {user && <RoleBasedHeader user={user} />}
@@ -128,7 +135,9 @@ export function ProtectedLayout({ children, requiredRoles }: ProtectedLayoutProp
       {/* Navigation breadcrumb or role-based nav could go here */}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">{children}</main>
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }

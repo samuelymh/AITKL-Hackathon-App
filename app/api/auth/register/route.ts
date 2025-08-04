@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
+import {
+  generateToken,
+  generateRefreshToken,
+  hashPassword,
+  UserRole,
+  AuthErrors,
+} from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
-import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 // Validation schemas
 const RegisterSchema = z.object({
@@ -15,14 +20,18 @@ const RegisterSchema = z.object({
     dateOfBirth: z.string().transform((str) => new Date(str)),
     contact: z.object({
       email: z.string().email(),
-      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
     }),
   }),
   password: z.string().min(8).max(128),
   role: z.enum(["patient", "doctor", "pharmacist", "admin"]).default("patient"),
   medicalInfo: z
     .object({
-      bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      bloodType: z
+        .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+        .optional(),
       knownAllergies: z.array(z.string()).optional(),
       emergencyContact: z
         .object({
@@ -54,10 +63,9 @@ async function registerHandler(request: NextRequest) {
     const validatedData: RegisterData = RegisterSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Check if user already exists using searchable email hash
-      const emailHash = createSearchableEmailHash(validatedData.personalInfo.contact.email);
+      // Check if user already exists
       const existingUser = await User.findOne({
-        "personalInfo.contact.searchableEmail": emailHash,
+        "personalInfo.contact.email": validatedData.personalInfo.contact.email,
       });
 
       if (existingUser) {
@@ -92,14 +100,14 @@ async function registerHandler(request: NextRequest) {
 
       const savedUser = await user.save();
 
-      const publicUser = await savedUser.toPublicJSON();
+      const publicUser = savedUser.toPublicJSON();
 
       // Generate JWT tokens
       const token = generateToken({
         userId: savedUser._id.toString(),
         digitalIdentifier: savedUser.digitalIdentifier,
         role: validatedData.role as UserRole,
-        email: publicUser.email,
+        email: validatedData.personalInfo.contact.email,
         tokenVersion: 1,
       });
 
@@ -123,7 +131,7 @@ async function registerHandler(request: NextRequest) {
           error: result.error || "Registration failed",
           timestamp: result.timestamp,
         },
-        { status }
+        { status },
       );
     }
 
@@ -133,7 +141,7 @@ async function registerHandler(request: NextRequest) {
         data: result.data,
         timestamp: result.timestamp,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Registration error:", error);
@@ -146,7 +154,7 @@ async function registerHandler(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -156,7 +164,7 @@ async function registerHandler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Registration failed",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

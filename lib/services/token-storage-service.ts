@@ -1,4 +1,8 @@
-import { ITokenRepository, MongoTokenRepository, InMemoryTokenRepository } from "../repositories/token-repository";
+import {
+  ITokenRepository,
+  MongoTokenRepository,
+  InMemoryTokenRepository,
+} from "../repositories/token-repository";
 
 export interface StoredToken {
   token: string;
@@ -58,7 +62,9 @@ export class TokenStorageService {
         this.repository = new InMemoryTokenRepository();
         break;
       default:
-        throw new Error(`Unsupported token storage backend: ${this.config.backend}`);
+        throw new Error(
+          `Unsupported token storage backend: ${this.config.backend}`,
+        );
     }
 
     // Start periodic cleanup if enabled
@@ -87,7 +93,7 @@ export class TokenStorageService {
     organizationId: string,
     tokenType: StoredToken["tokenType"],
     expiresAt: Date,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): Promise<void> {
     const storedToken: StoredToken = {
       token,
@@ -114,22 +120,42 @@ export class TokenStorageService {
   /**
    * Revoke a token manually
    */
-  static async revokeToken(token: string, revokedBy: string, reason?: string): Promise<boolean> {
+  static async revokeToken(
+    token: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<boolean> {
     return await this.getRepository().revokeToken(token, revokedBy, reason);
   }
 
   /**
    * Revoke all tokens for a specific grant
    */
-  static async revokeTokensForGrant(grantId: string, revokedBy: string, reason?: string): Promise<number> {
-    return await this.getRepository().revokeTokensForGrant(grantId, revokedBy, reason);
+  static async revokeTokensForGrant(
+    grantId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
+    return await this.getRepository().revokeTokensForGrant(
+      grantId,
+      revokedBy,
+      reason,
+    );
   }
 
   /**
    * Revoke all tokens for a specific user
    */
-  static async revokeTokensForUser(userId: string, revokedBy: string, reason?: string): Promise<number> {
-    return await this.getRepository().revokeTokensForUser(userId, revokedBy, reason);
+  static async revokeTokensForUser(
+    userId: string,
+    revokedBy: string,
+    reason?: string,
+  ): Promise<number> {
+    return await this.getRepository().revokeTokensForUser(
+      userId,
+      revokedBy,
+      reason,
+    );
   }
 
   /**
@@ -168,13 +194,18 @@ export class TokenStorageService {
         try {
           const cleaned = await this.cleanupExpiredTokens();
           if (cleaned > 0) {
-            console.log(`TokenStorageService: Cleaned up ${cleaned} expired tokens`);
+            console.log(
+              `TokenStorageService: Cleaned up ${cleaned} expired tokens`,
+            );
           }
         } catch (error) {
-          console.error("TokenStorageService: Error during periodic cleanup:", error);
+          console.error(
+            "TokenStorageService: Error during periodic cleanup:",
+            error,
+          );
         }
       },
-      intervalMinutes * 60 * 1000
+      intervalMinutes * 60 * 1000,
     );
   }
 

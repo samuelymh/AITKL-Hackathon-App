@@ -18,7 +18,11 @@ describe("ErrorHandler", () => {
         name: "ZodError",
         errors: [
           { path: ["userId"], message: "Required", code: "invalid_type" },
-          { path: ["organizationId"], message: "Required", code: "invalid_type" },
+          {
+            path: ["organizationId"],
+            message: "Required",
+            code: "invalid_type",
+          },
         ],
       };
 
@@ -69,7 +73,9 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle GrantActionError", () => {
-      const grantError = new GrantActionError("Invalid action", "ACTIVE", ["revoke"]);
+      const grantError = new GrantActionError("Invalid action", "ACTIVE", [
+        "revoke",
+      ]);
 
       const result = ErrorHandler.handleError(grantError);
 
@@ -82,7 +88,10 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle ValidationError", () => {
-      const validationError = new ValidationError("Validation failed", { field: "userId", issue: "required" });
+      const validationError = new ValidationError("Validation failed", {
+        field: "userId",
+        issue: "required",
+      });
 
       const result = ErrorHandler.handleError(validationError);
 
@@ -92,12 +101,26 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle generic errors", () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        process.env,
+        "NODE_ENV",
+      );
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+      });
+      
       const genericError = new Error("Something went wrong");
 
       const result = ErrorHandler.handleError(genericError);
 
       expect(result.error).toBe("Something went wrong");
       expect(result.statusCode).toBe(500);
+      
+      // Restore original NODE_ENV
+      if (originalDescriptor) {
+        Object.defineProperty(process.env, "NODE_ENV", originalDescriptor);
+      }
     });
   });
 
@@ -126,7 +149,11 @@ describe("ErrorHandler", () => {
     });
 
     it("should format GrantActionError with context", () => {
-      const error = new GrantActionError("Cannot approve revoked grant", "REVOKED", []);
+      const error = new GrantActionError(
+        "Cannot approve revoked grant",
+        "REVOKED",
+        [],
+      );
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -141,14 +168,20 @@ describe("ErrorHandler", () => {
     });
 
     it("should format DatabaseError with development details", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        process.env,
+        "NODE_ENV",
+      );
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "development",
         configurable: true,
       });
 
       const originalError = new Error("Connection failed");
-      const error = new DatabaseError("Database connection error", originalError);
+      const error = new DatabaseError(
+        "Database connection error",
+        originalError,
+      );
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -165,14 +198,20 @@ describe("ErrorHandler", () => {
     });
 
     it("should format DatabaseError without details in production", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        process.env,
+        "NODE_ENV",
+      );
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "production",
         configurable: true,
       });
 
       const originalError = new Error("Connection failed");
-      const error = new DatabaseError("Database connection error", originalError);
+      const error = new DatabaseError(
+        "Database connection error",
+        originalError,
+      );
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -210,7 +249,10 @@ describe("ErrorHandler", () => {
     });
 
     it("should format generic errors with stack trace in development", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        process.env,
+        "NODE_ENV",
+      );
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "development",
         configurable: true,
@@ -231,7 +273,10 @@ describe("ErrorHandler", () => {
     });
 
     it("should format generic errors without stack trace in production", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        process.env,
+        "NODE_ENV",
+      );
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "production",
         configurable: true,

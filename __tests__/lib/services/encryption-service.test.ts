@@ -1,4 +1,7 @@
-import { encryptionService, encryptionUtils } from "../../../lib/services/encryption-service";
+import {
+  encryptionService,
+  encryptionUtils,
+} from "../../../lib/services/encryption-service";
 
 // Mock environment variables for testing
 const originalEnv = process.env;
@@ -27,7 +30,9 @@ describe("EncryptionService", () => {
 
   describe("Field Encryption and Decryption", () => {
     test("should encrypt a string field", async () => {
-      const encrypted = await encryptionService.encryptField(testData.plaintext);
+      const encrypted = await encryptionService.encryptField(
+        testData.plaintext,
+      );
 
       expect(encrypted).toHaveProperty("data");
       expect(encrypted).toHaveProperty("iv");
@@ -39,14 +44,18 @@ describe("EncryptionService", () => {
     });
 
     test("should decrypt an encrypted field back to original", async () => {
-      const encrypted = await encryptionService.encryptField(testData.plaintext);
+      const encrypted = await encryptionService.encryptField(
+        testData.plaintext,
+      );
       const decrypted = await encryptionService.decryptField(encrypted);
 
       expect(decrypted).toBe(testData.plaintext);
     });
 
     test("should handle email encryption/decryption", async () => {
-      const encrypted = await encryptionService.encryptField(testData.sensitiveData);
+      const encrypted = await encryptionService.encryptField(
+        testData.sensitiveData,
+      );
       const decrypted = await encryptionService.decryptField(encrypted);
 
       expect(decrypted).toBe(testData.sensitiveData);
@@ -54,7 +63,9 @@ describe("EncryptionService", () => {
     });
 
     test("should handle medical information encryption", async () => {
-      const encrypted = await encryptionService.encryptField(testData.medicalInfo);
+      const encrypted = await encryptionService.encryptField(
+        testData.medicalInfo,
+      );
       const decrypted = await encryptionService.decryptField(encrypted);
 
       expect(decrypted).toBe(testData.medicalInfo);
@@ -62,8 +73,12 @@ describe("EncryptionService", () => {
     });
 
     test("should produce different encrypted values for same input (due to random IV)", async () => {
-      const encrypted1 = await encryptionService.encryptField(testData.plaintext);
-      const encrypted2 = await encryptionService.encryptField(testData.plaintext);
+      const encrypted1 = await encryptionService.encryptField(
+        testData.plaintext,
+      );
+      const encrypted2 = await encryptionService.encryptField(
+        testData.plaintext,
+      );
 
       expect(encrypted1.data).not.toBe(encrypted2.data);
       expect(encrypted1.iv).not.toBe(encrypted2.iv);
@@ -86,7 +101,11 @@ describe("EncryptionService", () => {
 
       const encrypted = await encryptionService.encryptFields(fields);
 
-      expect(Object.keys(encrypted)).toEqual(["firstName", "lastName", "email"]);
+      expect(Object.keys(encrypted)).toEqual([
+        "firstName",
+        "lastName",
+        "email",
+      ]);
       expect(encrypted.firstName).toHaveProperty("data");
       expect(encrypted.lastName).toHaveProperty("data");
       expect(encrypted.email).toHaveProperty("data");
@@ -122,9 +141,15 @@ describe("EncryptionService", () => {
 
   describe("Error Handling", () => {
     test("should throw error for empty plaintext", async () => {
-      await expect(encryptionService.encryptField("")).rejects.toThrow("Invalid input");
-      await expect(encryptionService.encryptField(null as any)).rejects.toThrow("Invalid input");
-      await expect(encryptionService.encryptField(undefined as any)).rejects.toThrow("Invalid input");
+      await expect(encryptionService.encryptField("")).rejects.toThrow(
+        "Invalid input",
+      );
+      await expect(encryptionService.encryptField(null as any)).rejects.toThrow(
+        "Invalid input",
+      );
+      await expect(
+        encryptionService.encryptField(undefined as any),
+      ).rejects.toThrow("Invalid input");
     });
 
     test("should throw error for invalid encrypted field", async () => {
@@ -135,7 +160,9 @@ describe("EncryptionService", () => {
         algorithm: "aes-256-gcm",
       };
 
-      await expect(encryptionService.decryptField(invalidField)).rejects.toThrow();
+      await expect(
+        encryptionService.decryptField(invalidField),
+      ).rejects.toThrow();
     });
 
     test("should throw error for missing auth tag", async () => {
@@ -146,7 +173,9 @@ describe("EncryptionService", () => {
         algorithm: "aes-256-gcm",
       };
 
-      await expect(encryptionService.decryptField(invalidField)).rejects.toThrow("missing auth tag");
+      await expect(
+        encryptionService.decryptField(invalidField),
+      ).rejects.toThrow("missing auth tag");
     });
   });
 
@@ -162,7 +191,9 @@ describe("EncryptionService", () => {
     });
 
     test("should check if field needs re-encryption", async () => {
-      const encrypted = await encryptionService.encryptField(testData.plaintext);
+      const encrypted = await encryptionService.encryptField(
+        testData.plaintext,
+      );
 
       // With same key version, should not need re-encryption
       expect(encryptionService.needsReEncryption(encrypted)).toBe(false);
@@ -224,7 +255,13 @@ describe("EncryptionService", () => {
     });
 
     test("should handle medical allergy information", async () => {
-      const allergies = ["Penicillin", "Tree nuts", "Shellfish", "Latex", "Sulfa drugs"];
+      const allergies = [
+        "Penicillin",
+        "Tree nuts",
+        "Shellfish",
+        "Latex",
+        "Sulfa drugs",
+      ];
 
       const encryptedAllergies = await encryptionService.encryptFields(
         allergies.reduce(
@@ -232,11 +269,12 @@ describe("EncryptionService", () => {
             acc[`allergy_${index}`] = allergy;
             return acc;
           },
-          {} as Record<string, string>
-        )
+          {} as Record<string, string>,
+        ),
       );
 
-      const decryptedAllergies = await encryptionService.decryptFields(encryptedAllergies);
+      const decryptedAllergies =
+        await encryptionService.decryptFields(encryptedAllergies);
 
       Object.values(decryptedAllergies).forEach((allergy, index) => {
         expect(allergy).toBe(allergies[index]);
@@ -264,9 +302,14 @@ describe("EncryptionService", () => {
 
   describe("Performance", () => {
     test("should handle concurrent encryption operations", async () => {
-      const testValues = Array.from({ length: 10 }, (_, i) => `test-value-${i}`);
+      const testValues = Array.from(
+        { length: 10 },
+        (_, i) => `test-value-${i}`,
+      );
 
-      const encryptionPromises = testValues.map((value) => encryptionService.encryptField(value));
+      const encryptionPromises = testValues.map((value) =>
+        encryptionService.encryptField(value),
+      );
 
       const encrypted = await Promise.all(encryptionPromises);
 
@@ -276,7 +319,9 @@ describe("EncryptionService", () => {
         expect(enc.keyVersion).toBe(1);
       });
 
-      const decryptionPromises = encrypted.map((enc: any) => encryptionService.decryptField(enc));
+      const decryptionPromises = encrypted.map((enc: any) =>
+        encryptionService.decryptField(enc),
+      );
 
       const decrypted = await Promise.all(decryptionPromises);
 

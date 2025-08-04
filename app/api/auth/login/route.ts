@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
-import { generateToken, generateRefreshToken, verifyPassword, AuthErrors, UserRole } from "@/lib/auth";
+import {
+  generateToken,
+  generateRefreshToken,
+  verifyPassword,
+  AuthErrors,
+  UserRole,
+} from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
-import { createSearchableEmailHash } from "@/lib/utils/email-utils";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -21,10 +26,9 @@ async function loginHandler(request: NextRequest) {
     const { email, password } = LoginSchema.parse(body);
 
     const result = await executeDatabaseOperation(async () => {
-      // Find user by searchable email hash
-      const emailHash = createSearchableEmailHash(email);
+      // Find user by email
       const user = await User.findOne({
-        "personalInfo.contact.searchableEmail": emailHash,
+        "personalInfo.contact.email": email,
         auditDeletedDateTime: { $exists: false }, // Exclude soft-deleted users
       });
 
@@ -38,11 +42,16 @@ async function loginHandler(request: NextRequest) {
         user.auth?.accountLockedUntil &&
         new Date() < new Date(user.auth.accountLockedUntil)
       ) {
-        throw new Error("Account temporarily locked due to multiple failed login attempts");
+        throw new Error(
+          "Account temporarily locked due to multiple failed login attempts",
+        );
       }
 
       // Verify password
-      const isValidPassword = await verifyPassword(password, user.auth?.passwordHash || "");
+      const isValidPassword = await verifyPassword(
+        password,
+        user.auth?.passwordHash || "",
+      );
 
       if (!isValidPassword) {
         // Increment login attempts
@@ -52,7 +61,9 @@ async function loginHandler(request: NextRequest) {
           // Lock account after 5 failed attempts for 15 minutes
           if (user.auth.loginAttempts >= 5) {
             user.auth.accountLocked = true;
-            user.auth.accountLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+            user.auth.accountLockedUntil = new Date(
+              Date.now() + 15 * 60 * 1000,
+            ); // 15 minutes
           }
 
           AuditHelper.applyAudit(user, "update", "system-login-attempt");
@@ -74,19 +85,21 @@ async function loginHandler(request: NextRequest) {
       }
 
       // Generate JWT tokens
-      const publicUser = await user.toPublicJSON();
       const token = generateToken({
         userId: user._id.toString(),
         digitalIdentifier: user.digitalIdentifier,
         role: (user.auth?.role as UserRole) || UserRole.PATIENT,
-        email: publicUser.email,
+        email: user.personalInfo.contact.email as any,
         tokenVersion: user.auth?.tokenVersion || 1,
       });
 
-      const refreshToken = generateRefreshToken(user._id.toString(), user.auth?.tokenVersion || 1);
+      const refreshToken = generateRefreshToken(
+        user._id.toString(),
+        user.auth?.tokenVersion || 1,
+      );
 
       return {
-        user: publicUser,
+        user: user.toPublicJSON(),
         accessToken: token,
         refreshToken,
         tokenType: "Bearer",
@@ -96,14 +109,18 @@ async function loginHandler(request: NextRequest) {
     }, "User Login");
 
     if (!result.success) {
-      const status = result.error?.includes("credentials") || result.error?.includes("locked") ? 401 : 500;
+      const status =
+        result.error?.includes("credentials") ||
+        result.error?.includes("locked")
+          ? 401
+          : 500;
       return NextResponse.json(
         {
           success: false,
           error: result.error || "Login failed",
           timestamp: result.timestamp,
         },
-        { status }
+        { status },
       );
     }
 
@@ -123,7 +140,7 @@ async function loginHandler(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -133,7 +150,7 @@ async function loginHandler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Login failed",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

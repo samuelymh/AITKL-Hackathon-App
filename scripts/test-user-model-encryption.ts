@@ -21,8 +21,12 @@ async function simulateUserModelSave() {
 
   try {
     // Import the encryption plugin after setting env vars
-    const { encryptionPlugin } = await import("../lib/services/encryption-plugin");
-    const { encryptionService } = await import("../lib/services/encryption-service");
+    const { encryptionPlugin } = await import(
+      "../lib/services/encryption-plugin"
+    );
+    const { encryptionService } = await import(
+      "../lib/services/encryption-service"
+    );
 
     // Simulate user data as it would come from your app
     const userData = {
@@ -57,11 +61,17 @@ async function simulateUserModelSave() {
     };
 
     console.log("1. Original user data:");
-    console.log(`   Name: ${userData.personalInfo.firstName} ${userData.personalInfo.lastName}`);
+    console.log(
+      `   Name: ${userData.personalInfo.firstName} ${userData.personalInfo.lastName}`,
+    );
     console.log(`   Email: ${userData.personalInfo.contact.email}`);
     console.log(`   Phone: ${userData.personalInfo.contact.phone}`);
-    console.log(`   Allergies: [${userData.medicalInfo.knownAllergies.join(", ")}]`);
-    console.log(`   Emergency Contact: ${userData.medicalInfo.emergencyContact?.name}\n`);
+    console.log(
+      `   Allergies: [${userData.medicalInfo.knownAllergies.join(", ")}]`,
+    );
+    console.log(
+      `   Emergency Contact: ${userData.medicalInfo.emergencyContact?.name}\n`,
+    );
 
     // Simulate the pre-save middleware encryption
     console.log("2. Simulating pre-save encryption...");
@@ -107,10 +117,12 @@ async function simulateUserModelSave() {
       const encryptedAllergies: any[] = await Promise.all(
         userData.medicalInfo.knownAllergies.map(async (allergy) => {
           return await encryptionService.encryptField(allergy);
-        })
+        }),
       );
       userData.medicalInfo.knownAllergies = encryptedAllergies;
-      console.log(`   ✅ Encrypted: medicalInfo.knownAllergies (${userData.medicalInfo.knownAllergies.length} items)`);
+      console.log(
+        `   ✅ Encrypted: medicalInfo.knownAllergies (${userData.medicalInfo.knownAllergies.length} items)`,
+      );
     }
 
     console.log('\n3. Verifying encryption in "database":');
@@ -119,23 +131,29 @@ async function simulateUserModelSave() {
     for (const fieldPath of encryptedFields) {
       const encryptedValue = getNestedValue(userData, fieldPath);
       const isEncrypted = encryptionUtils.isEncrypted(encryptedValue);
-      console.log(`   ${fieldPath}: ${isEncrypted ? "🔒 Encrypted" : "❌ Not encrypted"}`);
+      console.log(
+        `   ${fieldPath}: ${isEncrypted ? "🔒 Encrypted" : "❌ Not encrypted"}`,
+      );
     }
 
     // Verify allergies are encrypted
     userData.medicalInfo.knownAllergies.forEach((allergy, index) => {
       const isEncrypted = encryptionUtils.isEncrypted(allergy);
-      console.log(`   medicalInfo.knownAllergies[${index}]: ${isEncrypted ? "🔒 Encrypted" : "❌ Not encrypted"}`);
+      console.log(
+        `   medicalInfo.knownAllergies[${index}]: ${isEncrypted ? "🔒 Encrypted" : "❌ Not encrypted"}`,
+      );
     });
 
     // Verify that non-sensitive fields are NOT encrypted
     console.log(
-      `   digitalIdentifier: ${typeof userData.digitalIdentifier === "string" ? "✅ Plaintext" : "❌ Encrypted"}`
+      `   digitalIdentifier: ${typeof userData.digitalIdentifier === "string" ? "✅ Plaintext" : "❌ Encrypted"}`,
     );
     console.log(
-      `   medicalInfo.bloodType: ${typeof userData.medicalInfo.bloodType === "string" ? "✅ Plaintext" : "❌ Encrypted"}`
+      `   medicalInfo.bloodType: ${typeof userData.medicalInfo.bloodType === "string" ? "✅ Plaintext" : "❌ Encrypted"}`,
     );
-    console.log(`   auth.role: ${typeof userData.auth?.role === "string" ? "✅ Plaintext" : "❌ Encrypted"}`);
+    console.log(
+      `   auth.role: ${typeof userData.auth?.role === "string" ? "✅ Plaintext" : "❌ Encrypted"}`,
+    );
 
     console.log("\n4. Simulating post-find decryption...");
 
@@ -157,26 +175,40 @@ async function simulateUserModelSave() {
             return await encryptionService.decryptField(allergy);
           }
           return allergy;
-        })
+        }),
       );
       console.log(`   ✅ Decrypted: medicalInfo.knownAllergies`);
     }
 
     console.log("\n5. Final decrypted user data:");
-    console.log(`   Name: ${userData.personalInfo.firstName} ${userData.personalInfo.lastName}`);
+    console.log(
+      `   Name: ${userData.personalInfo.firstName} ${userData.personalInfo.lastName}`,
+    );
     console.log(`   Email: ${userData.personalInfo.contact.email}`);
     console.log(`   Phone: ${userData.personalInfo.contact.phone}`);
-    console.log(`   Allergies: [${userData.medicalInfo.knownAllergies.join(", ")}]`);
-    console.log(`   Emergency Contact: ${userData.medicalInfo.emergencyContact?.name}`);
+    console.log(
+      `   Allergies: [${userData.medicalInfo.knownAllergies.join(", ")}]`,
+    );
+    console.log(
+      `   Emergency Contact: ${userData.medicalInfo.emergencyContact?.name}`,
+    );
 
     console.log("\n🎉 User Model Encryption Integration Test Passed!");
     console.log("\n📋 What this proves:");
-    console.log("   ✅ PII fields (firstName, lastName, email, phone) are encrypted in database");
-    console.log("   ✅ PHI fields (allergies, emergency contact) are encrypted in database");
-    console.log("   ✅ Non-sensitive fields (bloodType, role, ID) remain plaintext");
+    console.log(
+      "   ✅ PII fields (firstName, lastName, email, phone) are encrypted in database",
+    );
+    console.log(
+      "   ✅ PHI fields (allergies, emergency contact) are encrypted in database",
+    );
+    console.log(
+      "   ✅ Non-sensitive fields (bloodType, role, ID) remain plaintext",
+    );
     console.log("   ✅ Array fields (allergies) are properly encrypted");
     console.log("   ✅ Decryption restores original values exactly");
-    console.log("   ✅ Your healthcare data is HIPAA-compliant encrypted at rest!");
+    console.log(
+      "   ✅ Your healthcare data is HIPAA-compliant encrypted at rest!",
+    );
   } catch (error) {
     console.error("❌ User model encryption test failed:", error);
     process.exit(1);

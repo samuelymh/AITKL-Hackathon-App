@@ -53,7 +53,12 @@ export const GRANT_ACTION_PERMISSION_MAP: Record<string, PermissionKey> = {
  * Permission groups for easier management and validation
  */
 export const PERMISSION_GROUPS = {
-  PATIENT_READ: ["canViewMedicalHistory", "canViewPrescriptions", "canViewPatientDocuments", "canViewPatientHistory"],
+  PATIENT_READ: [
+    "canViewMedicalHistory",
+    "canViewPrescriptions",
+    "canViewPatientDocuments",
+    "canViewPatientHistory",
+  ],
   PATIENT_WRITE: ["canCreateEncounters", "canUpdatePatientRecords"],
   PRESCRIPTION: ["canCreatePrescriptions", "canModifyPrescriptions"],
   AUDIT: ["canViewAuditLogs"],
@@ -70,7 +75,7 @@ export class PermissionMapper {
    */
   static validateAccessScopes(
     practitioner: IPractitioner,
-    accessScopes: string[]
+    accessScopes: string[],
   ): { valid: boolean; missingPermissions: string[]; invalidScopes: string[] } {
     const missingPermissions: string[] = [];
     const invalidScopes: string[] = [];
@@ -98,7 +103,10 @@ export class PermissionMapper {
   /**
    * Validate if a practitioner can perform a specific grant action
    */
-  static validateGrantAction(practitioner: IPractitioner, action: string): { allowed: boolean; error?: string } {
+  static validateGrantAction(
+    practitioner: IPractitioner,
+    action: string,
+  ): { allowed: boolean; error?: string } {
     const requiredPermission = GRANT_ACTION_PERMISSION_MAP[action];
 
     if (!requiredPermission) {
@@ -124,7 +132,9 @@ export class PermissionMapper {
   static getAuthorizedScopes(practitioner: IPractitioner): string[] {
     const authorizedScopes: string[] = [];
 
-    for (const [scope, requiredPermission] of Object.entries(ACCESS_SCOPE_PERMISSION_MAP)) {
+    for (const [scope, requiredPermission] of Object.entries(
+      ACCESS_SCOPE_PERMISSION_MAP,
+    )) {
       if (practitioner.permissions[requiredPermission]) {
         authorizedScopes.push(scope);
       }
@@ -139,7 +149,9 @@ export class PermissionMapper {
   static getAuthorizedGrantActions(practitioner: IPractitioner): string[] {
     const authorizedActions: string[] = [];
 
-    for (const [action, requiredPermission] of Object.entries(GRANT_ACTION_PERMISSION_MAP)) {
+    for (const [action, requiredPermission] of Object.entries(
+      GRANT_ACTION_PERMISSION_MAP,
+    )) {
       if (practitioner.permissions[requiredPermission]) {
         authorizedActions.push(action);
       }
@@ -151,7 +163,10 @@ export class PermissionMapper {
   /**
    * Check if a practitioner has permissions for an entire permission group
    */
-  static hasPermissionGroup(practitioner: IPractitioner, group: keyof typeof PERMISSION_GROUPS): boolean {
+  static hasPermissionGroup(
+    practitioner: IPractitioner,
+    group: keyof typeof PERMISSION_GROUPS,
+  ): boolean {
     const scopes = PERMISSION_GROUPS[group];
     return scopes.every((scope) => {
       const requiredPermission = ACCESS_SCOPE_PERMISSION_MAP[scope];
@@ -162,7 +177,9 @@ export class PermissionMapper {
   /**
    * Get permission requirements for access scopes (useful for documentation/UI)
    */
-  static getPermissionRequirements(accessScopes: string[]): Record<string, string> {
+  static getPermissionRequirements(
+    accessScopes: string[],
+  ): Record<string, string> {
     const requirements: Record<string, string> = {};
 
     for (const scope of accessScopes) {
@@ -178,8 +195,12 @@ export class PermissionMapper {
   /**
    * Validate that all required permission keys exist in the practitioner permissions
    */
-  static validatePermissionStructure(permissions: Partial<PractitionerPermissions>): string[] {
-    const requiredPermissions = new Set(Object.values(ACCESS_SCOPE_PERMISSION_MAP));
+  static validatePermissionStructure(
+    permissions: Partial<PractitionerPermissions>,
+  ): string[] {
+    const requiredPermissions = new Set(
+      Object.values(ACCESS_SCOPE_PERMISSION_MAP),
+    );
     const missingKeys: string[] = [];
 
     for (const permission of requiredPermissions) {
@@ -195,21 +216,27 @@ export class PermissionMapper {
 /**
  * Helper function to create access scope arrays with validation
  */
-export function createAccessScope(scopes: (keyof typeof ACCESS_SCOPE_PERMISSION_MAP)[]): string[] {
+export function createAccessScope(
+  scopes: (keyof typeof ACCESS_SCOPE_PERMISSION_MAP)[],
+): string[] {
   return scopes.filter((scope) => scope in ACCESS_SCOPE_PERMISSION_MAP);
 }
 
 /**
  * Type guard to check if a string is a valid access scope
  */
-export function isValidAccessScope(scope: string): scope is keyof typeof ACCESS_SCOPE_PERMISSION_MAP {
+export function isValidAccessScope(
+  scope: string,
+): scope is keyof typeof ACCESS_SCOPE_PERMISSION_MAP {
   return scope in ACCESS_SCOPE_PERMISSION_MAP;
 }
 
 /**
  * Type guard to check if a string is a valid grant action
  */
-export function isValidGrantAction(action: string): action is keyof typeof GRANT_ACTION_PERMISSION_MAP {
+export function isValidGrantAction(
+  action: string,
+): action is keyof typeof GRANT_ACTION_PERMISSION_MAP {
   return action in GRANT_ACTION_PERMISSION_MAP;
 }
 

@@ -53,7 +53,10 @@ class ApiClient {
       if (response.ok) {
         const refreshResponse: RefreshTokenResponse = await response.json();
         localStorage.setItem("auth-token", refreshResponse.data.accessToken);
-        localStorage.setItem("auth-refresh-token", refreshResponse.data.refreshToken);
+        localStorage.setItem(
+          "auth-refresh-token",
+          refreshResponse.data.refreshToken,
+        );
         return true;
       }
     } catch (error) {
@@ -88,7 +91,9 @@ class ApiClient {
       }
 
       const errorData: ApiError = await response.json();
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.error || `HTTP error! status: ${response.status}`,
+      );
     }
 
     const result: ApiResponse<T> = await response.json();

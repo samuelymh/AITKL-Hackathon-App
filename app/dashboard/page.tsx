@@ -4,29 +4,16 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/PermissionGuard";
+import {
+  DoctorOrAdmin,
+  PatientOnly,
+  HealthcareStaff,
+} from "@/components/auth/PermissionGuard";
 
 function WelcomeCard() {
   const { user } = useAuth();
 
   if (!user) return null;
-
-  // Helper function to safely render user data that might be encrypted
-  const safeRenderField = (field: any): string => {
-    if (!field) return "";
-
-    // If it's already a string, return it
-    if (typeof field === "string") return field;
-
-    // If it's an encrypted object, return a placeholder
-    if (typeof field === "object" && field.data && field.iv) {
-      console.warn("Encrypted field detected in dashboard, using fallback");
-      return "[Protected Data]";
-    }
-
-    // Convert to string as fallback
-    return String(field);
-  };
 
   const getRoleDescription = (role: string | undefined) => {
     switch (role) {
@@ -48,10 +35,12 @@ function WelcomeCard() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>
-            Welcome, {safeRenderField(user.firstName)} {safeRenderField(user.lastName)}
+            Welcome, {user.firstName} {user.lastName}
           </span>
           <Badge variant="secondary">
-            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Patient"}
+            {user.role
+              ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+              : "Patient"}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -60,7 +49,7 @@ function WelcomeCard() {
         <div className="mt-4 space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Email:</span>
-            <span className="text-sm">{safeRenderField(user.email)}</span>
+            <span className="text-sm">{user.email}</span>
             {user.emailVerified && (
               <Badge variant="outline" className="text-xs">
                 Verified
@@ -69,7 +58,7 @@ function WelcomeCard() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Phone:</span>
-            <span className="text-sm">{safeRenderField(user.phone)}</span>
+            <span className="text-sm">{user.phone}</span>
             {user.phoneVerified && (
               <Badge variant="outline" className="text-xs">
                 Verified
@@ -175,7 +164,9 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-gray-600">Welcome to your Health Records System</p>
+          <p className="mt-2 text-gray-600">
+            Welcome to your Health Records System
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -197,9 +188,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                This section will show recent user activities, system logs, and important notifications.
+                This section will show recent user activities, system logs, and
+                important notifications.
               </p>
-              <div className="mt-4 text-sm text-gray-500">Feature coming soon: Real-time activity monitoring</div>
+              <div className="mt-4 text-sm text-gray-500">
+                Feature coming soon: Real-time activity monitoring
+              </div>
             </CardContent>
           </Card>
         </DoctorOrAdmin>
@@ -211,9 +205,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                View your latest medical information, upcoming appointments, and prescription status.
+                View your latest medical information, upcoming appointments, and
+                prescription status.
               </p>
-              <div className="mt-4 text-sm text-gray-500">Feature coming soon: Personal health dashboard</div>
+              <div className="mt-4 text-sm text-gray-500">
+                Feature coming soon: Personal health dashboard
+              </div>
             </CardContent>
           </Card>
         </PatientOnly>

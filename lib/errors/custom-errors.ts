@@ -5,7 +5,7 @@
 export class AuthorizationError extends Error {
   constructor(
     message: string,
-    public statusCode: number = 403
+    public statusCode: number = 403,
   ) {
     super(message);
     this.name = "AuthorizationError";
@@ -16,7 +16,7 @@ export class ValidationError extends Error {
   constructor(
     message: string,
     public details?: any,
-    public statusCode: number = 400
+    public statusCode: number = 400,
   ) {
     super(message);
     this.name = "ValidationError";
@@ -27,7 +27,7 @@ export class ValidationError extends Error {
 export class NotFoundError extends Error {
   constructor(
     resource: string,
-    public statusCode: number = 404
+    public statusCode: number = 404,
   ) {
     super(`${resource} not found`);
     this.name = "NotFoundError";
@@ -37,7 +37,7 @@ export class NotFoundError extends Error {
 export class ConflictError extends Error {
   constructor(
     message: string,
-    public statusCode: number = 409
+    public statusCode: number = 409,
   ) {
     super(message);
     this.name = "ConflictError";
@@ -48,7 +48,7 @@ export class DatabaseError extends Error {
   constructor(
     message: string,
     public originalError?: Error,
-    public statusCode: number = 500
+    public statusCode: number = 500,
   ) {
     super(message);
     this.name = "DatabaseError";
@@ -61,7 +61,7 @@ export class GrantActionError extends Error {
     message: string,
     public currentStatus: string,
     public allowedActions: string[],
-    public statusCode: number = 400
+    public statusCode: number = 400,
   ) {
     super(message);
     this.name = "GrantActionError";
@@ -73,7 +73,7 @@ export class GrantActionError extends Error {
 export class TokenGenerationError extends Error {
   constructor(
     message: string = "Failed to generate secure token",
-    public statusCode: number = 500
+    public statusCode: number = 500,
   ) {
     super(message);
     this.name = "TokenGenerationError";
@@ -83,7 +83,7 @@ export class TokenGenerationError extends Error {
 export class QRCodeGenerationError extends Error {
   constructor(
     message: string = "Failed to generate QR code",
-    public statusCode: number = 500
+    public statusCode: number = 500,
   ) {
     super(message);
     this.name = "QRCodeGenerationError";
@@ -103,8 +103,14 @@ export class ErrorHandler {
     details?: any;
   } {
     // Handle Zod validation errors
-    if (error?.name === "ZodError" || (error?.errors && Array.isArray(error.errors))) {
-      const validationError = new ValidationError("Validation failed", error.errors);
+    if (
+      error?.name === "ZodError" ||
+      (error?.errors && Array.isArray(error.errors))
+    ) {
+      const validationError = new ValidationError(
+        "Validation failed",
+        error.errors,
+      );
       return this.formatErrorResponse(validationError);
     }
 
@@ -172,11 +178,17 @@ export class ErrorHandler {
       return {
         error: error.message,
         statusCode: error.statusCode,
-        details: process.env.NODE_ENV === "development" ? error.originalError?.message : undefined,
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.originalError?.message
+            : undefined,
       };
     }
 
-    if (error instanceof TokenGenerationError || error instanceof QRCodeGenerationError) {
+    if (
+      error instanceof TokenGenerationError ||
+      error instanceof QRCodeGenerationError
+    ) {
       return {
         error: error.message,
         statusCode: error.statusCode,
@@ -185,7 +197,10 @@ export class ErrorHandler {
 
     // Generic error fallback
     return {
-      error: process.env.NODE_ENV === "development" ? error.message : "Internal server error",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
       statusCode: 500,
       details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     };

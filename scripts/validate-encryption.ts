@@ -10,7 +10,9 @@ async function validateEncryptedUserModel() {
 
   try {
     // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/test-healthcare");
+    await mongoose.connect(
+      process.env.MONGODB_URI || "mongodb://localhost:27017/test-healthcare",
+    );
     console.log("✅ Connected to database");
 
     // Test data
@@ -61,10 +63,15 @@ async function validateEncryptedUserModel() {
 
     // Verify data integrity
     console.log("\n🔍 Verifying data integrity...");
-    const emailMatch = foundUser.personalInfo.contact.email === testUserData.personalInfo.contact.email;
-    const phoneMatch = foundUser.personalInfo.contact.phone === testUserData.personalInfo.contact.phone;
+    const emailMatch =
+      foundUser.personalInfo.contact.email ===
+      testUserData.personalInfo.contact.email;
+    const phoneMatch =
+      foundUser.personalInfo.contact.phone ===
+      testUserData.personalInfo.contact.phone;
     const nameMatch =
-      foundUser.getFullName() === `${testUserData.personalInfo.firstName} ${testUserData.personalInfo.lastName}`;
+      foundUser.getFullName() ===
+      `${testUserData.personalInfo.firstName} ${testUserData.personalInfo.lastName}`;
 
     if (emailMatch && phoneMatch && nameMatch) {
       console.log("✅ Data integrity verified - all fields match");
@@ -86,7 +93,9 @@ async function validateEncryptedUserModel() {
       console.log("✅ firstName is properly encrypted in database");
 
       // Test manual decryption
-      const decryptedName = await foundUser.decryptField("personalInfo.firstName");
+      const decryptedName = await foundUser.decryptField(
+        "personalInfo.firstName",
+      );
       console.log(`   Manually decrypted name: ${decryptedName}`);
     } else {
       console.log("❌ firstName is not encrypted in database");
@@ -101,7 +110,9 @@ async function validateEncryptedUserModel() {
 
     // Test query capabilities
     console.log("\n🔍 Testing query capabilities...");
-    const userByDigitalId = await User.findByDigitalId(foundUser.digitalIdentifier);
+    const userByDigitalId = await User.findByDigitalId(
+      foundUser.digitalIdentifier,
+    );
 
     if (userByDigitalId) {
       console.log("✅ Query by digital ID successful");
@@ -113,7 +124,9 @@ async function validateEncryptedUserModel() {
     await User.deleteOne({ _id: user._id });
     console.log("\n🧹 Cleanup completed");
 
-    console.log("\n🎉 All tests passed! Encrypted User model is working correctly.");
+    console.log(
+      "\n🎉 All tests passed! Encrypted User model is working correctly.",
+    );
   } catch (error) {
     console.error("❌ Test failed:", error);
     process.exit(1);

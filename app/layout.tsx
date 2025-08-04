@@ -26,7 +26,7 @@ export default function RootLayout({
             retry: 1,
           },
         },
-      })
+      }),
   );
 
   return (

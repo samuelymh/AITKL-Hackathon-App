@@ -120,7 +120,7 @@ class AuditLogger {
         {
           timestamps: true,
           collection: "audit_logs",
-        }
+        },
       );
 
       // Add compound indexes for common queries
@@ -156,7 +156,9 @@ class AuditLogger {
       };
 
       // Log to all enabled backends
-      const promises = this.config.enabledBackends.map((backend) => this.logToBackend(backend, completeEntry));
+      const promises = this.config.enabledBackends.map((backend) =>
+        this.logToBackend(backend, completeEntry),
+      );
 
       await Promise.allSettled(promises);
     } catch (error) {
@@ -175,7 +177,7 @@ class AuditLogger {
     resource: string,
     details?: any,
     duration?: number,
-    errorMessage?: string
+    errorMessage?: string,
   ): Promise<void> {
     const authContext = getAuthContext(request);
     const ip = this.extractClientIP(request);
@@ -207,7 +209,7 @@ class AuditLogger {
     eventType: SecurityEventType,
     request?: NextRequest,
     userId?: string,
-    details?: any
+    details?: any,
   ): Promise<void> {
     if (!this.config.enableSecurityEventTracking) {
       return;
@@ -224,7 +226,10 @@ class AuditLogger {
       endpoint: request ? new URL(request.url).pathname : "/system",
       ip,
       userAgent,
-      statusCode: eventType.includes("FAILURE") || eventType.includes("DENIED") ? 403 : 200,
+      statusCode:
+        eventType.includes("FAILURE") || eventType.includes("DENIED")
+          ? 403
+          : 200,
       details: {
         eventType,
         securityEvent: true,
@@ -281,7 +286,11 @@ class AuditLogger {
 
       // Execute query with pagination
       const [logs, total] = await Promise.all([
-        AuditLog.find(query).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
+        AuditLog.find(query)
+          .sort({ timestamp: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
         AuditLog.countDocuments(query),
       ]);
 
@@ -295,7 +304,10 @@ class AuditLogger {
   /**
    * Log to specific backend
    */
-  private async logToBackend(backend: AuditStorageBackend, entry: AuditLogEntry): Promise<void> {
+  private async logToBackend(
+    backend: AuditStorageBackend,
+    entry: AuditLogEntry,
+  ): Promise<void> {
     try {
       switch (backend) {
         case AuditStorageBackend.CONSOLE:
@@ -351,7 +363,9 @@ class AuditLogger {
       await connectToDatabase();
 
       if (!this.auditLogSchema) {
-        console.warn("Audit log schema not initialized, falling back to console");
+        console.warn(
+          "Audit log schema not initialized, falling back to console",
+        );
         await this.logToConsole(entry);
         return;
       }
@@ -396,7 +410,9 @@ class AuditLogger {
 export const auditLogger = new AuditLogger();
 
 // Export factory function for custom configurations
-export function createAuditLogger(config?: Partial<AuditLoggerConfig>): AuditLogger {
+export function createAuditLogger(
+  config?: Partial<AuditLoggerConfig>,
+): AuditLogger {
   return new AuditLogger(config);
 }
 
@@ -412,19 +428,37 @@ export const auditOperations = {
     resource: string,
     details?: any,
     duration?: number,
-    errorMessage?: string
-  ) => auditLogger.logFromRequest(request, statusCode, action, resource, details, duration, errorMessage),
+    errorMessage?: string,
+  ) =>
+    auditLogger.logFromRequest(
+      request,
+      statusCode,
+      action,
+      resource,
+      details,
+      duration,
+      errorMessage,
+    ),
 
   /**
    * Log authentication events
    */
-  logAuth: (eventType: SecurityEventType, request?: NextRequest, userId?: string, details?: any) =>
-    auditLogger.logSecurityEvent(eventType, request, userId, details),
+  logAuth: (
+    eventType: SecurityEventType,
+    request?: NextRequest,
+    userId?: string,
+    details?: any,
+  ) => auditLogger.logSecurityEvent(eventType, request, userId, details),
 
   /**
    * Log data access
    */
-  logDataAccess: (userId: string, resource: string, action: string, details?: any) =>
+  logDataAccess: (
+    userId: string,
+    resource: string,
+    action: string,
+    details?: any,
+  ) =>
     auditLogger.log({
       userId,
       action,

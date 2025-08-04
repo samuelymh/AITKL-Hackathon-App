@@ -48,9 +48,15 @@ export interface IOrganization extends IBaseDocument {
 // Static methods interface
 export interface IOrganizationModel extends Model<IOrganization> {
   findByType(type: OrganizationType): Promise<IOrganization[]>;
-  findByRegistrationNumber(registrationNumber: string): Promise<IOrganization | null>;
+  findByRegistrationNumber(
+    registrationNumber: string,
+  ): Promise<IOrganization | null>;
   findVerified(): Promise<IOrganization[]>;
-  findNearby(latitude: number, longitude: number, radiusKm: number): Promise<IOrganization[]>;
+  findNearby(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+  ): Promise<IOrganization[]>;
 }
 
 // Organization schema fields
@@ -141,7 +147,10 @@ const organizationSchemaFields = {
       required: true,
       lowercase: true,
       trim: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email"],
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Please enter a valid email",
+      ],
       index: true,
     },
     website: {
@@ -181,14 +190,23 @@ const OrganizationSchema = createExtendedSchema(organizationSchemaFields, {
 
 // Indexes for performance
 OrganizationSchema.index({ "organizationInfo.name": "text" }); // Text search
-OrganizationSchema.index({ "address.coordinates.latitude": 1, "address.coordinates.longitude": 1 }); // Geospatial
-OrganizationSchema.index({ "organizationInfo.type": 1, "verification.isVerified": 1 }); // Common queries
+OrganizationSchema.index({
+  "address.coordinates.latitude": 1,
+  "address.coordinates.longitude": 1,
+}); // Geospatial
+OrganizationSchema.index({
+  "organizationInfo.type": 1,
+  "verification.isVerified": 1,
+}); // Common queries
 
 // Pre-save middleware
 OrganizationSchema.pre("save", function (next) {
   // Auto-verify based on registration number format (implement specific logic as needed)
   const doc = this as any;
-  if (doc.organizationInfo?.registrationNumber && !doc.verification?.isVerified) {
+  if (
+    doc.organizationInfo?.registrationNumber &&
+    !doc.verification?.isVerified
+  ) {
     // Could implement automatic verification logic here
   }
 
@@ -198,7 +216,10 @@ OrganizationSchema.pre("save", function (next) {
 // Instance methods
 OrganizationSchema.methods = {
   // Verify the organization
-  verify: async function (this: IOrganization, verifiedBy: string): Promise<IOrganization> {
+  verify: async function (
+    this: IOrganization,
+    verifiedBy: string,
+  ): Promise<IOrganization> {
     this.verification.isVerified = true;
     this.verification.verifiedAt = new Date();
     this.auditModifiedBy = verifiedBy;
@@ -207,7 +228,10 @@ OrganizationSchema.methods = {
   },
 
   // Unverify the organization
-  unverify: async function (this: IOrganization, unverifiedBy: string): Promise<IOrganization> {
+  unverify: async function (
+    this: IOrganization,
+    unverifiedBy: string,
+  ): Promise<IOrganization> {
     this.verification.isVerified = false;
     this.verification.verifiedAt = undefined;
     this.auditModifiedBy = unverifiedBy;
@@ -216,7 +240,11 @@ OrganizationSchema.methods = {
   },
 
   // Update contact information
-  updateContact: async function (this: IOrganization, contactInfo: any, updatedBy: string): Promise<IOrganization> {
+  updateContact: async function (
+    this: IOrganization,
+    contactInfo: any,
+    updatedBy: string,
+  ): Promise<IOrganization> {
     if (contactInfo.phone) this.contact.phone = contactInfo.phone;
     if (contactInfo.email) this.contact.email = contactInfo.email;
     if (contactInfo.website) this.contact.website = contactInfo.website;
@@ -274,6 +302,9 @@ OrganizationSchema.statics = {
 
 // Create and export the model
 const Organization: IOrganizationModel = (mongoose.models.Organization ||
-  mongoose.model<IOrganization, IOrganizationModel>("Organization", OrganizationSchema)) as IOrganizationModel;
+  mongoose.model<IOrganization, IOrganizationModel>(
+    "Organization",
+    OrganizationSchema,
+  )) as IOrganizationModel;
 
 export default Organization;
