@@ -159,13 +159,13 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     setUser(null);
     setToken(null);
     setRefreshToken(null);
-    
+
     // Clear localStorage with error handling
     try {
       localStorage.removeItem("auth-token");
       localStorage.removeItem("auth-refresh-token");
       localStorage.removeItem("auth-user");
-      
+
       // Also clear any potential legacy keys if they exist
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       console.error("Error clearing localStorage during logout:", error);
       // Even if localStorage fails, continue with logout
     }
-    
+
     // Redirect to login page
     router.push("/login");
   };

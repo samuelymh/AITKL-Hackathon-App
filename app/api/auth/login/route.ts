@@ -24,11 +24,18 @@ async function loginHandler(request: NextRequest) {
       const user = await User.findOne({
         "personalInfo.contact.searchableEmail": email.toLowerCase().trim(),
         auditDeletedDateTime: { $exists: false }, // Exclude soft-deleted users
-      });
+      }).select("+auth.passwordHash"); // Explicitly include password hash
+
+      console.log("🔍 Debug - Login attempt for:", email.toLowerCase().trim());
+      console.log("🔍 Debug - User found:", !!user);
 
       if (!user) {
+        console.log("❌ Debug - No user found");
         throw new Error(AuthErrors.INVALID_CREDENTIALS);
       }
+
+      console.log("✅ Debug - User found:", user.digitalIdentifier);
+      console.log("🔍 Debug - User has password hash:", !!user.auth?.passwordHash);
 
       // Check if account is locked
       if (
@@ -40,15 +47,18 @@ async function loginHandler(request: NextRequest) {
       }
 
       // Verify password
+      console.log("🔑 Debug - Verifying password...");
       const isValidPassword = await verifyPassword(password, user.auth?.passwordHash || "");
+      console.log("🔑 Debug - Password valid:", isValidPassword);
 
       if (!isValidPassword) {
+        console.log("❌ Debug - Password verification failed");
         // Increment login attempts
         if (user.auth) {
           user.auth.loginAttempts = (user.auth.loginAttempts || 0) + 1;
 
-          // Lock account after 5 failed attempts for 15 minutes
-          if (user.auth.loginAttempts >= 5) {
+          // Lock account after 10 failed attempts for 15 minutes
+          if (user.auth.loginAttempts >= 10) {
             user.auth.accountLocked = true;
             user.auth.accountLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
           }
