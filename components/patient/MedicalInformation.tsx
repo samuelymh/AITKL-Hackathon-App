@@ -95,6 +95,69 @@ const COMMON_CONDITIONS = [
   "Migraines",
 ];
 
+// Helper function for API calls with JWT handling
+const makeApiCallHelper = async (
+  url: string,
+  token: string,
+  refreshAuthToken: () => Promise<void>,
+  logout: () => void,
+  options: RequestInit = {}
+) => {
+  if (!token) {
+    throw new Error("No authentication token available");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    ...(options.headers as Record<string, string>),
+  };
+
+  try {
+    let response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      try {
+        await refreshAuthToken();
+
+        // Get the new token from localStorage
+        const newToken = localStorage.getItem("auth-token");
+        if (!newToken) {
+          throw new Error("Token refresh failed");
+        }
+
+        // Retry the request with new token
+        response = await fetch(url, {
+          ...options,
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${newToken}`,
+          },
+        });
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        logout();
+        throw new Error("Session expired. Please log in again.");
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status}`);
+    }
+
+    return response;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Session expired")) {
+      throw error;
+    }
+    throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+};
+
 export function MedicalInformation({ userId, className }: MedicalInformationProps) {
   const [medicalInfo, setMedicalInfo] = useState<MedicalInformation>({
     bloodType: "",
@@ -117,7 +180,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   const [hasChanges, setHasChanges] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token, logout, refreshAuthToken } = useAuth();
 
   // Load existing medical information
   useEffect(() => {
@@ -128,27 +191,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       }
 
       try {
-        const response = await fetch("/api/patient/medical-info", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            setMedicalInfo(data.data);
-            calculateCompletion(data.data);
-          }
-        } else {
-          console.error("Failed to load medical information:", response.statusText);
+        const response = await makeApiCallHelper("/api/patient/medical-info", token, refreshAuthToken, logout);
+        const data = await response.json();
+        if (data) {
+          setMedicalInfo(data);
+          calculateCompletion(data);
         }
       } catch (error) {
         console.error("Failed to load medical information:", error);
         toast({
           title: "Error",
-          description: "Failed to load medical information. Please refresh the page.",
+          description:
+            error instanceof Error ? error.message : "Failed to load medical information. Please refresh the page.",
           variant: "destructive",
         });
       } finally {
@@ -227,31 +281,22 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/patient/medical-info", {
+      const response = await makeApiCallHelper("/api/patient/medical-info", token, refreshAuthToken, logout, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(medicalInfo),
       });
-
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        setHasChanges(false);
-        setMedicalInfo((prev) => ({
-          ...prev,
-          lastUpdated: data.data.lastUpdated ? new Date(data.data.lastUpdated) : new Date(),
-        }));
+      setHasChanges(false);
+      setMedicalInfo((prev) => ({
+        ...prev,
+        lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
+      }));
 
-        toast({
-          title: "Medical Information Saved",
-          description: "Your medical information has been updated successfully.",
-        });
-      } else {
-        throw new Error(data.error || "Failed to save medical information");
-      }
+      toast({
+        title: "Medical Information Saved",
+        description: "Your medical information has been updated successfully.",
+      });
     } catch (error) {
       console.error("Failed to save medical information:", error);
       toast({

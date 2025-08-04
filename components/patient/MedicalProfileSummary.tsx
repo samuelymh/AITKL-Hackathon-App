@@ -32,7 +32,7 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
     hasMedicalConditions: false,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { token } = useAuth();
+  const { token, logout, refreshAuthToken } = useAuth();
 
   useEffect(() => {
     const loadProfileStatus = async () => {
@@ -42,47 +42,86 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
       }
 
       try {
-        const response = await fetch("/api/patient/medical-info", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            const medicalInfo = data.data;
-
-            // Calculate completion based on actual data
-            const hasBloodType = !!medicalInfo.bloodType;
-            const hasEmergencyContact = !!(medicalInfo.emergencyContact?.name && medicalInfo.emergencyContact?.phone);
-            const hasAllergies = medicalInfo.foodAllergies?.length > 0 || medicalInfo.drugAllergies?.length > 0;
-            const hasMedicalConditions =
-              medicalInfo.knownMedicalConditions?.length > 0 || medicalInfo.currentMedications?.length > 0;
-
-            const completedFields = [hasBloodType, hasEmergencyContact, hasAllergies, hasMedicalConditions].filter(
-              Boolean
-            ).length;
-            const completionPercentage = Math.round((completedFields / 4) * 100);
-
-            setProfileStatus({
-              completionPercentage,
-              hasBloodType,
-              hasEmergencyContact,
-              hasAllergies,
-              hasMedicalConditions,
-              lastUpdated: medicalInfo.lastUpdated ? new Date(medicalInfo.lastUpdated) : undefined,
-            });
+        // API call helper with JWT handling
+        const makeApiCall = async (url: string, options: RequestInit = {}) => {
+          if (!token) {
+            throw new Error("No authentication token available");
           }
-        } else {
-          // Set default incomplete status if API fails
+
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...(options.headers as Record<string, string>),
+          };
+
+          try {
+            let response = await fetch(url, {
+              ...options,
+              headers,
+            });
+
+            // Handle 401 - token expired
+            if (response.status === 401) {
+              try {
+                await refreshAuthToken();
+
+                // Get the new token from localStorage
+                const newToken = localStorage.getItem("auth-token");
+                if (!newToken) {
+                  throw new Error("Token refresh failed");
+                }
+
+                // Retry the request with new token
+                response = await fetch(url, {
+                  ...options,
+                  headers: {
+                    ...headers,
+                    Authorization: `Bearer ${newToken}`,
+                  },
+                });
+              } catch (refreshError) {
+                console.error("Token refresh failed:", refreshError);
+                logout();
+                throw new Error("Session expired. Please log in again.");
+              }
+            }
+
+            if (!response.ok) {
+              throw new Error(`API call failed: ${response.status}`);
+            }
+
+            return response;
+          } catch (error) {
+            if (error instanceof Error && error.message.includes("Session expired")) {
+              throw error;
+            }
+            throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+          }
+        };
+
+        const response = await makeApiCall("/api/patient/medical-info");
+        const medicalInfo = await response.json();
+
+        if (medicalInfo) {
+          // Calculate completion based on actual data
+          const hasBloodType = !!medicalInfo.bloodType;
+          const hasEmergencyContact = !!(medicalInfo.emergencyContact?.name && medicalInfo.emergencyContact?.phone);
+          const hasAllergies = medicalInfo.foodAllergies?.length > 0 || medicalInfo.drugAllergies?.length > 0;
+          const hasMedicalConditions =
+            medicalInfo.knownMedicalConditions?.length > 0 || medicalInfo.currentMedications?.length > 0;
+
+          const completedFields = [hasBloodType, hasEmergencyContact, hasAllergies, hasMedicalConditions].filter(
+            Boolean
+          ).length;
+          const completionPercentage = Math.round((completedFields / 4) * 100);
+
           setProfileStatus({
-            completionPercentage: 0,
-            hasBloodType: false,
-            hasEmergencyContact: false,
-            hasAllergies: false,
-            hasMedicalConditions: false,
+            completionPercentage,
+            hasBloodType,
+            hasEmergencyContact,
+            hasAllergies,
+            hasMedicalConditions,
+            lastUpdated: medicalInfo.lastUpdated ? new Date(medicalInfo.lastUpdated) : undefined,
           });
         }
       } catch (error) {

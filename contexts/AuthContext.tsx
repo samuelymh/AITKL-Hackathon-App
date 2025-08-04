@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-  useMemo,
-} from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -145,20 +138,44 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
     const { data } = await response.json();
 
-    // Update tokens
+    // Ensure user has a valid role property and phone number
+    const userWithRole = {
+      ...data.user,
+      role: data.user.role || "patient",
+      phone: data.user.phone || "",
+    };
+
+    // Update tokens and user data
     setToken(data.accessToken);
     setRefreshToken(data.refreshToken);
+    setUser(userWithRole); // Update user data from refresh response
     localStorage.setItem("auth-token", data.accessToken);
     localStorage.setItem("auth-refresh-token", data.refreshToken);
+    localStorage.setItem("auth-user", JSON.stringify(userWithRole));
   };
 
   const logout = () => {
+    // Clear all state
     setUser(null);
     setToken(null);
     setRefreshToken(null);
-    localStorage.removeItem("auth-token");
-    localStorage.removeItem("auth-refresh-token");
-    localStorage.removeItem("auth-user");
+    
+    // Clear localStorage with error handling
+    try {
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("auth-refresh-token");
+      localStorage.removeItem("auth-user");
+      
+      // Also clear any potential legacy keys if they exist
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+    } catch (error) {
+      console.error("Error clearing localStorage during logout:", error);
+      // Even if localStorage fails, continue with logout
+    }
+    
+    // Redirect to login page
     router.push("/login");
   };
 
@@ -204,16 +221,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       register,
       refreshAuthToken,
     }),
-    [
-      user,
-      token,
-      refreshToken,
-      isLoading,
-      login,
-      logout,
-      register,
-      refreshAuthToken,
-    ],
+    [user, token, refreshToken, isLoading, login, logout, register, refreshAuthToken]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
