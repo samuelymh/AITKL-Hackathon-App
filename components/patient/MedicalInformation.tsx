@@ -14,13 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,13 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface MedicalInformation {
@@ -62,19 +50,48 @@ interface MedicalInformationProps {
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const COMMON_ALLERGIES = [
-  "Peanuts", "Tree nuts", "Shellfish", "Fish", "Eggs", "Milk", "Soy", "Wheat",
-  "Sesame", "Latex", "Dust mites", "Pet dander", "Pollen"
+  "Peanuts",
+  "Tree nuts",
+  "Shellfish",
+  "Fish",
+  "Eggs",
+  "Milk",
+  "Soy",
+  "Wheat",
+  "Sesame",
+  "Latex",
+  "Dust mites",
+  "Pet dander",
+  "Pollen",
 ];
 
 const COMMON_DRUG_ALLERGIES = [
-  "Penicillin", "Aspirin", "Ibuprofen", "Codeine", "Morphine", "Sulfa drugs",
-  "Insulin", "Tetracycline", "Vancomycin", "Contrast dye"
+  "Penicillin",
+  "Aspirin",
+  "Ibuprofen",
+  "Codeine",
+  "Morphine",
+  "Sulfa drugs",
+  "Insulin",
+  "Tetracycline",
+  "Vancomycin",
+  "Contrast dye",
 ];
 
 const COMMON_CONDITIONS = [
-  "Diabetes", "Hypertension", "Asthma", "Heart disease", "Arthritis",
-  "Depression", "Anxiety", "COPD", "Kidney disease", "Liver disease",
-  "Thyroid disorders", "Epilepsy", "Migraines"
+  "Diabetes",
+  "Hypertension",
+  "Asthma",
+  "Heart disease",
+  "Arthritis",
+  "Depression",
+  "Anxiety",
+  "COPD",
+  "Kidney disease",
+  "Liver disease",
+  "Thyroid disorders",
+  "Epilepsy",
+  "Migraines",
 ];
 
 export function MedicalInformation({ userId, className }: MedicalInformationProps) {
@@ -107,10 +124,10 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
         // In a real implementation, this would fetch from the API
         // const response = await fetch(`/api/patient/${userId}/medical-info`);
         // const data = await response.json();
-        
+
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         // For now, using empty state (indicating incomplete profile)
         setIsLoading(false);
         calculateCompletion(medicalInfo);
@@ -131,7 +148,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       info.emergencyContact.phone,
       info.emergencyContact.relationship,
     ];
-    
+
     const arrayFields = [
       info.foodAllergies.length > 0,
       info.drugAllergies.length > 0,
@@ -139,13 +156,13 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       info.currentMedications.length > 0,
     ];
 
-    const filledFields = fields.filter(field => field && field.trim() !== "").length;
-    const filledArrays = arrayFields.filter(hasItems => hasItems).length;
+    const filledFields = fields.filter((field) => field && field.trim() !== "").length;
+    const filledArrays = arrayFields.filter((hasItems) => hasItems).length;
     const smokingProvided = info.smokingStatus !== "never" ? 1 : 0;
-    
+
     const totalFields = fields.length + arrayFields.length + 1; // +1 for smoking status
     const completedFields = filledFields + filledArrays + smokingProvided;
-    
+
     const percentage = Math.round((completedFields / totalFields) * 100);
     setCompletionPercentage(percentage);
   };
@@ -161,11 +178,11 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   // Add item to array field
   const addToArrayField = (fieldName: keyof MedicalInformation, value: string) => {
     if (!value.trim()) return;
-    
+
     const currentArray = medicalInfo[fieldName] as string[];
     if (!currentArray.includes(value.trim())) {
       updateMedicalInfo({
-        [fieldName]: [...currentArray, value.trim()]
+        [fieldName]: [...currentArray, value.trim()],
       });
     }
   };
@@ -174,7 +191,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   const removeFromArrayField = (fieldName: keyof MedicalInformation, value: string) => {
     const currentArray = medicalInfo[fieldName] as string[];
     updateMedicalInfo({
-      [fieldName]: currentArray.filter(item => item !== value)
+      [fieldName]: currentArray.filter((item) => item !== value),
     });
   };
 
@@ -184,13 +201,13 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
     try {
       // In a real implementation, this would call the API
       // await updateMedicalInformation(userId, medicalInfo);
-      
+
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setHasChanges(false);
-      setMedicalInfo(prev => ({ ...prev, lastUpdated: new Date() }));
-      
+      setMedicalInfo((prev) => ({ ...prev, lastUpdated: new Date() }));
+
       toast({
         title: "Medical Information Saved",
         description: "Your medical information has been updated successfully.",
@@ -264,14 +281,11 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <Heart className="h-4 w-4 text-red-500" />
             Basic Medical Information
           </Label>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="bloodType">Blood Type *</Label>
-              <Select
-                value={medicalInfo.bloodType}
-                onValueChange={(value) => updateMedicalInfo({ bloodType: value })}
-              >
+              <Select value={medicalInfo.bloodType} onValueChange={(value) => updateMedicalInfo({ bloodType: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select blood type" />
                 </SelectTrigger>
@@ -289,9 +303,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
               <Label htmlFor="smokingStatus">Smoking Status</Label>
               <Select
                 value={medicalInfo.smokingStatus}
-                onValueChange={(value: "never" | "current" | "former") => 
-                  updateMedicalInfo({ smokingStatus: value })
-                }
+                onValueChange={(value: "never" | "current" | "former") => updateMedicalInfo({ smokingStatus: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -337,7 +349,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                   <SelectValue placeholder="Add food allergy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_ALLERGIES.filter(a => !medicalInfo.foodAllergies.includes(a)).map((allergy) => (
+                  {COMMON_ALLERGIES.filter((a) => !medicalInfo.foodAllergies.includes(a)).map((allergy) => (
                     <SelectItem key={allergy} value={allergy}>
                       {allergy}
                     </SelectItem>
@@ -369,7 +381,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                   <SelectValue placeholder="Add drug allergy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_DRUG_ALLERGIES.filter(a => !medicalInfo.drugAllergies.includes(a)).map((allergy) => (
+                  {COMMON_DRUG_ALLERGIES.filter((a) => !medicalInfo.drugAllergies.includes(a)).map((allergy) => (
                     <SelectItem key={allergy} value={allergy}>
                       {allergy}
                     </SelectItem>
@@ -410,7 +422,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                   <SelectValue placeholder="Add medical condition" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_CONDITIONS.filter(c => !medicalInfo.knownMedicalConditions.includes(c)).map((condition) => (
+                  {COMMON_CONDITIONS.filter((c) => !medicalInfo.knownMedicalConditions.includes(c)).map((condition) => (
                     <SelectItem key={condition} value={condition}>
                       {condition}
                     </SelectItem>
@@ -579,11 +591,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <>
             <Separator />
             <div className="flex gap-3">
-              <Button 
-                onClick={handleSave} 
-                disabled={isSaving}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2">
                 <Save className="h-4 w-4" />
                 {isSaving ? "Saving..." : "Save Medical Information"}
               </Button>
@@ -598,8 +606,8 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="text-sm">
               <p className="font-medium text-blue-800">Privacy & Security</p>
               <p className="text-blue-700">
-                Your medical information is encrypted and only accessible to healthcare 
-                providers you explicitly authorize through QR code access or direct permission.
+                Your medical information is encrypted and only accessible to healthcare providers you explicitly
+                authorize through QR code access or direct permission.
               </p>
             </div>
           </div>

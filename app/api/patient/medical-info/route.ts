@@ -14,11 +14,13 @@ const MedicalInfoSchema = z.object({
   currentMedications: z.array(z.string()).optional(),
   pastSurgicalHistory: z.array(z.string()).optional(),
   smokingStatus: z.enum(["never", "current", "former"]).optional(),
-  emergencyContact: z.object({
-    name: z.string().optional(),
-    phone: z.string().optional(),
-    relationship: z.string().optional(),
-  }).optional(),
+  emergencyContact: z
+    .object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      relationship: z.string().optional(),
+    })
+    .optional(),
   additionalNotes: z.string().optional(),
 });
 
@@ -30,25 +32,19 @@ export async function GET(request: NextRequest) {
     // Verify authentication
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = verifyToken(token);
-    
+
     if (!decoded) {
-      return NextResponse.json(
-        { success: false, error: "Invalid token" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
     }
 
     const result = await executeDatabaseOperation(async () => {
       const user = await User.findById(decoded.userId);
-      
+
       if (!user) {
         throw new Error("User not found");
       }
@@ -61,57 +57,74 @@ export async function GET(request: NextRequest) {
       // Decrypt and return medical information
       const medicalInfo = {
         bloodType: user.medicalInfo?.bloodType || "",
-        foodAllergies: user.medicalInfo?.knownAllergies ? 
-          await Promise.all(
-            user.medicalInfo.knownAllergies
-              .filter(allergy => allergy.includes("food:"))
-              .map(async (allergy) => {
-                const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`);
-                return decrypted?.replace("food:", "") || "";
-              })
-          ) : [],
-        drugAllergies: user.medicalInfo?.knownAllergies ? 
-          await Promise.all(
-            user.medicalInfo.knownAllergies
-              .filter(allergy => allergy.includes("drug:"))
-              .map(async (allergy) => {
-                const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`);
-                return decrypted?.replace("drug:", "") || "";
-              })
-          ) : [],
-        knownMedicalConditions: user.medicalInfo?.knownAllergies ? 
-          await Promise.all(
-            user.medicalInfo.knownAllergies
-              .filter(allergy => allergy.includes("condition:"))
-              .map(async (allergy) => {
-                const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`);
-                return decrypted?.replace("condition:", "") || "";
-              })
-          ) : [],
-        currentMedications: user.medicalInfo?.knownAllergies ? 
-          await Promise.all(
-            user.medicalInfo.knownAllergies
-              .filter(allergy => allergy.includes("medication:"))
-              .map(async (allergy) => {
-                const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`);
-                return decrypted?.replace("medication:", "") || "";
-              })
-          ) : [],
-        pastSurgicalHistory: user.medicalInfo?.knownAllergies ? 
-          await Promise.all(
-            user.medicalInfo.knownAllergies
-              .filter(allergy => allergy.includes("surgery:"))
-              .map(async (allergy) => {
-                const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`);
-                return decrypted?.replace("surgery:", "") || "";
-              })
-          ) : [],
+        foodAllergies: user.medicalInfo?.knownAllergies
+          ? await Promise.all(
+              user.medicalInfo.knownAllergies
+                .filter((allergy) => allergy.includes("food:"))
+                .map(async (allergy) => {
+                  const decrypted = await user.decryptField(
+                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
+                  );
+                  return decrypted?.replace("food:", "") || "";
+                })
+            )
+          : [],
+        drugAllergies: user.medicalInfo?.knownAllergies
+          ? await Promise.all(
+              user.medicalInfo.knownAllergies
+                .filter((allergy) => allergy.includes("drug:"))
+                .map(async (allergy) => {
+                  const decrypted = await user.decryptField(
+                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
+                  );
+                  return decrypted?.replace("drug:", "") || "";
+                })
+            )
+          : [],
+        knownMedicalConditions: user.medicalInfo?.knownAllergies
+          ? await Promise.all(
+              user.medicalInfo.knownAllergies
+                .filter((allergy) => allergy.includes("condition:"))
+                .map(async (allergy) => {
+                  const decrypted = await user.decryptField(
+                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
+                  );
+                  return decrypted?.replace("condition:", "") || "";
+                })
+            )
+          : [],
+        currentMedications: user.medicalInfo?.knownAllergies
+          ? await Promise.all(
+              user.medicalInfo.knownAllergies
+                .filter((allergy) => allergy.includes("medication:"))
+                .map(async (allergy) => {
+                  const decrypted = await user.decryptField(
+                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
+                  );
+                  return decrypted?.replace("medication:", "") || "";
+                })
+            )
+          : [],
+        pastSurgicalHistory: user.medicalInfo?.knownAllergies
+          ? await Promise.all(
+              user.medicalInfo.knownAllergies
+                .filter((allergy) => allergy.includes("surgery:"))
+                .map(async (allergy) => {
+                  const decrypted = await user.decryptField(
+                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
+                  );
+                  return decrypted?.replace("surgery:", "") || "";
+                })
+            )
+          : [],
         smokingStatus: user.medicalInfo?.smokingStatus || "never",
         emergencyContact: {
-          name: user.medicalInfo?.emergencyContact?.name ? 
-            await user.decryptField("medicalInfo.emergencyContact.name") || "" : "",
-          phone: user.medicalInfo?.emergencyContact?.phone ? 
-            await user.decryptField("medicalInfo.emergencyContact.phone") || "" : "",
+          name: user.medicalInfo?.emergencyContact?.name
+            ? (await user.decryptField("medicalInfo.emergencyContact.name")) || ""
+            : "",
+          phone: user.medicalInfo?.emergencyContact?.phone
+            ? (await user.decryptField("medicalInfo.emergencyContact.phone")) || ""
+            : "",
           relationship: user.medicalInfo?.emergencyContact?.relationship || "",
         },
         additionalNotes: user.medicalInfo?.additionalNotes || "",
@@ -158,20 +171,14 @@ export async function PUT(request: NextRequest) {
     // Verify authentication
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
     }
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = verifyToken(token);
-    
+
     if (!decoded) {
-      return NextResponse.json(
-        { success: false, error: "Invalid token" },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
     }
 
     // Only patients can update their own medical info
@@ -187,7 +194,7 @@ export async function PUT(request: NextRequest) {
 
     const result = await executeDatabaseOperation(async () => {
       const user = await User.findById(decoded.userId);
-      
+
       if (!user) {
         throw new Error("User not found");
       }
@@ -198,22 +205,22 @@ export async function PUT(request: NextRequest) {
 
       // Prepare encrypted medical data
       const encryptedAllergies: string[] = [];
-      
+
       // Combine all medical data into the knownAllergies encrypted field with prefixes
       if (validatedData.foodAllergies) {
-        encryptedAllergies.push(...validatedData.foodAllergies.map(allergy => `food:${allergy}`));
+        encryptedAllergies.push(...validatedData.foodAllergies.map((allergy) => `food:${allergy}`));
       }
       if (validatedData.drugAllergies) {
-        encryptedAllergies.push(...validatedData.drugAllergies.map(allergy => `drug:${allergy}`));
+        encryptedAllergies.push(...validatedData.drugAllergies.map((allergy) => `drug:${allergy}`));
       }
       if (validatedData.knownMedicalConditions) {
-        encryptedAllergies.push(...validatedData.knownMedicalConditions.map(condition => `condition:${condition}`));
+        encryptedAllergies.push(...validatedData.knownMedicalConditions.map((condition) => `condition:${condition}`));
       }
       if (validatedData.currentMedications) {
-        encryptedAllergies.push(...validatedData.currentMedications.map(med => `medication:${med}`));
+        encryptedAllergies.push(...validatedData.currentMedications.map((med) => `medication:${med}`));
       }
       if (validatedData.pastSurgicalHistory) {
-        encryptedAllergies.push(...validatedData.pastSurgicalHistory.map(surgery => `surgery:${surgery}`));
+        encryptedAllergies.push(...validatedData.pastSurgicalHistory.map((surgery) => `surgery:${surgery}`));
       }
 
       // Update medical information
@@ -224,7 +231,7 @@ export async function PUT(request: NextRequest) {
           knownAllergies: encryptedAllergies,
           smokingStatus: validatedData.smokingStatus,
           additionalNotes: validatedData.additionalNotes,
-        }
+        },
       };
 
       // Update emergency contact if provided
