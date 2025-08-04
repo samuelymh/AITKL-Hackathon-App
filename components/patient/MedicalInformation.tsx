@@ -43,6 +43,22 @@ interface MedicalInformation {
   lastUpdated?: Date | string;
 }
 
+// API Response interfaces for better type safety
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: Date;
+}
+
+interface MedicalInfoApiResponse extends ApiResponse<MedicalInformation> {}
+
+interface SaveMedicalInfoResponse
+  extends ApiResponse<{
+    message: string;
+    lastUpdated: Date | string;
+  }> {}
+
 interface MedicalInformationProps {
   userId: string;
   className?: string;
@@ -192,11 +208,11 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
       try {
         const response = await makeApiCallHelper("/api/patient/medical-info", token, refreshAuthToken, logout);
-        const result = await response.json();
+        const result: MedicalInfoApiResponse = await response.json();
 
         if (result.success && result.data) {
-          // Ensure all array fields are arrays and not objects
-          const processedData = {
+          // Ensure all array fields are arrays and not objects - defensive programming
+          const processedData: MedicalInformation = {
             ...result.data,
             foodAllergies: Array.isArray(result.data.foodAllergies) ? result.data.foodAllergies : [],
             drugAllergies: Array.isArray(result.data.drugAllergies) ? result.data.drugAllergies : [],
@@ -306,7 +322,7 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
         method: "PUT",
         body: JSON.stringify(medicalInfo),
       });
-      const result = await response.json();
+      const result: SaveMedicalInfoResponse = await response.json();
 
       if (result.success) {
         setHasChanges(false);

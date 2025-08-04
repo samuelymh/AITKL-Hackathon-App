@@ -5,6 +5,31 @@ import User from "@/lib/models/User";
 import { verifyToken } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 
+// Type definitions for better type safety
+interface MedicalInformation {
+  bloodType: string;
+  foodAllergies: string[];
+  drugAllergies: string[];
+  knownMedicalConditions: string[];
+  currentMedications: string[];
+  pastSurgicalHistory: string[];
+  smokingStatus: "never" | "current" | "former";
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  additionalNotes: string;
+  lastUpdated?: Date;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: Date;
+}
+
 // Medical information validation schema
 const MedicalInfoSchema = z.object({
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
@@ -54,29 +79,14 @@ export async function GET(request: NextRequest) {
         throw new Error("Access denied");
       }
 
-      // Decrypt and return medical information
-      const medicalInfo: {
-        bloodType: string;
-        foodAllergies: string[];
-        drugAllergies: string[];
-        knownMedicalConditions: string[];
-        currentMedications: string[];
-        pastSurgicalHistory: string[];
-        smokingStatus: "never" | "current" | "former";
-        emergencyContact: {
-          name: string;
-          phone: string;
-          relationship: string;
-        };
-        additionalNotes: string;
-        lastUpdated?: Date;
-      } = {
+      // Decrypt and return medical information with guaranteed array types
+      const medicalInfo: MedicalInformation = {
         bloodType: user.medicalInfo?.bloodType || "",
-        foodAllergies: [],
-        drugAllergies: [],
-        knownMedicalConditions: [],
-        currentMedications: [],
-        pastSurgicalHistory: [],
+        foodAllergies: [], // Always initialize as empty array
+        drugAllergies: [], // Always initialize as empty array
+        knownMedicalConditions: [], // Always initialize as empty array
+        currentMedications: [], // Always initialize as empty array
+        pastSurgicalHistory: [], // Always initialize as empty array
         smokingStatus: user.medicalInfo?.smokingStatus || "never",
         emergencyContact: {
           name: user.medicalInfo?.emergencyContact?.name
@@ -129,14 +139,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    return NextResponse.json<ApiResponse<MedicalInformation>>({
       success: true,
       data: result.data,
       timestamp: result.timestamp,
     });
   } catch (error) {
     console.error("Get medical info error:", error);
-    return NextResponse.json(
+    return NextResponse.json<ApiResponse>(
       {
         success: false,
         error: error instanceof Error ? error.message : "Failed to fetch medical information",
