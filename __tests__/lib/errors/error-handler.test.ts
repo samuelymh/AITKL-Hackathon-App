@@ -73,9 +73,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle GrantActionError", () => {
-      const grantError = new GrantActionError("Invalid action", "ACTIVE", [
-        "revoke",
-      ]);
+      const grantError = new GrantActionError("Invalid action", "ACTIVE", ["revoke"]);
 
       const result = ErrorHandler.handleError(grantError);
 
@@ -101,10 +99,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should handle generic errors", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        process.env,
-        "NODE_ENV",
-      );
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "development",
         writable: true,
@@ -149,11 +144,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should format GrantActionError with context", () => {
-      const error = new GrantActionError(
-        "Cannot approve revoked grant",
-        "REVOKED",
-        [],
-      );
+      const error = new GrantActionError("Cannot approve revoked grant", "REVOKED", []);
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -168,20 +159,14 @@ describe("ErrorHandler", () => {
     });
 
     it("should format DatabaseError with development details", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        process.env,
-        "NODE_ENV",
-      );
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "development",
         configurable: true,
       });
 
       const originalError = new Error("Connection failed");
-      const error = new DatabaseError(
-        "Database connection error",
-        originalError,
-      );
+      const error = new DatabaseError("Database connection error", originalError);
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -198,20 +183,14 @@ describe("ErrorHandler", () => {
     });
 
     it("should format DatabaseError without details in production", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        process.env,
-        "NODE_ENV",
-      );
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "production",
         configurable: true,
       });
 
       const originalError = new Error("Connection failed");
-      const error = new DatabaseError(
-        "Database connection error",
-        originalError,
-      );
+      const error = new DatabaseError("Database connection error", originalError);
 
       const result = ErrorHandler.formatErrorResponse(error);
 
@@ -249,10 +228,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should format generic errors with stack trace in development", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        process.env,
-        "NODE_ENV",
-      );
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "development",
         configurable: true,
@@ -273,10 +249,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should format generic errors without stack trace in production", () => {
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        process.env,
-        "NODE_ENV",
-      );
+      const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, "NODE_ENV");
       Object.defineProperty(process.env, "NODE_ENV", {
         value: "production",
         configurable: true,
