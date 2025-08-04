@@ -1,95 +1,117 @@
-"use client"
+'use client';
 
-import { Button } from "@/components/ui/button"
-import { Share2, FileText, Shield, Upload } from "lucide-react"
+import { Button } from '@/components/ui/button';
+import { Share2, FileText, Shield, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface PatientHomeProps {
-  onNavigate: (screen: string) => void
+  onNavigate: (screen: string) => void;
 }
 
 export default function PatientHome({ onNavigate }: PatientHomeProps) {
+  const router = useRouter();
+
   return (
-    <div className="p-6 space-y-6">
+    <div className='p-6 space-y-6'>
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Health Records</h1>
-        <p className="text-gray-600">Good morning, Sarah Chen</p>
+      <div className='text-center'>
+        <h1 className='text-2xl font-semibold text-gray-900 mb-2'>
+          Health Records
+        </h1>
+        <p className='text-gray-600'>Good morning, Sarah Chen</p>
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-blue-800 text-sm">Your records are secure and only shared with your explicit consent.</p>
+      <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+        <p className='text-blue-800 text-sm'>
+          Your records are secure and only shared with your explicit consent.
+        </p>
       </div>
 
       {/* Main Actions */}
-      <div className="space-y-4">
+      <div className='space-y-4'>
         <Button
-          onClick={() => onNavigate("share")}
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          onClick={() => router.push('/patient-123/share')}
+          variant='outline'
+          className='w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50'
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
-            <Share2 className="w-5 h-5 text-white" />
+          <div className='w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-4'>
+            <Share2 className='w-5 h-5 text-white' />
           </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">Share My Records</div>
-            <div className="text-sm text-gray-600">Generate QR code for doctor access</div>
-          </div>
-        </Button>
-
-        <Button variant="outline" className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50">
-          <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-4">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">My Prescriptions</div>
-            <div className="text-sm text-gray-600">View active and past prescriptions</div>
+          <div className='text-left'>
+            <div className='font-semibold text-gray-900'>Share My Records</div>
+            <div className='text-sm text-gray-600'>
+              Generate QR code for doctor access
+            </div>
           </div>
         </Button>
 
         <Button
-          onClick={() => onNavigate("audit")}
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          variant='outline'
+          className='w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50'
         >
-          <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
-            <Shield className="w-5 h-5 text-white" />
+          <div className='w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-4'>
+            <FileText className='w-5 h-5 text-white' />
           </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">Audit Log</div>
-            <div className="text-sm text-gray-600">See who accessed your records</div>
+          <div className='text-left'>
+            <div className='font-semibold text-gray-900'>My Prescriptions</div>
+            <div className='text-sm text-gray-600'>
+              View active and past prescriptions
+            </div>
           </div>
         </Button>
 
         <Button
-          onClick={() => onNavigate("upload")}
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          onClick={() => onNavigate('audit')}
+          variant='outline'
+          className='w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50'
         >
-          <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center mr-4">
-            <Upload className="w-5 h-5 text-white" />
+          <div className='w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-4'>
+            <Shield className='w-5 h-5 text-white' />
           </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">Upload Health Docs</div>
-            <div className="text-sm text-gray-600">Add medical documents to your record</div>
+          <div className='text-left'>
+            <div className='font-semibold text-gray-900'>Audit Log</div>
+            <div className='text-sm text-gray-600'>
+              See who accessed your records
+            </div>
+          </div>
+        </Button>
+
+        <Button
+          onClick={() => onNavigate('upload')}
+          variant='outline'
+          className='w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50'
+        >
+          <div className='w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center mr-4'>
+            <Upload className='w-5 h-5 text-white' />
+          </div>
+          <div className='text-left'>
+            <div className='font-semibold text-gray-900'>
+              Upload Health Docs
+            </div>
+            <div className='text-sm text-gray-600'>
+              Add medical documents to your record
+            </div>
           </div>
         </Button>
       </div>
 
       {/* Quick Stats */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-1">3</div>
-            <div className="text-sm text-gray-600">Active Prescriptions</div>
+        <h2 className='text-lg font-semibold text-gray-900 mb-4'>
+          Quick Stats
+        </h2>
+        <div className='grid grid-cols-2 gap-4'>
+          <div className='text-center'>
+            <div className='text-3xl font-bold text-blue-600 mb-1'>3</div>
+            <div className='text-sm text-gray-600'>Active Prescriptions</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600 mb-1">12</div>
-            <div className="text-sm text-gray-600">Documents Uploaded</div>
+          <div className='text-center'>
+            <div className='text-3xl font-bold text-green-600 mb-1'>12</div>
+            <div className='text-sm text-gray-600'>Documents Uploaded</div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
