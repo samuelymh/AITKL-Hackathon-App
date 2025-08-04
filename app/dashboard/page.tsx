@@ -4,11 +4,10 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  DoctorOrAdmin,
-  PatientOnly,
-  HealthcareStaff,
-} from "@/components/auth/PermissionGuard";
+import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/PermissionGuard";
+import { QRCodeManager } from "@/components/patient/QRCodeManager";
+import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
+import { AccessControl } from "@/components/patient/AccessControl";
 
 function WelcomeCard() {
   const { user } = useAuth();
@@ -38,9 +37,7 @@ function WelcomeCard() {
             Welcome, {user.firstName} {user.lastName}
           </span>
           <Badge variant="secondary">
-            {user.role
-              ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-              : "Patient"}
+            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Patient"}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -159,14 +156,14 @@ function SystemStatusCard() {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+
   return (
     <ProtectedLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-gray-600">
-            Welcome to your Health Records System
-          </p>
+          <p className="mt-2 text-gray-600">Welcome to your Health Records System</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -188,31 +185,23 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                This section will show recent user activities, system logs, and
-                important notifications.
+                This section will show recent user activities, system logs, and important notifications.
               </p>
-              <div className="mt-4 text-sm text-gray-500">
-                Feature coming soon: Real-time activity monitoring
-              </div>
+              <div className="mt-4 text-sm text-gray-500">Feature coming soon: Real-time activity monitoring</div>
             </CardContent>
           </Card>
         </DoctorOrAdmin>
 
         <PatientOnly>
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Health Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                View your latest medical information, upcoming appointments, and
-                prescription status.
-              </p>
-              <div className="mt-4 text-sm text-gray-500">
-                Feature coming soon: Personal health dashboard
+          {user && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <QRCodeManager user={user} className="xl:col-span-1" />
+              <div className="space-y-6">
+                <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
+                <AccessControl userId={user.digitalIdentifier || user.id} />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </PatientOnly>
       </div>
     </ProtectedLayout>
