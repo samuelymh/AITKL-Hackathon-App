@@ -1,3 +1,5 @@
+import { SanitizationRule } from "@/lib/types/enums";
+
 export class InputSanitizer {
   /**
    * Sanitize HTML content to prevent XSS attacks
@@ -72,31 +74,65 @@ export class InputSanitizer {
   }
 
   /**
-   * Sanitize object with multiple fields
+   * Sanitize alphanumeric input
+   */
+  static sanitizeAlphanumeric(input: string): string {
+    if (!input || typeof input !== "string") return "";
+
+    return input
+      .replace(/[^a-zA-Z0-9]/g, "") // Only allow alphanumeric characters
+      .trim();
+  }
+
+  /**
+   * Sanitize numeric input
+   */
+  static sanitizeNumeric(input: string): string {
+    if (!input || typeof input !== "string") return "";
+
+    return input
+      .replace(/[^0-9.-]/g, "") // Only allow numeric characters and decimal/negative
+      .trim();
+  }
+
+  /**
+   * Sanitize object with multiple fields using type-safe rules
    */
   static sanitizeObject<T extends Record<string, any>>(
     obj: T,
-    sanitizationRules: Partial<Record<keyof T, "text" | "email" | "phone" | "url" | "html">>
+    sanitizationRules: Partial<Record<keyof T, SanitizationRule>>
   ): T {
     const sanitized = { ...obj } as any;
 
     for (const [key, rule] of Object.entries(sanitizationRules)) {
       if (key in sanitized && typeof sanitized[key] === "string") {
         switch (rule) {
-          case "text":
+          case SanitizationRule.TEXT:
             sanitized[key] = this.sanitizeText(sanitized[key]);
             break;
-          case "email":
+          case SanitizationRule.EMAIL:
             sanitized[key] = this.sanitizeEmail(sanitized[key]);
             break;
-          case "phone":
+          case SanitizationRule.PHONE:
             sanitized[key] = this.sanitizePhone(sanitized[key]);
             break;
-          case "url":
+          case SanitizationRule.URL:
             sanitized[key] = this.sanitizeUrl(sanitized[key]);
             break;
-          case "html":
+          case SanitizationRule.HTML:
             sanitized[key] = this.sanitizeHtml(sanitized[key]);
+            break;
+          case SanitizationRule.ALPHANUMERIC:
+            sanitized[key] = this.sanitizeAlphanumeric(sanitized[key]);
+            break;
+          case SanitizationRule.NUMERIC:
+            sanitized[key] = this.sanitizeNumeric(sanitized[key]);
+            break;
+          case SanitizationRule.OBJECT_ID:
+            sanitized[key] = this.sanitizeObjectId(sanitized[key]);
+            break;
+          default:
+            // Unknown rule, keep original value
             break;
         }
       }
