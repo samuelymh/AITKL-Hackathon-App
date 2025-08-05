@@ -1,27 +1,18 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useAIAnalysis } from "@/hooks/use-ai-analysis";
 import AIDocumentAnalysis from "./ai-document-analysis";
-import { DocumentAnalysis } from "@/lib/services/gemini-service";
 
 import {
   ArrowLeft,
   Upload,
   FileText,
-  Check,
-  Share2,
-  Calendar,
-  Pill,
-  Activity,
   X,
   Loader2,
-  Brain,
 } from "lucide-react";
 
 interface UploadDocsProps {
@@ -39,58 +30,87 @@ interface UploadedFile {
   uploadedAt: Date;
 }
 
-const careTimeline = [
-  {
-    date: "July 2024",
-    type: "diagnosis",
-    title: "Hypertension Diagnosis",
-    provider: "Dr. Ahmad Hassan",
-    icon: Activity,
-    color: "red",
-  },
-  {
-    date: "June 2024",
-    type: "medication",
-    title: "Lisinopril 10mg prescribed",
-    provider: "Dr. Ahmad Hassan",
-    icon: Pill,
-    color: "blue",
-  },
-  {
-    date: "May 2024",
-    type: "visit",
-    title: "Annual Physical Exam",
-    provider: "Dr. Sarah Johnson",
-    icon: Calendar,
-    color: "green",
-  },
-  {
-    date: "March 2024",
-    type: "diagnosis",
-    title: "Type 2 Diabetes",
-    provider: "Dr. Lisa Chen",
-    icon: Activity,
-    color: "orange",
-  },
-];
-
 export default function UploadDocs({
   onBack,
   onDataUploaded,
   userId,
 }: UploadDocsProps) {
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [showTimeline, setShowTimeline] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [storageName, setStorageName] = useState('medical-records');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  const {
-    isAnalyzing,
-    analysis: aiAnalysis,
-    showAnalysis,
-    analyzeDocuments,
-  } = useAIAnalysis({ userId });
+  // Load previously uploaded files on component mount
+  useEffect(() => {
+    const loadExistingFiles = async () => {
+      try {
+        setIsLoadingFiles(true);
+        
+        // List all files in the user's folder
+        const { data: files, error } = await supabase.storage
+          .from('medical-records')
+          .list(`${userId}/`, {
+            limit: 100,
+            offset: 0,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        if (error) {
+          console.error('Error loading existing files:', error);
+          toast({
+            title: "Load Failed",
+            description: "Unable to load previously uploaded files.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (files?.length > 0) {
+          const existingFiles: UploadedFile[] = [];
+          
+          for (const file of files) {
+            if (file?.name) {
+              // Get public URL for each file
+              const { data: urlData } = supabase.storage
+                .from('medical-records')
+                .getPublicUrl(`${userId}/${file.name}`);
+
+              // Extract original filename from the stored filename (remove timestamp prefix)
+              const originalName = file.name.replace(/^\d+-/, '');
+              
+              const uploadedFile: UploadedFile = {
+                id: `${userId}/${file.name}`, // Use the full path as unique ID
+                name: originalName,
+                size: file.metadata?.size || 0,
+                url: urlData.publicUrl,
+                path: `${userId}/${file.name}`,
+                uploadedAt: new Date(file.created_at || Date.now()),
+              };
+
+              existingFiles.push(uploadedFile);
+            }
+          }
+
+          setUploadedFiles(existingFiles);
+        }
+      } catch (error) {
+        console.error('Error loading existing files:', error);
+        toast({
+          title: "Load Error",
+          description: "An unexpected error occurred while loading files.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    };
+
+    if (userId) {
+      loadExistingFiles();
+    }
+  }, [userId, toast, onDataUploaded]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -107,15 +127,6 @@ export default function UploadDocs({
     }
   };
 
-  const handleShareSummary = () => {
-    // This would generate a QR code for the care summary
-    alert("QR code generated for care summary sharing!");
-  };
-
-  const handleAnalyzeDocuments = async () => {
-    await analyzeDocuments(uploadedFiles.map(file => file.id));
-  };
-
   const uploadFile = async (file: File) => {
     try {
       // Validate file type
@@ -128,11 +139,11 @@ export default function UploadDocs({
         return;
       }
 
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
+      // Validate file size (100MB limit)
+      if (file.size > 100 * 1024 * 1024) {
         toast({
           title: "File Too Large",
-          description: "File size must be less than 10MB",
+          description: "File size must be less than 100MB",
           variant: "destructive",
         });
         return;
@@ -145,7 +156,7 @@ export default function UploadDocs({
       const fileName = `${userId}/${timestamp}-${file.name}`;
       
       const { data, error } = await supabase.storage
-        .from('medical-records')
+        .from(storageName)
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
@@ -162,11 +173,11 @@ export default function UploadDocs({
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('medical-records')
+        .from(storageName)
         .getPublicUrl(fileName);
 
       const uploadedFile: UploadedFile = {
-        id: Date.now().toString(),
+        id: data.path,
         name: file.name,
         size: file.size,
         url: urlData.publicUrl,
@@ -180,15 +191,6 @@ export default function UploadDocs({
         title: "Upload Successful",
         description: `${file.name} has been uploaded successfully.`,
       });
-
-      // Show timeline after first successful upload
-      if (uploadedFiles.length === 0) {
-        setTimeout(() => {
-          setShowTimeline(true);
-          onDataUploaded(careTimeline);
-        }, 1000);
-      }
-
     } catch (error) {
       console.error("Error uploading file:", error);
       toast({
@@ -205,7 +207,7 @@ export default function UploadDocs({
     try {
       // First, try to get a fresh download URL (in case the previous one expired)
       const { data, error } = await supabase.storage
-        .from('medical-records')
+        .from(storageName)
         .createSignedUrl(file.path, 60); // 60 seconds expiry
 
       if (error) {
@@ -240,7 +242,7 @@ export default function UploadDocs({
 
     try {
       const { error } = await supabase.storage
-        .from('medical-records')
+        .from(storageName)
         .remove([file.path]);
 
       if (error) {
@@ -328,7 +330,12 @@ export default function UploadDocs({
           </div>
 
           {/* Uploaded Files */}
-          {uploadedFiles.length > 0 && (
+          {isLoadingFiles ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-10 h-10 mx-auto text-blue-500 animate-spin" />
+              <p className="text-lg text-gray-600 mt-4">Loading uploaded files...</p>
+            </div>
+          ) : uploadedFiles?.length ? (
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Uploaded Files</h3>
               {uploadedFiles.map((file) => (
@@ -336,21 +343,21 @@ export default function UploadDocs({
                   key={file.id}
                   className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200"
                 >
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium block">{file.name}</span>
+                  <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate" title={file.name}>{file.name}</span>
                     <span className="text-xs text-gray-500">
                       {formatFileSize(file.size)} • {file.uploadedAt.toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewFile(file)}
                       className="text-blue-600 hover:text-blue-700"
                     >
-                      <FileText className="w-4 h-4 mr-1" />
+                      <FileText className="w-4 h-4" />
                       View
                     </Button>
                     <Button
@@ -365,128 +372,15 @@ export default function UploadDocs({
                   </div>
                 </div>
               ))}
-              
-              {/* AI Analysis Button */}
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                      <Brain className="w-5 h-5 text-purple-600" />
-                      AI Document Analysis
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Get AI-powered insights from your medical documents
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleAnalyzeDocuments}
-                    disabled={isAnalyzing}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="w-4 h-4 mr-2" />
-                        Analyze Documents
-                      </>
-                    )}
-                  </Button>
-                </div>
               </div>
-            </div>
-          )}
-
-          {/* AI Insights Section */}
-          {uploadedFiles.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                  AI Document Analysis
-                </CardTitle>
-                <p className="text-sm text-gray-600">
-                  AI-powered insights from your uploaded medical documents
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Document Summary */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gray-600" />
-                    Document Summary
-                  </h4>
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-700">
-                      Analysis of {uploadedFiles.length} medical document{uploadedFiles.length > 1 ? 's' : ''} reveals 
-                      consistent patterns of hypertension management with current medication showing positive effects. 
-                      Lab results indicate elevated cholesterol levels requiring dietary intervention. Overall health 
-                      status shows improvement with continued medication adherence.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-lg text-gray-600 mb-4">No files uploaded yet.</p>
+              </div>
+            )}
         </CardContent>
       </Card>
-
-      {/* AI Document Analysis Results */}
-      {showAnalysis && aiAnalysis && (
-        <AIDocumentAnalysis
-          analysis={aiAnalysis}
-          documentsAnalyzed={uploadedFiles.length}
-          onRefresh={handleAnalyzeDocuments}
-        />
-      )}
-
-      {/* AI-Generated Care Timeline */}
-      {showTimeline && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-600" />
-                AI-Generated Care Timeline
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Based on your uploaded documents
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {careTimeline.map((event, index) => {
-                const IconComponent = event.icon;
-                return (
-                  <div key={index} className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full bg-${event.color}-100 flex items-center justify-center flex-shrink-0`}
-                    >
-                      <IconComponent
-                        className={`w-5 h-5 text-${event.color}-600`}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900">
-                          {event.title}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {event.type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{event.provider}</p>
-                      <p className="text-xs text-gray-500">{event.date}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </>
-      )}
     </div>
   );
 }
