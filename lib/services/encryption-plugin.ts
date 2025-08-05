@@ -1,9 +1,5 @@
 import { Schema, Document } from "mongoose";
-import {
-  encryptionService,
-  encryptionUtils,
-  EncryptedField,
-} from "./encryption-service";
+import { encryptionService, encryptionUtils, EncryptedField } from "./encryption-service";
 import { setNestedValue, getNestedValue } from "../utils/encryption-utils";
 
 export type EncryptedFieldType = string | EncryptedField;
@@ -23,10 +19,7 @@ export interface EncryptionPluginDocument extends Document {
  * Mongoose plugin for automatic field-level encryption
  * Handles transparent encryption/decryption of specified fields
  */
-export function encryptionPlugin(
-  schema: Schema,
-  options: EncryptionPluginOptions,
-) {
+export function encryptionPlugin(schema: Schema, options: EncryptionPluginOptions) {
   const { encryptedFields = [], encryptedPaths = [] } = options;
   const allEncryptedPaths = [...encryptedFields, ...encryptedPaths];
 
@@ -42,8 +35,7 @@ export function encryptionPlugin(
         if (currentValue && typeof currentValue === "string") {
           // Only encrypt if it's a plain string (not already encrypted)
           if (!encryptionUtils.isEncrypted(currentValue)) {
-            const encrypted =
-              await encryptionService.encryptField(currentValue);
+            const encrypted = await encryptionService.encryptField(currentValue);
             setNestedValue(doc, fieldPath, encrypted);
           }
         }
@@ -56,14 +48,11 @@ export function encryptionPlugin(
         if (Array.isArray(arrayValue)) {
           const encryptedArray = await Promise.all(
             arrayValue.map(async (item) => {
-              if (
-                typeof item === "string" &&
-                !encryptionUtils.isEncrypted(item)
-              ) {
+              if (typeof item === "string" && !encryptionUtils.isEncrypted(item)) {
                 return await encryptionService.encryptField(item);
               }
               return item;
-            }),
+            })
           );
           setNestedValue(doc, arrayPath, encryptedArray);
         }
@@ -71,11 +60,7 @@ export function encryptionPlugin(
 
       next();
     } catch (error) {
-      next(
-        error instanceof Error
-          ? error
-          : new Error("Encryption failed during save"),
-      );
+      next(error instanceof Error ? error : new Error("Encryption failed during save"));
     }
   });
 
@@ -95,15 +80,11 @@ export function encryptionPlugin(
 
           if (encryptedValue && encryptionUtils.isEncrypted(encryptedValue)) {
             try {
-              const decrypted =
-                await encryptionService.decryptField(encryptedValue);
+              const decrypted = await encryptionService.decryptField(encryptedValue);
               setNestedValue(doc, fieldPath, decrypted);
             } catch (decryptError) {
               // Improved error handling: retain encrypted value instead of throwing
-              console.warn(
-                `Failed to decrypt field ${fieldPath}:`,
-                decryptError,
-              );
+              console.warn(`Failed to decrypt field ${fieldPath}:`, decryptError);
               // Keep the encrypted value - don't replace with null or throw error
             }
           }
@@ -120,15 +101,12 @@ export function encryptionPlugin(
                   try {
                     return await encryptionService.decryptField(item);
                   } catch (decryptError) {
-                    console.warn(
-                      `Failed to decrypt array item in ${arrayPath}:`,
-                      decryptError,
-                    );
+                    console.warn(`Failed to decrypt array item in ${arrayPath}:`, decryptError);
                     return item; // Return encrypted value on failure
                   }
                 }
                 return item;
-              }),
+              })
             );
             setNestedValue(doc, arrayPath, decryptedArray);
           }
@@ -141,50 +119,54 @@ export function encryptionPlugin(
   });
 
   // Instance methods for manual field operations
-  schema.methods.decryptField = async function (
-    fieldPath: string,
-  ): Promise<string | null> {
-    const encryptedValue = getNestedValue(this, fieldPath);
+  schema.methods.decryptField = async function (fieldPath: string): Promise<string | null> {
+    try {
+      const encryptedValue = getNestedValue(this, fieldPath);
 
-    if (!encryptedValue) return null;
+      if (!encryptedValue) return null;
 
-    if (encryptionUtils.isEncrypted(encryptedValue)) {
-      return await encryptionService.decryptField(encryptedValue);
+      if (encryptionUtils.isEncrypted(encryptedValue)) {
+        return await encryptionService.decryptField(encryptedValue);
+      }
+
+      // Already decrypted or plaintext
+      return typeof encryptedValue === "string" ? encryptedValue : null;
+    } catch (error) {
+      console.warn(`Error decrypting field ${fieldPath}:`, error);
+      return null;
     }
-
-    // Already decrypted or plaintext
-    return encryptedValue;
   };
 
   schema.methods.needsReEncryption = function (fieldPath: string): boolean {
-    const encryptedValue = getNestedValue(this, fieldPath);
+    try {
+      const encryptedValue = getNestedValue(this, fieldPath);
 
-    if (encryptionUtils.isEncrypted(encryptedValue)) {
-      return encryptionService.needsReEncryption(encryptedValue);
+      if (encryptionUtils.isEncrypted(encryptedValue)) {
+        return encryptionService.needsReEncryption(encryptedValue);
+      }
+
+      return false;
+    } catch (error) {
+      console.warn(`Error checking re-encryption need for ${fieldPath}:`, error);
+      return false;
     }
-
-    return false;
   };
 
-  schema.methods.reEncryptField = async function (
-    fieldPath: string,
-  ): Promise<void> {
-    const encryptedValue = getNestedValue(this, fieldPath);
+  schema.methods.reEncryptField = async function (fieldPath: string): Promise<void> {
+    try {
+      const encryptedValue = getNestedValue(this, fieldPath);
 
-    if (
-      encryptionUtils.isEncrypted(encryptedValue) &&
-      this.needsReEncryption(fieldPath)
-    ) {
-      const reEncrypted =
-        await encryptionService.reEncryptField(encryptedValue);
-      setNestedValue(this, fieldPath, reEncrypted);
+      if (encryptionUtils.isEncrypted(encryptedValue) && this.needsReEncryption(fieldPath)) {
+        const reEncrypted = await encryptionService.reEncryptField(encryptedValue);
+        setNestedValue(this, fieldPath, reEncrypted);
+      }
+    } catch (error) {
+      console.warn(`Error re-encrypting field ${fieldPath}:`, error);
     }
   };
 
   // Static method for bulk re-encryption (useful for key rotation)
-  schema.statics.bulkReEncrypt = async function (
-    batchSize: number = 100,
-  ): Promise<number> {
+  schema.statics.bulkReEncrypt = async function (batchSize: number = 100): Promise<number> {
     let processed = 0;
     let hasMore = true;
 
