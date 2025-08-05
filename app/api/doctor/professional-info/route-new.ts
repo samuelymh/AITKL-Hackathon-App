@@ -5,7 +5,6 @@ import User from "@/lib/models/User";
 import Practitioner from "@/lib/models/Practitioner";
 import Organization from "@/lib/models/Organization";
 import { OrganizationMember } from "@/lib/models/OrganizationMember";
-import { ORGANIZATION_MEMBER_STATUS, PRACTITIONER_TYPES } from "@/lib/constants/organization-member";
 
 /**
  * Utility function to set nested properties safely
@@ -42,7 +41,7 @@ function validateProfessionalData(data: any): string | null {
   }
 
   // Validate practitioner type
-  const validTypes = Object.values(PRACTITIONER_TYPES);
+  const validTypes = ["doctor", "nurse", "pharmacist", "technician", "admin", "other"];
   if (!validTypes.includes(data.practitionerType)) {
     return `Invalid practitioner type. Must be one of: ${validTypes.join(", ")}`;
   }
@@ -76,13 +75,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Only doctors and healthcare providers can access this endpoint
-      const allowedRoles = [
-        PRACTITIONER_TYPES.DOCTOR,
-        PRACTITIONER_TYPES.NURSE,
-        PRACTITIONER_TYPES.PHARMACIST,
-        PRACTITIONER_TYPES.ADMIN,
-      ];
-      if (!allowedRoles.includes(decoded.role as any)) {
+      if (!["doctor", "nurse", "pharmacist", "admin"].includes(decoded.role)) {
         throw new Error("Access denied - healthcare provider role required");
       }
 
@@ -165,13 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only doctors and healthcare providers can update this
-    const allowedRoles = [
-      PRACTITIONER_TYPES.DOCTOR,
-      PRACTITIONER_TYPES.NURSE,
-      PRACTITIONER_TYPES.PHARMACIST,
-      PRACTITIONER_TYPES.ADMIN,
-    ];
-    if (!allowedRoles.includes(decoded.role as any)) {
+    if (!["doctor", "nurse", "pharmacist", "admin"].includes(decoded.role)) {
       return NextResponse.json(
         { success: false, error: "Access denied - healthcare provider role required" },
         { status: 403 }
@@ -254,7 +241,7 @@ async function createNewPractitioner(userId: string, userRole: string, professio
       isOrganizationVerified: false,
     },
     metadata: professionalData.metadata || {},
-    status: ORGANIZATION_MEMBER_STATUS.ACTIVE,
+    status: "active",
   });
 
   await practitioner.save();
@@ -272,7 +259,7 @@ async function createNewPractitioner(userId: string, userRole: string, professio
         isPrimary: true, // First organization is usually primary
         startDate: new Date(),
       },
-      status: ORGANIZATION_MEMBER_STATUS.PENDING, // Requires activation by admin
+      status: "pending", // Requires activation by admin
     };
 
     const membership = new OrganizationMember(membershipData);
@@ -344,7 +331,7 @@ async function handleOrganizationMembership(practitioner: any, professionalData:
       isPrimary: existingMemberships.length === 0, // First membership is primary
       startDate: new Date(),
     },
-    status: ORGANIZATION_MEMBER_STATUS.PENDING,
+    status: "pending",
   };
 
   const membership = new OrganizationMember(membershipData);
