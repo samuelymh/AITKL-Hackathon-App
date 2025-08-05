@@ -1,0 +1,95 @@
+name: Process Notification Queue
+
+on:
+  schedule:
+    # Run every 5 minutes during business hours (UTC)
+    - cron: "*/5 8-20 * * 1-5"
+    # Run every 15 minutes during off hours and weekends
+    - cron: "*/15 0-7,21-23 * * *"
+    - cron: "*/15 * * * 0,6"
+
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  process-queue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Process Notification Jobs
+        run: |
+          echo "Processing notification queue..."
+          response=$(curl -s -w "%{http_code}" -X POST ${{ secrets.APP_URL }}/api/admin/queue/process \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"batchSize": 20}')
+          http_code="${response: -3}"
+          body="${response%???}"
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Queue processing failed"
+            exit 1
+          else
+            echo "✅ Queue processing successful"
+          fi
+
+      - name: Check Queue Health
+        run: |
+          echo "Checking queue statistics..."
+          stats=$(curl -s ${{ secrets.APP_URL }}/api/admin/queue/process \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}")
+          echo "Queue Stats: $stats"
+
+          # Parse JSON and check for issues (requires jq)
+          pending=$(echo "$stats" | jq -r '.data.stats.pending // 0')
+          failed=$(echo "$stats" | jq -r '.data.stats.failed // 0')
+
+          echo "Pending jobs: $pending"
+          echo "Failed jobs: $failed"
+
+          # Alert if too many failed jobs
+          if [ "$failed" -gt 50 ]; then
+            echo "⚠️  High number of failed jobs: $failed"
+            echo "::warning::High number of failed notification jobs detected"
+          fi
+
+          # Alert if queue is backing up
+          if [ "$pending" -gt 100 ]; then
+            echo "⚠️  Queue backup detected: $pending pending jobs"
+            echo "::warning::Notification queue backup detected"
+          fi
+
+  cleanup-old-jobs:
+    runs-on: ubuntu-latest
+    # Run cleanup once per day at 2 AM UTC
+    if: github.event.schedule == '0 2 * * *'
+
+    steps:
+      - name: Cleanup Old Jobs
+        run: |
+          echo "Cleaning up old notification jobs..."
+          response=$(curl -s -X POST ${{ secrets.APP_URL }}/api/admin/queue/cleanup \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"olderThanHours": 48}')
+
+          echo "Cleanup Response: $response"
+
+          deleted_count=$(echo "$response" | jq -r '.data.deletedCount // 0')
+          echo "Deleted $deleted_count old jobs"  # Optional: Send notifications on failure
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [process-queue]
+
+    steps:
+      - name: Notify on Failure
+        run: |
+          echo "Notification queue processing failed!"
+          # Add your notification logic here (Slack, email, etc.)
+          # curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+          #   -H "Content-Type: application/json" \
+          #   -d '{"text": "❌ Notification queue processing failed!"}'

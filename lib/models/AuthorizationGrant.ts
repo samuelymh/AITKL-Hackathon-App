@@ -54,10 +54,7 @@ export interface IAuthorizationGrant extends IBaseDocument {
 
 // Static methods interface
 export interface IAuthorizationGrantModel extends Model<IAuthorizationGrant> {
-  findActiveGrants(
-    userId: string,
-    organizationId?: string,
-  ): Promise<IAuthorizationGrant[]>;
+  findActiveGrants(userId: string, organizationId?: string): Promise<IAuthorizationGrant[]>;
   findPendingRequests(userId: string): Promise<IAuthorizationGrant[]>;
   findExpiredGrants(): Promise<IAuthorizationGrant[]>;
   createRequest(
@@ -66,7 +63,7 @@ export interface IAuthorizationGrantModel extends Model<IAuthorizationGrant> {
     requestMetadata: any,
     accessScope: any,
     timeWindowHours?: number,
-    requestingPractitionerId?: string,
+    requestingPractitionerId?: string
   ): Promise<IAuthorizationGrant>;
 }
 
@@ -175,14 +172,11 @@ const authorizationGrantSchemaFields = {
 };
 
 // Create extended schema with audit fields from BaseSchema
-const AuthorizationGrantSchema = createExtendedSchema(
-  authorizationGrantSchemaFields,
-  {
-    timestamps: true,
-    versionKey: false,
-    collection: "authorization_grants",
-  },
-);
+const AuthorizationGrantSchema = createExtendedSchema(authorizationGrantSchemaFields, {
+  timestamps: true,
+  versionKey: false,
+  collection: "authorization_grants",
+});
 
 // Compound indexes for performance optimization (from knowledge base)
 AuthorizationGrantSchema.index({
@@ -208,9 +202,7 @@ AuthorizationGrantSchema.pre("save", function (next) {
   // Set expiration time if not set
   if (!doc.grantDetails?.expiresAt && doc.grantDetails?.timeWindowHours) {
     const now = new Date();
-    doc.grantDetails.expiresAt = new Date(
-      now.getTime() + doc.grantDetails.timeWindowHours * 60 * 60 * 1000,
-    );
+    doc.grantDetails.expiresAt = new Date(now.getTime() + doc.grantDetails.timeWindowHours * 60 * 60 * 1000);
   }
 
   // Validate that only one active grant exists per user-organization pair
@@ -224,24 +216,17 @@ AuthorizationGrantSchema.pre("save", function (next) {
 // Instance methods
 AuthorizationGrantSchema.methods = {
   // Approve the authorization request
-  approve: async function (
-    this: IAuthorizationGrant,
-    approvedBy: string,
-  ): Promise<IAuthorizationGrant> {
+  approve: async function (this: IAuthorizationGrant, approvedBy: string): Promise<IAuthorizationGrant> {
     if (this.grantDetails.status !== GrantStatus.PENDING) {
       throw new GrantActionError(
         "Only pending grants can be approved",
         this.grantDetails.status,
-        GrantStateManager.getAllowedActions(this.grantDetails.status),
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
       );
     }
 
     if (this.isExpired()) {
-      throw new GrantActionError(
-        "Cannot approve expired grant request",
-        this.grantDetails.status,
-        [],
-      );
+      throw new GrantActionError("Cannot approve expired grant request", this.grantDetails.status, []);
     }
 
     this.grantDetails.status = GrantStatus.ACTIVE;
@@ -252,15 +237,12 @@ AuthorizationGrantSchema.methods = {
   },
 
   // Deny the authorization request
-  deny: async function (
-    this: IAuthorizationGrant,
-    deniedBy: string,
-  ): Promise<IAuthorizationGrant> {
+  deny: async function (this: IAuthorizationGrant, deniedBy: string): Promise<IAuthorizationGrant> {
     if (this.grantDetails.status !== GrantStatus.PENDING) {
       throw new GrantActionError(
         "Only pending grants can be denied",
         this.grantDetails.status,
-        GrantStateManager.getAllowedActions(this.grantDetails.status),
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
       );
     }
 
@@ -272,18 +254,12 @@ AuthorizationGrantSchema.methods = {
   },
 
   // Revoke an active authorization grant
-  revoke: async function (
-    this: IAuthorizationGrant,
-    revokedBy: string,
-  ): Promise<IAuthorizationGrant> {
-    if (
-      this.grantDetails.status !== GrantStatus.ACTIVE &&
-      this.grantDetails.status !== GrantStatus.PENDING
-    ) {
+  revoke: async function (this: IAuthorizationGrant, revokedBy: string): Promise<IAuthorizationGrant> {
+    if (this.grantDetails.status !== GrantStatus.ACTIVE && this.grantDetails.status !== GrantStatus.PENDING) {
       throw new GrantActionError(
         "Only active or pending grants can be revoked",
         this.grantDetails.status,
-        GrantStateManager.getAllowedActions(this.grantDetails.status),
+        GrantStateManager.getAllowedActions(this.grantDetails.status)
       );
     }
 
@@ -297,9 +273,7 @@ AuthorizationGrantSchema.methods = {
   // Check if grant is currently active and not expired
   isActive: function (this: IAuthorizationGrant): boolean {
     return (
-      this.grantDetails.status === GrantStatus.ACTIVE &&
-      !this.isExpired() &&
-      !this.auditDeletedDateTime // Check if soft deleted
+      this.grantDetails.status === GrantStatus.ACTIVE && !this.isExpired() && !this.auditDeletedDateTime // Check if soft deleted
     );
   },
 
@@ -309,10 +283,7 @@ AuthorizationGrantSchema.methods = {
   },
 
   // Check if grant has specific permission
-  hasPermission: function (
-    this: IAuthorizationGrant,
-    permission: string,
-  ): boolean {
+  hasPermission: function (this: IAuthorizationGrant, permission: string): boolean {
     if (!this.isActive()) {
       return false;
     }
@@ -348,8 +319,18 @@ AuthorizationGrantSchema.statics = {
     }
 
     return this.find(query)
-      .populate("organizationId")
-      .populate("requestingPractitionerId");
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      });
   },
 
   // Find pending authorization requests for a user
@@ -360,12 +341,22 @@ AuthorizationGrantSchema.statics = {
       "grantDetails.expiresAt": { $gt: new Date() },
       auditDeletedDateTime: { $exists: false },
     })
-      .populate("organizationId")
-      .populate("requestingPractitionerId")
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      })
       .sort({ createdAt: -1 });
   },
 
-  // Find expired grants for cleanup
+  // Find expired grants for cleanup (no need for population optimization here)
   findExpiredGrants: function () {
     return this.find({
       "grantDetails.status": { $in: [GrantStatus.PENDING, GrantStatus.ACTIVE] },
@@ -381,7 +372,7 @@ AuthorizationGrantSchema.statics = {
     requestMetadata: any,
     accessScope: any,
     timeWindowHours: number = 24,
-    requestingPractitionerId?: string,
+    requestingPractitionerId?: string
   ): Promise<IAuthorizationGrant> {
     // Check for existing active grant
     const existingGrant = await this.findOne({
@@ -393,9 +384,7 @@ AuthorizationGrantSchema.statics = {
     });
 
     if (existingGrant) {
-      throw new Error(
-        "Active authorization grant already exists for this user and organization",
-      );
+      throw new Error("Active authorization grant already exists for this user and organization");
     }
 
     const expiresAt = new Date(Date.now() + timeWindowHours * 60 * 60 * 1000);
@@ -404,9 +393,7 @@ AuthorizationGrantSchema.statics = {
       userId: new mongoose.Types.ObjectId(userId),
       organizationId: new mongoose.Types.ObjectId(organizationId),
       ...(requestingPractitionerId && {
-        requestingPractitionerId: new mongoose.Types.ObjectId(
-          requestingPractitionerId,
-        ),
+        requestingPractitionerId: new mongoose.Types.ObjectId(requestingPractitionerId),
       }),
       grantDetails: {
         status: GrantStatus.PENDING,
@@ -427,11 +414,10 @@ AuthorizationGrantSchema.statics = {
 };
 
 // Create and export the model
-const AuthorizationGrant: IAuthorizationGrantModel = (mongoose.models
-  .AuthorizationGrant ||
+const AuthorizationGrant: IAuthorizationGrantModel = (mongoose.models.AuthorizationGrant ||
   mongoose.model<IAuthorizationGrant, IAuthorizationGrantModel>(
     "AuthorizationGrant",
-    AuthorizationGrantSchema,
+    AuthorizationGrantSchema
   )) as IAuthorizationGrantModel;
 
 export default AuthorizationGrant;
