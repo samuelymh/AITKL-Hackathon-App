@@ -66,7 +66,7 @@ export class MedicalRecordAuthMiddleware {
       console.error("Error validating medical record access:", error);
       return {
         isAuthorized: false,
-        error: "Failed to validate authorization",
+        error: `Failed to validate authorization: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -110,36 +110,18 @@ export class MedicalRecordAuthMiddleware {
   }
 
   /**
-   * Extract patient and organization IDs from request
+   * Simplified parameter extraction from request
    */
   private static async extractAuthParams(request: NextRequest): Promise<{
     patientId?: string;
     organizationId?: string;
   }> {
     try {
-      // Try URL parameters first (for routes like /api/patients/[patientId]/records)
       const url = new URL(request.url);
-      const pathSegments = url.pathname.split("/");
 
-      let patientId = url.searchParams.get("patientId") || url.searchParams.get("userId");
-      let organizationId = url.searchParams.get("organizationId");
-
-      // Try to extract from URL path
-      const patientIndex = pathSegments.findIndex((segment) => segment === "patients");
-      if (patientIndex !== -1 && pathSegments[patientIndex + 1]) {
-        patientId = patientId || pathSegments[patientIndex + 1];
-      }
-
-      // Try request body for POST/PUT requests
-      if (!patientId || !organizationId) {
-        try {
-          const body = await request.json();
-          patientId = patientId || body.patientId || body.userId;
-          organizationId = organizationId || body.organizationId;
-        } catch (bodyError) {
-          console.debug("Non-JSON request body, skipping body parameter extraction:", bodyError);
-        }
-      }
+      // Extract from query parameters
+      const patientId = url.searchParams.get("patientId") || url.searchParams.get("userId");
+      const organizationId = url.searchParams.get("organizationId");
 
       return {
         patientId: patientId || undefined,

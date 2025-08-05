@@ -5,6 +5,47 @@ import { withAuth } from "@/lib/middleware/auth";
 import { UserRole } from "@/lib/auth";
 
 /**
+ * Transform a single pending grant with error handling
+ */
+async function transformPendingGrant(grant: any) {
+  try {
+    const organization = grant.organizationId;
+    const practitioner = grant.requestingPractitionerId;
+
+    return {
+      grantId: grant._id.toString(),
+      organization: {
+        id: organization._id.toString(),
+        name: organization.organizationInfo.name,
+        type: organization.organizationInfo.type,
+        address: organization.getFullAddress(),
+      },
+      practitioner: practitioner
+        ? {
+            id: practitioner._id.toString(),
+            firstName: practitioner.personalInfo.firstName,
+            lastName: practitioner.personalInfo.lastName,
+            role: practitioner.professionalInfo.role,
+            specialty: practitioner.professionalInfo.specialty,
+          }
+        : null,
+      requestedScope: grant.accessScope,
+      timeWindowHours: grant.grantDetails.timeWindowHours,
+      status: grant.grantDetails.status,
+      createdAt: grant.auditCreatedDateTime,
+      expiresAt: grant.grantDetails.expiresAt,
+      requestMetadata: {
+        ipAddress: grant.requestMetadata.ipAddress,
+        location: grant.requestMetadata.location,
+      },
+    };
+  } catch (error) {
+    console.error(`Error transforming pending grant ${grant._id}:`, error);
+    return null; // Skip this grant if transformation fails
+  }
+}
+
+/**
  * GET /api/v1/authorizations/pending
  * Get pending authorization requests for the authenticated patient
  *
@@ -19,43 +60,27 @@ async function pendingHandler(request: NextRequest, authContext: any) {
     }
 
     // Get pending requests for this user
-    const pendingRequests = await AuthorizationGrant.findPendingRequests(authContext.userId);
+    const pendingRequests = await AuthorizationGrant.find({
+      userId: authContext.userId,
+      "grantDetails.status": "PENDING",
+      auditDeletedDateTime: { $exists: false },
+    })
+      .populate("organizationId")
+      .populate("requestingPractitionerId")
+      .sort({ auditCreatedDateTime: -1 });
 
-    // Transform for patient UI
-    const formattedRequests = await Promise.all(
-      pendingRequests.map(async (grant) => {
-        const organization = grant.organizationId as any;
-        const practitioner = grant.requestingPractitionerId as any;
+    // Transform requests with resilient error handling
+    const settledResults = await Promise.allSettled(pendingRequests.map(transformPendingGrant));
 
-        return {
-          grantId: grant._id.toString(),
-          organization: {
-            id: organization._id.toString(),
-            name: organization.organizationInfo.name,
-            type: organization.organizationInfo.type,
-            address: organization.getFullAddress(),
-          },
-          practitioner: practitioner
-            ? {
-                id: practitioner._id.toString(),
-                firstName: practitioner.personalInfo.firstName,
-                lastName: practitioner.personalInfo.lastName,
-                role: practitioner.professionalInfo.role,
-                specialty: practitioner.professionalInfo.specialty,
-              }
-            : null,
-          requestedScope: grant.accessScope,
-          timeWindowHours: grant.grantDetails.timeWindowHours,
-          status: grant.grantDetails.status,
-          createdAt: grant.auditCreatedDateTime,
-          expiresAt: grant.grantDetails.expiresAt,
-          requestMetadata: {
-            ipAddress: grant.requestMetadata.ipAddress,
-            location: grant.requestMetadata.location,
-          },
-        };
-      })
-    );
+    const formattedRequests = settledResults
+      .filter((result) => result.status === "fulfilled" && result.value !== null)
+      .map((result) => (result as PromiseFulfilledResult<any>).value);
+
+    // Log any failed transformations
+    const failedCount = settledResults.length - formattedRequests.length;
+    if (failedCount > 0) {
+      console.warn(`Failed to transform ${failedCount} pending grants for user ${authContext.userId}`);
+    }
 
     return NextResponse.json({
       success: true,
@@ -66,7 +91,10 @@ async function pendingHandler(request: NextRequest, authContext: any) {
     });
   } catch (error) {
     console.error("Error fetching pending authorization requests:", error);
-    return NextResponse.json({ error: "Failed to fetch pending requests" }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to fetch pending requests: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 }
+    );
   }
 }
 

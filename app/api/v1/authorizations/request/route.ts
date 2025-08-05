@@ -5,6 +5,20 @@ import Organization from "@/lib/models/Organization";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { QRCodeService } from "@/lib/services/qr-code-service";
+import { PushNotificationService } from "@/lib/services/push-notification-service";
+
+/**
+ * Securely extracts client IP address from request headers
+ */
+const getClientIP = (req: NextRequest): string => {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    // Get the first IP in the comma-separated list and validate it's not empty
+    const firstIP = forwarded.split(",")[0].trim();
+    if (firstIP) return firstIP;
+  }
+  return req.headers.get("x-real-ip") || "unknown";
+};
 
 /**
  * POST /api/v1/authorizations/request
@@ -93,7 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare request metadata
-    const clientIP = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    // Capture request metadata with secure IP handling
+    const clientIP = getClientIP(request);
     const userAgent = request.headers.get("user-agent") || "unknown";
 
     const requestMeta = {
@@ -134,8 +149,7 @@ export async function POST(request: NextRequest) {
 
     // Send push notification to patient
     try {
-      const { NotificationService } = await import("@/lib/services/push-notification-service");
-      await NotificationService.sendAuthorizationRequest(patient._id.toString(), authGrant._id.toString());
+      await PushNotificationService.sendAuthorizationRequest(patient._id.toString(), authGrant._id.toString());
     } catch (notificationError) {
       console.warn("Failed to send push notification:", notificationError);
       // Don't fail the request if notification fails
@@ -169,9 +183,12 @@ export async function POST(request: NextRequest) {
     // Log the error
     await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, "system", {
       action: "AUTHORIZATION_REQUEST_ERROR",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to create authorization request: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 }
+    );
   }
 }

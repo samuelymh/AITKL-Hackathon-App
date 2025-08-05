@@ -13,6 +13,58 @@ const PatientActionSchema = z.object({
 });
 
 /**
+ * Extract grant ID from URL path
+ */
+function extractGrantId(request: NextRequest): string | null {
+  const url = new URL(request.url);
+  const pathSegments = url.pathname.split("/");
+  return pathSegments[pathSegments.indexOf("authorizations") + 1] || null;
+}
+
+/**
+ * Validate grant ownership and status
+ */
+function validateGrantForAction(grant: any, userId: string): { isValid: boolean; error?: string } {
+  if (!grant) {
+    return { isValid: false, error: "Authorization grant not found" };
+  }
+
+  if (grant.userId.toString() !== userId) {
+    return { isValid: false, error: "Unauthorized: This grant does not belong to you" };
+  }
+
+  if (grant.grantDetails.status !== "PENDING") {
+    return { isValid: false, error: `Cannot modify grant with status: ${grant.grantDetails.status}` };
+  }
+
+  if (grant.isExpired()) {
+    return { isValid: false, error: "Authorization grant has expired" };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Update grant status based on action
+ */
+async function updateGrantStatus(grant: any, action: string): Promise<void> {
+  if (action === "approve") {
+    grant.grantDetails.status = "ACTIVE";
+    grant.grantDetails.grantedAt = new Date();
+
+    // Calculate expiration based on time window
+    const expirationTime = new Date();
+    expirationTime.setHours(expirationTime.getHours() + grant.grantDetails.timeWindowHours);
+    grant.grantDetails.expiresAt = expirationTime;
+  } else if (action === "deny") {
+    grant.grantDetails.status = "DENIED";
+    grant.grantDetails.deniedAt = new Date();
+  }
+
+  await grant.save();
+}
+
+/**
  * POST /api/v1/authorizations/[grantId]/patient-action
  * Allow patients to approve or deny authorization requests
  *
@@ -43,44 +95,31 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
       .populate("organizationId")
       .populate("requestingPractitionerId");
 
-    if (!authGrant) {
-      return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });
+    // Validate grant
+    const validation = validateGrantForAction(authGrant, authContext.userId);
+    if (!validation.isValid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // Verify this grant belongs to the authenticated patient
-    if (authGrant.userId.toString() !== authContext.userId) {
-      return NextResponse.json({ error: "You can only approve/deny your own authorization requests" }, { status: 403 });
-    }
-
-    // Verify grant is in pending status
-    if (authGrant.grantDetails.status !== "PENDING") {
-      return NextResponse.json(
-        { error: `Cannot ${validatedData.action} a grant with status ${authGrant.grantDetails.status}` },
-        { status: 400 }
-      );
-    }
-
-    // Check if grant has expired
-    if (authGrant.isExpired()) {
-      return NextResponse.json({ error: "Cannot process expired authorization request" }, { status: 400 });
-    }
+    // At this point authGrant is guaranteed to exist
+    const validGrant = authGrant!;
 
     let updatedGrant;
-    const currentStatus = authGrant.grantDetails.status;
+    const currentStatus = validGrant.grantDetails.status;
 
     // Perform the action
     if (validatedData.action === "approve") {
-      updatedGrant = await authGrant.approve(authContext.userId);
+      updatedGrant = await validGrant.approve(authContext.userId);
     } else {
-      updatedGrant = await authGrant.deny(authContext.userId);
+      updatedGrant = await validGrant.deny(authContext.userId);
     }
 
     // Log the patient action
     await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authContext.userId, {
       action: `PATIENT_${validatedData.action.toUpperCase()}D_ACCESS`,
-      grantId: authGrant._id.toString(),
-      organizationId: authGrant.organizationId._id.toString(),
-      requestingPractitionerId: authGrant.requestingPractitionerId?._id.toString(),
+      grantId: validGrant._id.toString(),
+      organizationId: validGrant.organizationId._id.toString(),
+      requestingPractitionerId: validGrant.requestingPractitionerId?._id.toString(),
       reason: validatedData.reason,
       previousStatus: currentStatus,
       newStatus: updatedGrant.grantDetails.status,
@@ -88,8 +127,8 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
     });
 
     // Format response
-    const organization = authGrant.organizationId as any;
-    const practitioner = authGrant.requestingPractitionerId as any;
+    const organization = validGrant.organizationId as any;
+    const practitioner = validGrant.requestingPractitionerId as any;
 
     return NextResponse.json({
       success: true,
@@ -139,7 +178,10 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
       }
     );
 
-    return NextResponse.json({ error: "Failed to process authorization action" }, { status: 500 });
+    return NextResponse.json(
+      { error: `Failed to process authorization action: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { status: 500 }
+    );
   }
 }
 
