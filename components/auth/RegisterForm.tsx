@@ -81,8 +81,8 @@ export function RegisterForm() {
       // Call backend API
       await register(registrationData);
 
-      // Redirect on success
-      router.push("/dashboard");
+      // Redirect to login page with success message
+      router.push("/login?message=registration-success");
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Handle validation errors
