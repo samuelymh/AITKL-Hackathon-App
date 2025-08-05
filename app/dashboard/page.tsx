@@ -9,6 +9,7 @@ import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/P
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
+import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
 import { Settings, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -235,6 +236,10 @@ export default function DashboardPage() {
             </div>
           )}
         </PatientOnly>
+
+        <DoctorOrAdmin>
+          <DoctorDashboard />
+        </DoctorOrAdmin>
       </div>
     </ProtectedLayout>
   );
