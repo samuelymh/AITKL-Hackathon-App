@@ -321,12 +321,8 @@ export default function PharmacistProfessionalProfile() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Professional Profile</h1>
-          <p className="text-muted-foreground">Manage your pharmacist professional information and credentials</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-end">
         <div className="flex items-center space-x-2">
           <span className="text-sm text-muted-foreground">Profile Completion:</span>
           <Badge variant={completionPercentage >= 80 ? "default" : "secondary"}>{completionPercentage}%</Badge>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
+import { PharmacistLayout } from "@/components/layout/PharmacistNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -238,7 +239,15 @@ export default function DashboardPage() {
 
         {user?.role === "doctor" && <DoctorDashboard />}
 
-        {user?.role === "pharmacist" && <PharmacistDashboard />}
+        {user?.role === "pharmacist" && (
+          <PharmacistLayout
+            title="Pharmacist Dashboard"
+            description="Manage prescriptions, patient consultations, and pharmacy operations"
+            navigationVariant="tabs"
+          >
+            <PharmacistDashboard />
+          </PharmacistLayout>
+        )}
 
         {user?.role === "patient" && (
           <div className="space-y-6">
