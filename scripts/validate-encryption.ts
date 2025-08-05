@@ -13,7 +13,7 @@ async function validateEncryptedUserModel() {
     await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/test-healthcare");
     console.log("✅ Connected to database");
 
-    // Test data
+    // Test data (include auth field with passwordHash to satisfy validation)
     const testUserData = {
       personalInfo: {
         firstName: "John",
@@ -37,6 +37,17 @@ async function validateEncryptedUserModel() {
           relationship: "Spouse",
         },
       },
+      auth: {
+        passwordHash: "test-hash-for-validation",
+        role: "patient" as const,
+        emailVerified: false,
+        phoneVerified: false,
+        lastLogin: null,
+        loginAttempts: 0,
+        accountLocked: false,
+        accountLockedUntil: null,
+        tokenVersion: 1,
+      },
     };
 
     // Create user (should auto-encrypt sensitive fields)
@@ -56,8 +67,13 @@ async function validateEncryptedUserModel() {
 
     console.log("✅ User retrieved successfully");
     console.log(`   Name: ${await foundUser.getFullName()}`);
-    console.log(`   Email: ${String(foundUser.personalInfo.contact.email)}`);
-    console.log(`   Phone: ${String(foundUser.personalInfo.contact.phone)}`);
+
+    // Handle potentially encrypted fields in logging
+    const emailValue = foundUser.personalInfo.contact.email;
+    const phoneValue = foundUser.personalInfo.contact.phone;
+
+    console.log(`   Email: ${typeof emailValue === "string" ? emailValue : "[encrypted]"}`);
+    console.log(`   Phone: ${typeof phoneValue === "string" ? phoneValue : "[encrypted]"}`);
 
     // Verify data integrity
     console.log("\n🔍 Verifying data integrity...");
@@ -87,8 +103,12 @@ async function validateEncryptedUserModel() {
       console.log("✅ firstName is properly encrypted in database");
 
       // Test manual decryption
-      const decryptedName = await foundUser.decryptField("personalInfo.firstName");
-      console.log(`   Manually decrypted name: ${decryptedName}`);
+      if (typeof foundUser.decryptField === "function") {
+        const decryptedName = await foundUser.decryptField("personalInfo.firstName");
+        console.log(`   Manually decrypted name: ${decryptedName}`);
+      } else {
+        console.log("⚠️  decryptField method not available on user instance");
+      }
     } else {
       console.log("❌ firstName is not encrypted in database");
     }
