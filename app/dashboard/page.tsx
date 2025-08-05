@@ -1,15 +1,20 @@
 "use client";
 
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
+import { PharmacistLayout } from "@/components/layout/PharmacistNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/PermissionGuard";
+import { Button } from "@/components/ui/button";
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
-import { AccessControl } from "@/components/patient/AccessControl";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
 import UploadDocs from "@/components/upload-docs";
+import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
+import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { Settings, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 function WelcomeCard() {
   const { user } = useAuth();
@@ -75,86 +80,136 @@ function WelcomeCard() {
 }
 
 function QuickActionsCard() {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  const renderRoleSpecificActions = () => {
+    switch (user.role) {
+      case "admin":
+        return (
+          <div className="space-y-2">
+            <h4 className="font-medium">System Administration</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>• Manage admin users</li>
+              <li>• Review organization requests</li>
+              <li>• Monitor system health</li>
+              <li>• View audit logs</li>
+              <li>• Configure security settings</li>
+              <li>• System backup and maintenance</li>
+            </ul>
+          </div>
+        );
+      case "doctor":
+        return (
+          <div className="space-y-2">
+            <h4 className="font-medium">Healthcare Professional Actions</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>• Scan patient QR codes</li>
+              <li>• Manage patient records</li>
+              <li>• Create prescriptions</li>
+              <li>• View audit logs</li>
+              <li>• Access shared records</li>
+              <li>• Schedule appointments</li>
+            </ul>
+          </div>
+        );
+      case "pharmacist":
+        return (
+          <div className="space-y-2">
+            <h4 className="font-medium">Pharmacy Actions</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>• Process prescriptions</li>
+              <li>• Verify medications</li>
+              <li>• Scan patient QR codes</li>
+              <li>• Check drug interactions</li>
+              <li>• Update inventory</li>
+              <li>• Patient consultation</li>
+            </ul>
+          </div>
+        );
+      case "patient":
+      default:
+        return (
+          <div className="space-y-2">
+            <h4 className="font-medium">Patient Actions</h4>
+            <ul className="space-y-1 text-sm text-gray-600">
+              <li>• Complete medical profile</li>
+              <li>• View medical records</li>
+              <li>• Check prescriptions</li>
+              <li>• Update profile information</li>
+              <li>• Share records with QR code</li>
+              <li>• Manage access control settings</li>
+            </ul>
+          </div>
+        );
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PatientOnly>
-            <div className="space-y-2">
-              <h4 className="font-medium">Patient Actions</h4>
-              <ul className="space-y-1 text-sm text-gray-600">
-                <li>• Complete medical profile</li>
-                <li>• View medical records</li>
-                <li>• Check prescriptions</li>
-                <li>• Update profile information</li>
-                <li>• Share records with QR code</li>
-              </ul>
-            </div>
-          </PatientOnly>
-
-          <DoctorOrAdmin>
-            <div className="space-y-2">
-              <h4 className="font-medium">Healthcare Professional Actions</h4>
-              <ul className="space-y-1 text-sm text-gray-600">
-                <li>• Manage patient records</li>
-                <li>• Create prescriptions</li>
-                <li>• View audit logs</li>
-                <li>• Access shared records</li>
-              </ul>
-            </div>
-          </DoctorOrAdmin>
-
-          <HealthcareStaff>
-            <div className="space-y-2">
-              <h4 className="font-medium">System Features</h4>
-              <ul className="space-y-1 text-sm text-gray-600">
-                <li>• User management</li>
-                <li>• Document upload</li>
-                <li>• Prescription management</li>
-                <li>• System monitoring</li>
-              </ul>
-            </div>
-          </HealthcareStaff>
-        </div>
+        <div className="grid grid-cols-1 gap-4">{renderRoleSpecificActions()}</div>
       </CardContent>
     </Card>
   );
 }
 
 function SystemStatusCard() {
+  const { user } = useAuth();
+
+  // Only show system status for admin and doctor roles
+  if (!user || !["admin", "doctor"].includes(user.role)) {
+    return null;
+  }
+
   return (
-    <DoctorOrAdmin>
-      <Card>
-        <CardHeader>
-          <CardTitle>System Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Database Connection</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Active
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Authentication Service</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Operational
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Audit Logging</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                Recording
-              </Badge>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>System Status</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Database Connection</span>
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              Active
+            </Badge>
           </div>
-        </CardContent>
-      </Card>
-    </DoctorOrAdmin>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Authentication Service</span>
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              Operational
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Audit Logging</span>
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              Recording
+            </Badge>
+          </div>
+          {user.role === "admin" && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">API Performance</span>
+                <Badge variant="default" className="bg-green-100 text-green-800">
+                  142ms avg
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Security Status</span>
+                <Badge variant="default" className="bg-green-100 text-green-800">
+                  Secure
+                </Badge>
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -180,39 +235,58 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Additional role-specific content */}
-        <DoctorOrAdmin>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                This section will show recent user activities, system logs, and important notifications.
-              </p>
-              <div className="mt-4 text-sm text-gray-500">Feature coming soon: Real-time activity monitoring</div>
-            </CardContent>
-          </Card>
-        </DoctorOrAdmin>
+        {/* Role-specific dashboards */}
+        {user?.role === "admin" && <AdminDashboard />}
 
-        <PatientOnly>
-          {user && (
-            <div className="space-y-6">
-              {/* Medical Profile Summary - Links to dedicated page */}
-              <MedicalProfileSummary userId={user.digitalIdentifier || user.id} />
+        {user?.role === "doctor" && <DoctorDashboard />}
 
-              {/* QR Code and Authorization Management */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <QRCodeManager user={user} className="xl:col-span-1" />
-                <div className="space-y-6">
-                  <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
-                  <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
-                  <AccessControl userId={user.digitalIdentifier || user.id} />
-                </div>
+        {user?.role === "pharmacist" && (
+          <PharmacistLayout
+            title="Pharmacist Dashboard"
+            description="Manage prescriptions, patient consultations, and pharmacy operations"
+            navigationVariant="tabs"
+          >
+            <PharmacistDashboard />
+          </PharmacistLayout>
+        )}
+
+        {user?.role === "patient" && (
+          <div className="space-y-6">
+            {/* Medical Profile Summary - Links to dedicated page */}
+            <MedicalProfileSummary userId={user.digitalIdentifier || user.id} />
+
+            {/* QR Code and Authorization Management */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <QRCodeManager user={user} className="xl:col-span-1" />
+              <div className="space-y-6">
+              <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+                <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
+
+                {/* Settings Card - Link to dedicated settings page */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Settings & Privacy
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 mb-4">
+                      Manage your access control settings, privacy preferences, and account configuration.
+                    </p>
+                    <Link href="/dashboard/settings">
+                      <Button className="w-full flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Open Settings
+                        <ArrowRight className="h-4 w-4 ml-auto" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          )}
-        </PatientOnly>
+          </div>
+        )}
       </div>
     </ProtectedLayout>
   );

@@ -16,6 +16,7 @@ export interface IOrganization extends IBaseDocument {
     name: string;
     type: OrganizationType;
     registrationNumber?: string; // Government registration ID
+    description?: string;
   };
   address: {
     street: string;
@@ -37,26 +38,35 @@ export interface IOrganization extends IBaseDocument {
     isVerified: boolean;
     verifiedAt?: Date;
     verificationDocuments?: string[]; // GridFS file references
+    verificationNotes?: string;
+  };
+  metadata: {
+    isActive: boolean;
+    memberCount: number;
+    establishedDate?: Date;
   };
 
   // Instance methods
   verify(verifiedBy: string): Promise<IOrganization>;
   unverify(unverifiedBy: string): Promise<IOrganization>;
   updateContact(contactInfo: any, updatedBy: string): Promise<IOrganization>;
+  toPublicJSON(): any;
 }
 
 // Static methods interface
 export interface IOrganizationModel extends Model<IOrganization> {
   findByType(type: OrganizationType): Promise<IOrganization[]>;
-  findByRegistrationNumber(
-    registrationNumber: string,
-  ): Promise<IOrganization | null>;
+  findByRegistrationNumber(registrationNumber: string): Promise<IOrganization | null>;
   findVerified(): Promise<IOrganization[]>;
-  findNearby(
-    latitude: number,
-    longitude: number,
-    radiusKm: number,
+  findNearby(latitude: number, longitude: number, radiusKm: number): Promise<IOrganization[]>;
+  searchOrganizations(
+    query: string,
+    type?: OrganizationType,
+    location?: { state?: string; city?: string },
+    options?: { page?: number; limit?: number; onlyVerified?: boolean }
   ): Promise<IOrganization[]>;
+  getOrganizationById(organizationId: string): Promise<IOrganization | null>;
+  updateMemberCount(organizationId: string, increment?: number): Promise<IOrganization | null>;
 }
 
 // Organization schema fields
@@ -82,6 +92,10 @@ const organizationSchemaFields = {
       unique: true,
       sparse: true, // Allow multiple null values
       index: true,
+    },
+    description: {
+      type: String,
+      maxlength: 1000,
     },
   },
 
@@ -147,10 +161,7 @@ const organizationSchemaFields = {
       required: true,
       lowercase: true,
       trim: true,
-      match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        "Please enter a valid email",
-      ],
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email"],
       index: true,
     },
     website: {
@@ -178,6 +189,26 @@ const organizationSchemaFields = {
         required: false,
       },
     ],
+    verificationNotes: {
+      type: String,
+      maxlength: 500,
+    },
+  },
+
+  metadata: {
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    memberCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    establishedDate: {
+      type: Date,
+    },
   },
 };
 
@@ -203,10 +234,7 @@ OrganizationSchema.index({
 OrganizationSchema.pre("save", function (next) {
   // Auto-verify based on registration number format (implement specific logic as needed)
   const doc = this as any;
-  if (
-    doc.organizationInfo?.registrationNumber &&
-    !doc.verification?.isVerified
-  ) {
+  if (doc.organizationInfo?.registrationNumber && !doc.verification?.isVerified) {
     // Could implement automatic verification logic here
   }
 
@@ -216,42 +244,44 @@ OrganizationSchema.pre("save", function (next) {
 // Instance methods
 OrganizationSchema.methods = {
   // Verify the organization
-  verify: async function (
-    this: IOrganization,
-    verifiedBy: string,
-  ): Promise<IOrganization> {
+  verify: async function (this: IOrganization, verifiedBy: string): Promise<IOrganization> {
     this.verification.isVerified = true;
     this.verification.verifiedAt = new Date();
     this.auditModifiedBy = verifiedBy;
-
     return await this.save();
   },
 
   // Unverify the organization
-  unverify: async function (
-    this: IOrganization,
-    unverifiedBy: string,
-  ): Promise<IOrganization> {
+  unverify: async function (this: IOrganization, unverifiedBy: string): Promise<IOrganization> {
     this.verification.isVerified = false;
     this.verification.verifiedAt = undefined;
     this.auditModifiedBy = unverifiedBy;
-
     return await this.save();
   },
 
   // Update contact information
-  updateContact: async function (
-    this: IOrganization,
-    contactInfo: any,
-    updatedBy: string,
-  ): Promise<IOrganization> {
+  updateContact: async function (this: IOrganization, contactInfo: any, updatedBy: string): Promise<IOrganization> {
     if (contactInfo.phone) this.contact.phone = contactInfo.phone;
     if (contactInfo.email) this.contact.email = contactInfo.email;
     if (contactInfo.website) this.contact.website = contactInfo.website;
-
     this.auditModifiedBy = updatedBy;
-
     return await this.save();
+  },
+
+  // Convert organization to public JSON
+  toPublicJSON: function (this: IOrganization) {
+    return {
+      _id: this._id,
+      organizationInfo: this.organizationInfo,
+      address: this.address,
+      contact: this.contact,
+      verification: this.verification,
+      metadata: this.metadata,
+      auditCreatedBy: this.auditCreatedBy,
+      auditCreatedDateTime: this.auditCreatedDateTime,
+      auditModifiedBy: this.auditModifiedBy,
+      auditModifiedDateTime: this.auditModifiedDateTime,
+    };
   },
 };
 
@@ -298,13 +328,56 @@ OrganizationSchema.statics = {
       auditDeletedDateTime: { $exists: false },
     });
   },
+
+  // Search organizations with query and filters
+  searchOrganizations: function (
+    query: string,
+    type?: OrganizationType,
+    location?: { state?: string; city?: string },
+    options?: { page?: number; limit?: number; onlyVerified?: boolean }
+  ) {
+    const { page = 1, limit = 20, onlyVerified = false } = options || {};
+    const skip = (page - 1) * limit;
+
+    // Build search filters
+    const filters: any = {
+      auditDeletedDateTime: { $exists: false },
+    };
+
+    // Add search query
+    if (query?.trim()) {
+      filters.$or = [
+        { "organizationInfo.name": { $regex: query, $options: "i" } },
+        { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },
+        { "address.city": { $regex: query, $options: "i" } },
+        { "address.state": { $regex: query, $options: "i" } },
+      ];
+    }
+
+    // Add type filter
+    if (type) {
+      filters["organizationInfo.type"] = type;
+    }
+
+    // Add location filters
+    if (location?.city) {
+      filters["address.city"] = { $regex: location.city, $options: "i" };
+    }
+    if (location?.state) {
+      filters["address.state"] = { $regex: location.state, $options: "i" };
+    }
+
+    // Add verification filter
+    if (onlyVerified) {
+      filters["verification.isVerified"] = true;
+    }
+
+    return this.find(filters).sort({ "organizationInfo.name": 1 }).skip(skip).limit(limit);
+  },
 };
 
 // Create and export the model
 const Organization: IOrganizationModel = (mongoose.models.Organization ||
-  mongoose.model<IOrganization, IOrganizationModel>(
-    "Organization",
-    OrganizationSchema,
-  )) as IOrganizationModel;
+  mongoose.model<IOrganization, IOrganizationModel>("Organization", OrganizationSchema)) as IOrganizationModel;
 
 export default Organization;

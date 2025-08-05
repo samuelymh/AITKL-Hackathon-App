@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/patient/qr
@@ -19,10 +20,7 @@ export async function GET(request: NextRequest) {
     // Get authenticated user context
     const authContext = await getAuthContext(request);
     if (!authContext) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -39,10 +37,7 @@ export async function GET(request: NextRequest) {
     // Ensure user has a digitalIdentifier
     if (!user.digitalIdentifier) {
       // This shouldn't happen as digitalIdentifier is auto-generated
-      return NextResponse.json(
-        { error: "Digital identifier not found" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Digital identifier not found" }, { status: 500 });
     }
 
     const options = {
@@ -59,16 +54,10 @@ export async function GET(request: NextRequest) {
     let contentType: string;
 
     if (format === "svg") {
-      qrCodeResult = await QRCodeService.generatePatientQRSVG(
-        user.digitalIdentifier,
-        options,
-      );
+      qrCodeResult = await QRCodeService.generatePatientQRSVG(user.digitalIdentifier, options);
       contentType = "image/svg+xml";
     } else {
-      qrCodeResult = await QRCodeService.generatePatientQR(
-        user.digitalIdentifier,
-        options,
-      );
+      qrCodeResult = await QRCodeService.generatePatientQR(user.digitalIdentifier, options);
       contentType = "image/png";
 
       // Convert data URL to buffer for PNG
@@ -76,18 +65,13 @@ export async function GET(request: NextRequest) {
       const buffer = Buffer.from(base64Data, "base64");
 
       // Log QR code generation
-      await auditLogger.logSecurityEvent(
-        SecurityEventType.DATA_ACCESS,
-        request,
-        user._id.toString(),
-        {
-          action: "PATIENT_QR_GENERATED",
-          digitalIdentifier: user.digitalIdentifier,
-          format,
-          width,
-          height,
-        },
-      );
+      await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, user._id.toString(), {
+        action: "PATIENT_QR_GENERATED",
+        digitalIdentifier: user.digitalIdentifier,
+        format,
+        width,
+        height,
+      });
 
       return new NextResponse(buffer, {
         headers: {
@@ -101,18 +85,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Log QR code generation for SVG
-    await auditLogger.logSecurityEvent(
-      SecurityEventType.DATA_ACCESS,
-      request,
-      user._id.toString(),
-      {
-        action: "PATIENT_QR_GENERATED",
-        digitalIdentifier: user.digitalIdentifier,
-        format,
-        width,
-        height,
-      },
-    );
+    await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, user._id.toString(), {
+      action: "PATIENT_QR_GENERATED",
+      digitalIdentifier: user.digitalIdentifier,
+      format,
+      width,
+      height,
+    });
 
     return new NextResponse(qrCodeResult, {
       headers: {
@@ -123,7 +102,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error generating patient QR code:", error);
+    logger.error("Error generating patient QR code:", { error: error instanceof Error ? error.message : error });
 
     // Try to log the error if we have auth context
     try {
@@ -135,16 +114,15 @@ export async function GET(request: NextRequest) {
         {
           action: "PATIENT_QR_GENERATION_ERROR",
           error: error instanceof Error ? error.message : "Unknown error",
-        },
+        }
       );
     } catch (logError) {
-      console.error("Failed to log QR generation error:", logError);
+      logger.error("Failed to log QR generation error:", {
+        logError: logError instanceof Error ? logError.message : logError,
+      });
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -161,10 +139,7 @@ export async function POST(request: NextRequest) {
     // Get authenticated user context
     const authContext = await getAuthContext(request);
     if (!authContext) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     // Find the authenticated user
@@ -181,17 +156,12 @@ export async function POST(request: NextRequest) {
     await user.save();
 
     // Log the regeneration
-    await auditLogger.logSecurityEvent(
-      SecurityEventType.DATA_MODIFICATION,
-      request,
-      user._id.toString(),
-      {
-        action: "DIGITAL_IDENTIFIER_REGENERATED",
-        oldIdentifier: oldIdentifier,
-        newIdentifier: user.digitalIdentifier,
-        reason: "User requested regeneration",
-      },
-    );
+    await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, user._id.toString(), {
+      action: "DIGITAL_IDENTIFIER_REGENERATED",
+      oldIdentifier: oldIdentifier,
+      newIdentifier: user.digitalIdentifier,
+      reason: "User requested regeneration",
+    });
 
     return NextResponse.json({
       success: true,
@@ -202,7 +172,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error regenerating digital identifier:", error);
+    logger.error("Error regenerating digital identifier:", { error: error instanceof Error ? error.message : error });
 
     // Try to log the error if we have auth context
     try {
@@ -214,15 +184,14 @@ export async function POST(request: NextRequest) {
         {
           action: "DIGITAL_IDENTIFIER_REGENERATION_ERROR",
           error: error instanceof Error ? error.message : "Unknown error",
-        },
+        }
       );
     } catch (logError) {
-      console.error("Failed to log regeneration error:", logError);
+      logger.error("Failed to log regeneration error:", {
+        logError: logError instanceof Error ? logError.message : logError,
+      });
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

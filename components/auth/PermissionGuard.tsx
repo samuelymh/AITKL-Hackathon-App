@@ -13,12 +13,7 @@ interface PermissionGuardProps {
   readonly showError?: boolean;
 }
 
-export function PermissionGuard({
-  requiredRoles,
-  children,
-  fallback,
-  showError = true,
-}: PermissionGuardProps) {
+export function PermissionGuard({ requiredRoles, children, fallback, showError = true }: PermissionGuardProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -29,11 +24,7 @@ export function PermissionGuard({
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>You must be logged in to access this content.</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/login")}
-            >
+            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>
               Login
             </Button>
           </AlertDescription>
@@ -48,8 +39,7 @@ export function PermissionGuard({
       (showError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            You don't have permission to access this content. Required roles:{" "}
-            {requiredRoles.join(", ")}
+            You don't have permission to access this content. Required roles: {requiredRoles.join(", ")}
           </AlertDescription>
         </Alert>
       ) : null)
@@ -60,13 +50,7 @@ export function PermissionGuard({
 }
 
 // Convenience components for common permission scenarios
-export function AdminOnly({
-  children,
-  fallback,
-}: {
-  readonly children: ReactNode;
-  readonly fallback?: ReactNode;
-}) {
+export function AdminOnly({ children, fallback }: { readonly children: ReactNode; readonly fallback?: ReactNode }) {
   return (
     <PermissionGuard requiredRoles={["admin"]} fallback={fallback}>
       {children}
@@ -74,13 +58,7 @@ export function AdminOnly({
   );
 }
 
-export function DoctorOrAdmin({
-  children,
-  fallback,
-}: {
-  readonly children: ReactNode;
-  readonly fallback?: ReactNode;
-}) {
+export function DoctorOrAdmin({ children, fallback }: { readonly children: ReactNode; readonly fallback?: ReactNode }) {
   return (
     <PermissionGuard requiredRoles={["doctor", "admin"]} fallback={fallback}>
       {children}
@@ -96,16 +74,21 @@ export function HealthcareStaff({
   readonly fallback?: ReactNode;
 }) {
   return (
-    <PermissionGuard
-      requiredRoles={["doctor", "pharmacist", "admin"]}
-      fallback={fallback}
-    >
+    <PermissionGuard requiredRoles={["doctor", "pharmacist", "admin"]} fallback={fallback}>
       {children}
     </PermissionGuard>
   );
 }
 
-export function PatientOnly({
+export function PatientOnly({ children, fallback }: { readonly children: ReactNode; readonly fallback?: ReactNode }) {
+  return (
+    <PermissionGuard requiredRoles={["patient"]} fallback={fallback}>
+      {children}
+    </PermissionGuard>
+  );
+}
+
+export function PharmacistOrAdmin({
   children,
   fallback,
 }: {
@@ -113,7 +96,7 @@ export function PatientOnly({
   readonly fallback?: ReactNode;
 }) {
   return (
-    <PermissionGuard requiredRoles={["patient"]} fallback={fallback}>
+    <PermissionGuard requiredRoles={["pharmacist", "admin"]} fallback={fallback}>
       {children}
     </PermissionGuard>
   );

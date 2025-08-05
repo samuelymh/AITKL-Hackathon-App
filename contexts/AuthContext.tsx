@@ -191,22 +191,9 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       throw new Error(error.error || "Registration failed");
     }
 
-    const { data } = await response.json();
-
-    // Ensure user has a valid role property and phone number
-    const userWithRole = {
-      ...data.user,
-      role: data.user.role || "patient",
-      phone: data.user.phone || "",
-    };
-
-    // Automatically log in after registration
-    setUser(userWithRole);
-    setToken(data.accessToken);
-    setRefreshToken(data.refreshToken);
-    localStorage.setItem("auth-token", data.accessToken);
-    localStorage.setItem("auth-refresh-token", data.refreshToken);
-    localStorage.setItem("auth-user", JSON.stringify(userWithRole));
+    // Registration successful - do NOT auto-login
+    // User will need to manually login after registration
+    return await response.json();
   };
 
   const value = useMemo(
