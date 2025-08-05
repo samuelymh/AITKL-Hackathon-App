@@ -255,8 +255,17 @@ export class OrganizationService {
         },
       };
     } catch (error) {
-      logger.error("Error fetching organizations for verification:", error);
-      throw new Error("Failed to fetch organizations for verification");
+      logger.error("Error fetching organizations for verification:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        status,
+        page,
+        limit,
+        File,
+      });
+      throw new Error(
+        `Failed to fetch organizations for verification: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

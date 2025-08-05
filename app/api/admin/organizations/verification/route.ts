@@ -31,12 +31,16 @@ const verificationDecisionSchema = z
  * GET /api/admin/organizations/verification - List organizations pending verification
  */
 async function getHandler(request: NextRequest, authContext: any) {
+  let status: string = "unknown";
+  let page: number = 1;
+  let limit: number = 20;
+
   try {
     const { searchParams } = new URL(request.url);
 
     // Validate and sanitize query parameters
     const rawStatus = searchParams.get("status") || OrganizationVerificationStatus.PENDING;
-    const status = InputSanitizer.sanitizeText(rawStatus);
+    status = InputSanitizer.sanitizeText(rawStatus);
 
     // Validate status is one of allowed values
     if (!Object.values(OrganizationVerificationStatus).includes(status as OrganizationVerificationStatus)) {
@@ -46,22 +50,29 @@ async function getHandler(request: NextRequest, authContext: any) {
       );
     }
 
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "20")), 100);
+    page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "20")), 100);
 
     // Log admin access for audit
-    logger.info(`Admin ${authContext.user.userId} accessing organization verification list`, {
+    logger.info(`Admin ${authContext.userId} accessing organization verification list`, {
       status,
       page,
       limit,
-      adminId: authContext.user.userId,
+      adminId: authContext.userId,
     });
 
     const result = await OrganizationService.getOrganizationsForVerification(status, page, limit);
 
     return NextResponse.json(result);
   } catch (error) {
-    logger.error("Verification list error:", error);
+    logger.error("Verification list error:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      adminId: authContext?.userId,
+      status: status || "unknown",
+      page: page || "unknown",
+      limit: limit || "unknown",
+    });
     return NextResponse.json(
       {
         success: false,
@@ -107,10 +118,10 @@ async function postHandler(request: NextRequest, authContext: any) {
     const validatedDecision = verificationDecisionSchema.parse(sanitizedDecisionData);
 
     // Log admin action for audit
-    logger.info(`Admin ${authContext.user.userId} processing organization verification`, {
+    logger.info(`Admin ${authContext.userId} processing organization verification`, {
       organizationId: sanitizedOrgId,
       action: validatedDecision.action,
-      adminId: authContext.user.userId,
+      adminId: authContext.userId,
       hasNotes: !!validatedDecision.notes,
       hasRejectionReason: !!validatedDecision.rejectionReason,
     });
@@ -118,7 +129,7 @@ async function postHandler(request: NextRequest, authContext: any) {
     const result = await OrganizationService.processVerificationDecision(
       sanitizedOrgId,
       validatedDecision.action,
-      authContext.user.userId,
+      authContext.userId,
       validatedDecision.notes,
       validatedDecision.rejectionReason
     );
