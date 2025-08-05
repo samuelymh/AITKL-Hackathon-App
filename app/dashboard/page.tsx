@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
+import UploadDocs from "@/components/upload-docs";
 import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
 import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
@@ -258,6 +259,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
               <div className="space-y-6">
+              <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}

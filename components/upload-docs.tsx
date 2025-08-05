@@ -1,79 +1,128 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { supabaseStorageService, UploadedFile } from "@/lib/services/supabase-storage-service";
+import { useToast } from "@/hooks/use-toast";
+import AIDocumentAnalysis from "./ai-document-analysis";
+
 import {
   ArrowLeft,
   Upload,
   FileText,
-  Check,
-  Share2,
-  Calendar,
-  Pill,
-  Activity,
+  X,
+  Loader2,
 } from "lucide-react";
 
 interface UploadDocsProps {
   onBack: () => void;
   onDataUploaded: (data: any) => void;
+  userId: string;
 }
-
-const careTimeline = [
-  {
-    date: "July 2024",
-    type: "diagnosis",
-    title: "Hypertension Diagnosis",
-    provider: "Dr. Ahmad Hassan",
-    icon: Activity,
-    color: "red",
-  },
-  {
-    date: "June 2024",
-    type: "medication",
-    title: "Lisinopril 10mg prescribed",
-    provider: "Dr. Ahmad Hassan",
-    icon: Pill,
-    color: "blue",
-  },
-  {
-    date: "May 2024",
-    type: "visit",
-    title: "Annual Physical Exam",
-    provider: "Dr. Sarah Johnson",
-    icon: Calendar,
-    color: "green",
-  },
-  {
-    date: "March 2024",
-    type: "diagnosis",
-    title: "Type 2 Diabetes",
-    provider: "Dr. Lisa Chen",
-    icon: Activity,
-    color: "orange",
-  },
-];
 
 export default function UploadDocs({
   onBack,
   onDataUploaded,
+  userId,
 }: UploadDocsProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [showTimeline, setShowTimeline] = useState(false);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  
+  // Load previously uploaded files on component mount
+  useEffect(() => {
+    const loadExistingFiles = async () => {
+      try {
+        setIsLoadingFiles(true);
+        const files = await supabaseStorageService.listUserFiles(userId);
+        setUploadedFiles(files);
+      } catch (error) {
+        console.error('Error loading existing files:', error);
+        toast({
+          title: "Load Failed",
+          description: "Unable to load previously uploaded files.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    };
 
-  const handleFileUpload = (fileName: string) => {
-    setUploadedFiles((prev) => [...prev, fileName]);
-    // Simulate processing delay
-    setTimeout(() => {
-      setShowTimeline(true);
-      onDataUploaded(careTimeline);
-    }, 2000);
+    if (userId) {
+      loadExistingFiles();
+    }
+  }, [userId, toast, onDataUploaded]);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      await uploadFile(file);
+    }
+    
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const handleShareSummary = () => {
-    // This would generate a QR code for the care summary
-    alert("QR code generated for care summary sharing!");
+  const uploadFile = async (file: File) => {
+    try {
+      setIsUploading(true);
+      const uploadedFile = await supabaseStorageService.uploadFile(file, userId);
+      setUploadedFiles((prev) => [...prev, uploadedFile]);
+
+      toast({
+        title: "Upload Successful",
+        description: `${file.name} has been uploaded successfully.`,
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred during upload.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleViewFile = async (file: UploadedFile) => {
+    try {
+      await supabaseStorageService.viewFile(file);
+    } catch (error) {
+      toast({
+        title: "View Error",
+        description: error instanceof Error ? error.message : "Unable to open the file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    const file = uploadedFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    try {
+      await supabaseStorageService.deleteFile(file.path);
+      setUploadedFiles((prev) => prev.filter(f => f.id !== fileId));
+      toast({
+        title: "File Deleted",
+        description: `${file.name} has been deleted.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred while deleting the file.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -104,86 +153,85 @@ export default function UploadDocs({
             <p className="text-sm text-gray-500 mb-4">
               PDF files only, up to 10MB each
             </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             <Button
-              onClick={() => handleFileUpload("Lab_Results_July2024.pdf")}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              Choose Files
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Choose Files"
+              )}
             </Button>
           </div>
 
           {/* Uploaded Files */}
-          {uploadedFiles.length > 0 && (
+          {isLoadingFiles ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-10 h-10 mx-auto text-blue-500 animate-spin" />
+              <p className="text-lg text-gray-600 mt-4">Loading uploaded files...</p>
+            </div>
+          ) : uploadedFiles?.length ? (
             <div className="space-y-2">
               <h3 className="font-semibold text-gray-900">Uploaded Files</h3>
-              {uploadedFiles.map((file, index) => (
+              {uploadedFiles.map((file) => (
                 <div
-                  key={index}
+                  key={file.id}
                   className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200"
                 >
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <span className="flex-1 text-sm font-medium">{file}</span>
-                  <Check className="w-5 h-5 text-green-600" />
+                  <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium block truncate" title={file.name}>{file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {supabaseStorageService.formatFileSize(file.size)} • {file.uploadedAt.toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewFile(file)}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="text-red-600 hover:text-red-700"
+                      title="Delete file"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <AIDocumentAnalysis uploadedFiles={uploadedFiles} />
+              </div>
             </div>
-          )}
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-lg text-gray-600 mb-4">No files uploaded yet.</p>
+              </div>
+            )}
         </CardContent>
       </Card>
-
-      {/* AI-Generated Care Timeline */}
-      {showTimeline && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-600" />
-                AI-Generated Care Timeline
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Based on your uploaded documents
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {careTimeline.map((event, index) => {
-                const IconComponent = event.icon;
-                return (
-                  <div key={index} className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full bg-${event.color}-100 flex items-center justify-center flex-shrink-0`}
-                    >
-                      <IconComponent
-                        className={`w-5 h-5 text-${event.color}-600`}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900">
-                          {event.title}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {event.type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{event.provider}</p>
-                      <p className="text-xs text-gray-500">{event.date}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* Share Summary Button */}
-          <Button
-            onClick={handleShareSummary}
-            className="w-full bg-blue-600 hover:bg-blue-700 h-12"
-          >
-            <Share2 className="w-5 h-5 mr-2" />
-            Share Summary as QR Code
-          </Button>
-        </>
-      )}
     </div>
   );
 }
