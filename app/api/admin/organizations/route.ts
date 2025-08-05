@@ -18,7 +18,9 @@ async function getAllOrganizationsHandler(request: NextRequest, authContext: any
     const organizations = await Organization.find({
       auditDeletedDateTime: { $exists: false },
     })
-      .select("organizationInfo.name organizationInfo.type verification.isVerified verification.verifiedAt contact.email contact.phone address createdAt auditCreatedDateTime")
+      .select(
+        "organizationInfo.name organizationInfo.type verification.isVerified verification.verifiedAt contact.email contact.phone address createdAt auditCreatedDateTime"
+      )
       .sort({ auditCreatedDateTime: -1 });
 
     const mappedOrganizations = organizations.map((org) => {
