@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { OrganizationVerificationPanel } from "@/components/admin/OrganizationVerificationPanel";
+import { AdminNavBar, AdminBreadcrumb } from "@/components/admin/AdminNavBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -45,13 +46,27 @@ export default function AdminOrganizationVerificationPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-2">Manage organization verification requests and system administration.</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavBar />
+      
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <AdminBreadcrumb
+          items={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Organizations", href: "/admin/organizations" },
+            { title: "Verification" },
+          ]}
+        />
 
-      <OrganizationVerificationPanel />
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Organization Verification</h1>
+          <p className="text-gray-600 mt-2">
+            Review and approve organization registration requests to ensure platform security and compliance.
+          </p>
+        </div>
+
+        <OrganizationVerificationPanel />
+      </div>
     </div>
   );
 }
