@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
           status: authGrant.grantDetails.status,
           expiresAt: authGrant.grantDetails.expiresAt,
           patient: {
-            name: patient.getFullName(),
+            name: await patient.getFullName(),
             digitalIdentifier: patient.digitalIdentifier,
           },
           organization: {
