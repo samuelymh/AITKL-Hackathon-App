@@ -220,7 +220,10 @@ export default function UploadDocs({
                   </div>
                 </div>
               ))}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <AIDocumentAnalysis uploadedFiles={uploadedFiles} />
               </div>
+            </div>
             ) : (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />

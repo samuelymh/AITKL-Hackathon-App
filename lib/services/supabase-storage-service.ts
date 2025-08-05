@@ -180,6 +180,52 @@ export class SupabaseStorageService {
   }
 
   /**
+   * Download a file as binary data (for AI analysis)
+   */
+  async downloadFileAsBinary(
+    file: UploadedFile, 
+    storageName: string = 'medical-records'
+  ): Promise<ArrayBuffer> {
+    try {
+      // Get a signed URL for downloading
+      const signedUrl = await this.getSignedUrl(file.path, storageName, 60);
+      
+      // Fetch the file as binary data
+      const response = await fetch(signedUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+      
+      // Convert to ArrayBuffer for binary processing
+      const arrayBuffer = await response.arrayBuffer();
+      return arrayBuffer;
+    } catch (error) {
+      throw new Error(`Failed to download file as binary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Download multiple files as binary data (for batch AI analysis)
+   */
+  async downloadFilesAsBinary(
+    files: UploadedFile[], 
+    storageName: string = 'medical-records'
+  ): Promise<{ file: UploadedFile; binaryData: ArrayBuffer }[]> {
+    const downloadPromises = files.map(async (file) => {
+      try {
+        const binaryData = await this.downloadFileAsBinary(file, storageName);
+        return { file, binaryData };
+      } catch (error) {
+        console.error(`Failed to download file ${file.name}:`, error);
+        throw error;
+      }
+    });
+
+    return Promise.all(downloadPromises);
+  }
+
+  /**
    * Utility function to format file size
    */
   formatFileSize(bytes: number): string {
