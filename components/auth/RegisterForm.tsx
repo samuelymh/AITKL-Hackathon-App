@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Organization interface for dropdown
+interface OrganizationOption {
+  id: string;
+  name: string;
+  type: string;
+  city: string;
+  state: string;
+  verified: boolean;
+  registrationNumber?: string;
+}
 
 const RegisterSchema = z
   .object({
@@ -35,11 +46,36 @@ const RegisterSchema = z
       .max(128),
     confirmPassword: z.string(),
     role: z.enum(["patient", "doctor", "pharmacist"]).default("patient"),
+    organizationId: z.string().optional(),
+    professionalInfo: z.object({
+      licenseNumber: z.string().optional(),
+      specialty: z.string().optional(),
+      yearsOfExperience: z.number().optional(),
+      currentPosition: z.string().optional(),
+      department: z.string().optional(),
+    }).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-  });
+  })
+  .refine(
+    (data) => {
+      // If role is doctor or pharmacist, organizationId and professional info are required
+      if (data.role === "doctor" || data.role === "pharmacist") {
+        return data.organizationId && 
+               data.organizationId.length > 0 &&
+               data.professionalInfo?.licenseNumber &&
+               data.professionalInfo?.specialty &&
+               data.professionalInfo?.yearsOfExperience !== undefined;
+      }
+      return true;
+    },
+    {
+      message: "Organization and professional information are required for healthcare professionals",
+      path: ["organizationId"],
+    }
+  );
 
 type RegisterFormData = z.infer<typeof RegisterSchema>;
 
@@ -57,13 +93,50 @@ export function RegisterForm() {
     password: "",
     confirmPassword: "",
     role: "patient",
+    organizationId: "",
+    professionalInfo: {
+      licenseNumber: "",
+      specialty: "",
+      yearsOfExperience: undefined,
+      currentPosition: "",
+      department: "",
+    },
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
 
   const { register } = useAuth();
   const router = useRouter();
+
+  // Fetch organizations when role changes to doctor or pharmacist
+  useEffect(() => {
+    if (formData.role === "doctor" || formData.role === "pharmacist") {
+      fetchOrganizations();
+    }
+  }, [formData.role]);
+
+  const fetchOrganizations = async () => {
+    setLoadingOrganizations(true);
+    try {
+      // In development, also show unverified organizations for testing
+      const verifiedParam = process.env.NODE_ENV === 'development' ? 'false' : 'true';
+      const response = await fetch(`/api/organizations/list?verified=${verifiedParam}&limit=50`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setOrganizations(data.data.organizations);
+      } else {
+        console.error("Failed to fetch organizations:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    } finally {
+      setLoadingOrganizations(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +187,18 @@ export function RegisterForm() {
 
     // Set the final value
     current[keys[keys.length - 1]] = value;
+
+    // Reset organizationId and professionalInfo when role changes to patient
+    if (path === "role" && value === "patient") {
+      newFormData.organizationId = "";
+      newFormData.professionalInfo = {
+        licenseNumber: "",
+        specialty: "",
+        yearsOfExperience: undefined,
+        currentPosition: "",
+        department: "",
+      };
+    }
 
     setFormData(newFormData);
 
@@ -246,6 +331,174 @@ export function RegisterForm() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Organization Selection for Healthcare Professionals */}
+          {(formData.role === "doctor" || formData.role === "pharmacist") && (
+            <div>
+              <Select
+                value={formData.organizationId}
+                onValueChange={(value) => handleInputChange("organizationId", value)}
+                disabled={loadingOrganizations}
+              >
+                <SelectTrigger className={errors.organizationId ? "border-red-500" : ""}>
+                  <SelectValue 
+                    placeholder={
+                      loadingOrganizations 
+                        ? "Loading organizations..." 
+                        : "Select your organization"
+                    } 
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{org.name}</span>
+                        <span className="text-sm text-gray-500">
+                          {org.type} • {org.city}, {org.state}
+                          {org.verified && " ✓"}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {organizations.length === 0 && !loadingOrganizations && (
+                    <SelectItem value="" disabled>
+                      No verified organizations found
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.organizationId && (
+                <p className="text-sm text-red-600 mt-1">{errors.organizationId}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Can't find your organization?{" "}
+                <a 
+                  href="/demo/organization-management" 
+                  target="_blank" 
+                  className="text-blue-600 hover:underline"
+                >
+                  Register it here
+                </a>
+              </p>
+            </div>
+          )}
+
+          {/* Professional Information for Healthcare Professionals */}
+          {(formData.role === "doctor" || formData.role === "pharmacist") && (
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+              <h3 className="text-lg font-medium text-gray-900">Professional Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    placeholder="License Number"
+                    value={formData.professionalInfo?.licenseNumber || ""}
+                    onChange={(e) =>
+                      handleInputChange("professionalInfo.licenseNumber", e.target.value)
+                    }
+                    disabled={isLoading}
+                    className={
+                      errors["professionalInfo.licenseNumber"] ? "border-red-500" : ""
+                    }
+                  />
+                  {errors["professionalInfo.licenseNumber"] && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors["professionalInfo.licenseNumber"]}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    placeholder="Specialty"
+                    value={formData.professionalInfo?.specialty || ""}
+                    onChange={(e) =>
+                      handleInputChange("professionalInfo.specialty", e.target.value)
+                    }
+                    disabled={isLoading}
+                    className={
+                      errors["professionalInfo.specialty"] ? "border-red-500" : ""
+                    }
+                  />
+                  {errors["professionalInfo.specialty"] && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors["professionalInfo.specialty"]}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input
+                    type="number"
+                    placeholder="Years of Experience"
+                    min="0"
+                    max="70"
+                    value={formData.professionalInfo?.yearsOfExperience?.toString() || ""}
+                    onChange={(e) => {
+                      const value = e.target.value ? parseInt(e.target.value) : undefined;
+                      setFormData(prev => ({
+                        ...prev,
+                        professionalInfo: {
+                          ...prev.professionalInfo,
+                          yearsOfExperience: value
+                        }
+                      }));
+                    }}
+                    disabled={isLoading}
+                    className={
+                      errors["professionalInfo.yearsOfExperience"] ? "border-red-500" : ""
+                    }
+                  />
+                  {errors["professionalInfo.yearsOfExperience"] && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors["professionalInfo.yearsOfExperience"]}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    placeholder="Current Position (Optional)"
+                    value={formData.professionalInfo?.currentPosition || ""}
+                    onChange={(e) =>
+                      handleInputChange("professionalInfo.currentPosition", e.target.value)
+                    }
+                    disabled={isLoading}
+                    className={
+                      errors["professionalInfo.currentPosition"] ? "border-red-500" : ""
+                    }
+                  />
+                  {errors["professionalInfo.currentPosition"] && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors["professionalInfo.currentPosition"]}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Input
+                  placeholder="Department (Optional)"
+                  value={formData.professionalInfo?.department || ""}
+                  onChange={(e) =>
+                    handleInputChange("professionalInfo.department", e.target.value)
+                  }
+                  disabled={isLoading}
+                  className={
+                    errors["professionalInfo.department"] ? "border-red-500" : ""
+                  }
+                />
+                {errors["professionalInfo.department"] && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors["professionalInfo.department"]}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div>
             <Input
