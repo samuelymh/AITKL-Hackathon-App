@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Organization from "@/lib/models/Organization";
-import connectToDatabase from "@/lib/mongodb";
 import { z } from "zod";
+import { OrganizationService } from "@/lib/services/organizationService";
 
 // Validation schema for search parameters
 const searchSchema = z.object({
@@ -34,17 +33,15 @@ export async function GET(request: NextRequest) {
 
     const { query, type, city, state, verified, limit = "20", page = "1" } = validation.data;
 
-    // Connect to database
-    await connectToDatabase();
-
     // Calculate pagination
     const limitNum = Math.min(parseInt(limit), 50); // Max 50 results
     const pageNum = Math.max(parseInt(page), 1);
 
-    // Build location filter
-    const location: { state?: string; city?: string } = {};
-    if (city) location.city = city;
-    if (state) location.state = state;
+    // Build location filter using object destructuring with conditional assignment
+    const location = {
+      ...(city && { city }),
+      ...(state && { state }),
+    };
 
     // Build options
     const options = {
@@ -53,45 +50,21 @@ export async function GET(request: NextRequest) {
       onlyVerified: verified === "true",
     };
 
-    // Search organizations
-    const organizations = await Organization.searchOrganizations(
+    // Search organizations using service
+    const organizations = await OrganizationService.searchOrganizations(
       query,
-      type as any,
+      type,
       Object.keys(location).length > 0 ? location : undefined,
       options
     );
 
-    // Get total count for pagination
-    const countFilters: any = {
-      auditDeletedDateTime: { $exists: false },
-    };
-
-    if (query?.trim()) {
-      countFilters.$or = [
-        { "organizationInfo.name": { $regex: query, $options: "i" } },
-        { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },
-        { "address.city": { $regex: query, $options: "i" } },
-        { "address.state": { $regex: query, $options: "i" } },
-      ];
-    }
-
-    if (type) {
-      countFilters["organizationInfo.type"] = type;
-    }
-
-    if (city) {
-      countFilters["address.city"] = { $regex: city, $options: "i" };
-    }
-
-    if (state) {
-      countFilters["address.state"] = { $regex: state, $options: "i" };
-    }
-
-    if (verified === "true") {
-      countFilters["verification.isVerified"] = true;
-    }
-
-    const totalCount = await Organization.countDocuments(countFilters);
+    // Get total count using service (eliminates code duplication)
+    const totalCount = await OrganizationService.getSearchCount(
+      query,
+      type,
+      Object.keys(location).length > 0 ? location : undefined,
+      verified === "true"
+    );
 
     // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limitNum);
@@ -101,7 +74,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        organizations: organizations.map((org) => org.toPublicJSON()),
+        organizations: organizations.map((org: any) => org.toPublicJSON()),
         pagination: {
           currentPage: pageNum,
           totalPages,
