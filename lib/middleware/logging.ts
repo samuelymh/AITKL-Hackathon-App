@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIP } from "@/lib/utils/network";
 import { getAuthContext } from "@/lib/auth";
 
 interface LogEntry {
@@ -24,7 +25,7 @@ export function withLogging(
     logRequests?: boolean;
     logResponses?: boolean;
     logErrors?: boolean;
-  } = {},
+  } = {}
 ) {
   const { logRequests = true, logResponses = true, logErrors = true } = options;
 
@@ -64,7 +65,7 @@ export function withLogging(
           error: "Internal server error",
           timestamp: new Date().toISOString(),
         },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
@@ -102,17 +103,6 @@ export function withLogging(
 }
 
 /**
- * Extract client IP address from request headers
- */
-function getClientIP(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-
-  return cfConnectingIp || realIp || forwardedFor?.split(",")[0] || "unknown";
-}
-
-/**
  * Determine if request should be stored in audit log
  */
 function shouldAuditLog(request: NextRequest, response: NextResponse): boolean {
@@ -125,26 +115,17 @@ function shouldAuditLog(request: NextRequest, response: NextResponse): boolean {
   }
 
   // Audit user management operations
-  if (
-    url.includes("/api/users/") &&
-    ["POST", "PUT", "DELETE"].includes(method)
-  ) {
+  if (url.includes("/api/users/") && ["POST", "PUT", "DELETE"].includes(method)) {
     return true;
   }
 
   // Audit prescription operations
-  if (
-    url.includes("/api/prescriptions/") &&
-    ["POST", "PUT", "DELETE"].includes(method)
-  ) {
+  if (url.includes("/api/prescriptions/") && ["POST", "PUT", "DELETE"].includes(method)) {
     return true;
   }
 
   // Audit medical records operations
-  if (
-    url.includes("/api/medical-records/") &&
-    ["POST", "PUT", "DELETE"].includes(method)
-  ) {
+  if (url.includes("/api/medical-records/") && ["POST", "PUT", "DELETE"].includes(method)) {
     return true;
   }
 
@@ -173,7 +154,7 @@ async function storeAuditLog(logEntry: LogEntry): Promise<void> {
         ...logEntry,
         category: "AUDIT",
         severity: logEntry.statusCode >= 400 ? "ERROR" : "INFO",
-      }),
+      })
     );
 
     // TODO: Implement database storage
@@ -187,9 +168,7 @@ async function storeAuditLog(logEntry: LogEntry): Promise<void> {
 /**
  * Security-focused logging for sensitive operations
  */
-export function withSecurityLogging(
-  handler: (request: NextRequest) => Promise<NextResponse>,
-) {
+export function withSecurityLogging(handler: (request: NextRequest) => Promise<NextResponse>) {
   return withLogging(handler, {
     logRequests: true,
     logResponses: true,
@@ -200,9 +179,7 @@ export function withSecurityLogging(
 /**
  * Performance-focused logging for monitoring
  */
-export function withPerformanceLogging(
-  handler: (request: NextRequest) => Promise<NextResponse>,
-) {
+export function withPerformanceLogging(handler: (request: NextRequest) => Promise<NextResponse>) {
   return async (request: NextRequest): Promise<NextResponse> => {
     const startTime = Date.now();
 
@@ -223,7 +200,7 @@ export function withPerformanceLogging(
           method: request.method,
           responseTime,
           timestamp: new Date().toISOString(),
-        }),
+        })
       );
     }
 
