@@ -348,8 +348,18 @@ AuthorizationGrantSchema.statics = {
     }
 
     return this.find(query)
-      .populate("organizationId")
-      .populate("requestingPractitionerId");
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      });
   },
 
   // Find pending authorization requests for a user
@@ -360,12 +370,22 @@ AuthorizationGrantSchema.statics = {
       "grantDetails.expiresAt": { $gt: new Date() },
       auditDeletedDateTime: { $exists: false },
     })
-      .populate("organizationId")
-      .populate("requestingPractitionerId")
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      })
       .sort({ createdAt: -1 });
   },
 
-  // Find expired grants for cleanup
+  // Find expired grants for cleanup (no need for population optimization here)
   findExpiredGrants: function () {
     return this.find({
       "grantDetails.status": { $in: [GrantStatus.PENDING, GrantStatus.ACTIVE] },

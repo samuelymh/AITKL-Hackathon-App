@@ -122,11 +122,20 @@ export async function POST(
     }
 
     // Find and validate the grant
-    const authGrant = await AuthorizationGrant.findById(grantId).populate([
-      "userId",
-      "organizationId",
-      "requestingPractitionerId",
-    ]);
+    const authGrant = await AuthorizationGrant.findById(grantId)
+      .populate("userId", "digitalIdentifier personalInfo.firstName personalInfo.lastName")
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      });
 
     if (!authGrant) {
       return NextResponse.json(

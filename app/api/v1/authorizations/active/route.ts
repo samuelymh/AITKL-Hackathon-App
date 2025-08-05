@@ -23,10 +23,10 @@ async function transformGrant(grant: any) {
       practitioner: practitioner
         ? {
             id: practitioner._id.toString(),
-            firstName: practitioner.personalInfo.firstName,
-            lastName: practitioner.personalInfo.lastName,
-            role: practitioner.professionalInfo.role,
-            specialty: practitioner.professionalInfo.specialty,
+            firstName: practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
+            lastName: practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User",
+            role: practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+            specialty: practitioner.professionalInfo?.specialty || "General",
           }
         : null,
       accessScope: grant.accessScope,

@@ -179,11 +179,20 @@ export async function GET(request: NextRequest, { params }: { params: { grantId:
     const { grantId } = params;
 
     // Find the authorization grant
-    const authGrant = await AuthorizationGrant.findById(grantId).populate([
-      "userId",
-      "organizationId",
-      "requestingPractitionerId",
-    ]);
+    const authGrant = await AuthorizationGrant.findById(grantId)
+      .populate("userId", "digitalIdentifier personalInfo.firstName personalInfo.lastName")
+      .populate({
+        path: "organizationId",
+        select: "organizationInfo.name organizationInfo.type address",
+      })
+      .populate({
+        path: "requestingPractitionerId",
+        select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+        populate: {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
+      });
 
     if (!authGrant) {
       return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });

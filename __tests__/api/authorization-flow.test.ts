@@ -351,7 +351,7 @@ describe("Authorization Grant Flow", () => {
     test("should format authorization request notification correctly", async () => {
       const mockNotificationPayload = {
         title: "Healthcare Access Request",
-        body: `${mockOrganization.organizationInfo.name} is requesting access to your medical records for Dr. ${mockPractitioner.personalInfo.lastName}`,
+        body: `${mockOrganization.organizationInfo.name} is requesting access to your medical records for Dr. ${mockPractitioner.userId?.personalInfo?.lastName || mockPractitioner.personalInfo?.lastName || "Unknown"}`,
         data: {
           type: "authorization_request",
           grantId: "grant123",

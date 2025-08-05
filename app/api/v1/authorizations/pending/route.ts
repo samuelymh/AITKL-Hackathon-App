@@ -23,10 +23,10 @@ async function transformPendingGrant(grant: any) {
       practitioner: practitioner
         ? {
             id: practitioner._id.toString(),
-            firstName: practitioner.personalInfo.firstName,
-            lastName: practitioner.personalInfo.lastName,
-            role: practitioner.professionalInfo.role,
-            specialty: practitioner.professionalInfo.specialty,
+            firstName: practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
+            lastName: practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User",
+            role: practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+            specialty: practitioner.professionalInfo?.specialty || "General",
           }
         : null,
       requestedScope: grant.accessScope,
@@ -59,15 +59,8 @@ async function pendingHandler(request: NextRequest, authContext: any) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Get pending requests for this user
-    const pendingRequests = await AuthorizationGrant.find({
-      userId: authContext.userId,
-      "grantDetails.status": "PENDING",
-      auditDeletedDateTime: { $exists: false },
-    })
-      .populate("organizationId")
-      .populate("requestingPractitionerId")
-      .sort({ auditCreatedDateTime: -1 });
+    // Get pending requests for this user using optimized static method
+    const pendingRequests = await AuthorizationGrant.findPendingRequests(authContext.userId);
 
     // Transform requests with resilient error handling
     const settledResults = await Promise.allSettled(pendingRequests.map(transformPendingGrant));
