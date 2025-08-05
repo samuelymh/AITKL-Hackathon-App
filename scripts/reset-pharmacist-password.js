@@ -12,8 +12,17 @@
 const bcrypt = require("bcryptjs");
 const { MongoClient, ObjectId } = require("mongodb");
 
-// Get MongoDB URI from environment or use default
-const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mongodb://localhost:27017/healthcare-app";
+// Get MongoDB URI from environment with validation
+const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL;
+
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI is not defined");
+  console.error("   Please set MONGODB_URI or DATABASE_URL environment variable");
+  console.error(
+    "   Example: MONGODB_URI='mongodb://localhost:27017/healthcare-app' node scripts/reset-pharmacist-password.js <email> <password>"
+  );
+  process.exit(1);
+}
 
 // Validate email format
 const isValidEmail = (email) => {

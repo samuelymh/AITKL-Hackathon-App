@@ -6,6 +6,20 @@ import { logger } from "@/lib/logger";
 import { UserRole } from "@/lib/types/enums";
 
 /**
+ * Input sanitization helper
+ */
+function sanitizeSearchInput(input: string): string {
+  if (!input || typeof input !== "string") return "";
+
+  // Remove potential regex special characters and NoSQL injection attempts
+  return input
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
+    .replace(/[${}]/g, "") // Remove potential NoSQL injection chars
+    .trim()
+    .slice(0, 100); // Limit length
+}
+
+/**
  * GET /api/pharmacist/organizations
  * Get list of verified organizations for pharmacist profile setup
  */
@@ -41,12 +55,15 @@ async function getOrganizations(request: NextRequest, authContext: any) {
       filter["verification.isVerified"] = true;
     }
 
-    // Search by organization name
+    // Search by organization name with sanitization
     if (search) {
-      filter["organizationInfo.name"] = {
-        $regex: search,
-        $options: "i", // case-insensitive
-      };
+      const sanitizedSearch = sanitizeSearchInput(search);
+      if (sanitizedSearch) {
+        filter["organizationInfo.name"] = {
+          $regex: sanitizedSearch,
+          $options: "i", // case-insensitive
+        };
+      }
     }
 
     // Get organizations with pagination

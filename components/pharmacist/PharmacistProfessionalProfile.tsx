@@ -8,11 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, User, Building, Award, Clock, Languages, Phone, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, User, Building, Award, Clock, Phone, Loader2 } from "lucide-react";
 
 // Pharmacy Professional Info Schema
 const PharmacistProfessionalInfoSchema = z.object({
@@ -143,95 +142,103 @@ export default function PharmacistProfessionalProfile() {
     name: "certifications",
   });
 
-  // Load professional information on component mount
+  // Load professional information and organizations on component mount
   useEffect(() => {
-    loadProfessionalInfo();
-    loadOrganizations();
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [profileResponse, orgResponse] = await Promise.all([
+          fetch("/api/pharmacist/professional-info"),
+          fetch("/api/pharmacist/organizations?verified=true&limit=100"),
+        ]);
 
-  const loadProfessionalInfo = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/pharmacist/professional-info");
+        // Handle profile response
+        if (!profileResponse.ok) {
+          throw new Error(`Failed to load profile: ${profileResponse.status} ${profileResponse.statusText}`);
+        }
 
-      if (!response.ok) {
-        throw new Error("Failed to load professional information");
-      }
+        const profileData = await profileResponse.json();
 
-      const data = await response.json();
+        if (profileData.success && profileData.data) {
+          const profile = profileData.data;
 
-      if (data.success && data.data) {
-        const profileData = data.data;
+          // Map the data to form fields
+          form.reset({
+            licenseNumber: profile.licenseNumber || "",
+            specialty: profile.specialty || "",
+            practitionerType: profile.practitionerType || "pharmacist",
+            yearsOfExperience: profile.yearsOfExperience || 0,
+            currentPosition: profile.currentPosition || "",
+            department: profile.department || "",
+            organizationId: profile.organizationId || "",
+            certifications: profile.certifications || [],
+            specializations: profile.specializations || [],
+            languages: profile.languages || [],
+            continuingEducation: profile.continuingEducation || {
+              totalHours: 0,
+              lastCompletedDate: "",
+              certifyingBody: "",
+            },
+            emergencyContact: profile.emergencyContact || {
+              name: "",
+              relationship: "",
+              phone: "",
+              email: "",
+            },
+            preferences: profile.preferences || {
+              workingHours: "",
+              consultationTypes: [],
+              specialInterests: [],
+            },
+          });
 
-        // Map the data to form fields
-        form.reset({
-          licenseNumber: profileData.licenseNumber || "",
-          specialty: profileData.specialty || "",
-          practitionerType: profileData.practitionerType || "pharmacist",
-          yearsOfExperience: profileData.yearsOfExperience || 0,
-          currentPosition: profileData.currentPosition || "",
-          department: profileData.department || "",
-          organizationId: profileData.organizationId || "",
-          certifications: profileData.certifications || [],
-          specializations: profileData.specializations || [],
-          languages: profileData.languages || [],
-          continuingEducation: profileData.continuingEducation || {
-            totalHours: 0,
-            lastCompletedDate: "",
-            certifyingBody: "",
-          },
-          emergencyContact: profileData.emergencyContact || {
-            name: "",
-            relationship: "",
-            phone: "",
-            email: "",
-          },
-          preferences: profileData.preferences || {
-            workingHours: "",
-            consultationTypes: [],
-            specialInterests: [],
-          },
+          setCompletionPercentage(profile.completionPercentage || 0);
+        } else {
+          console.warn("Profile fetch succeeded but returned no data:", profileData.message);
+          toast({
+            title: "Info",
+            description: profileData.message || "No existing profile found. You can create one now.",
+            variant: "default",
+          });
+        }
+
+        // Handle organizations response
+        if (!orgResponse.ok) {
+          throw new Error(`Failed to load organizations: ${orgResponse.status} ${orgResponse.statusText}`);
+        }
+
+        const orgData = await orgResponse.json();
+
+        if (orgData.success) {
+          setOrganizations(orgData.data.organizations || []);
+        } else {
+          console.error("Organizations fetch failed:", orgData.message);
+          toast({
+            title: "Warning",
+            description: "Failed to load organizations. You can still save your profile.",
+            variant: "destructive",
+          });
+          setOrganizations([]); // Ensure empty state if loading fails
+        }
+      } catch (error) {
+        console.error("Data fetch error:", error);
+        toast({
+          title: "Error",
+          description:
+            error instanceof Error
+              ? `Failed to load data: ${error.message}`
+              : "Failed to load data. Please refresh the page and try again.",
+          variant: "destructive",
         });
-
-        setCompletionPercentage(profileData.completionPercentage || 0);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading professional info:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load professional information",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const loadOrganizations = async () => {
-    try {
-      setLoadingOrganizations(true);
-      const response = await fetch("/api/pharmacist/organizations?verified=true&limit=100");
+    fetchData();
+  }, [toast, form]);
 
-      if (!response.ok) {
-        throw new Error("Failed to load organizations");
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setOrganizations(data.data.organizations || []);
-      }
-    } catch (error) {
-      console.error("Error loading organizations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load organizations",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingOrganizations(false);
-    }
-  };
+  // Legacy functions removed - all data loading now handled in unified useEffect
 
   const onSubmit = async (data: PharmacistProfessionalInfo) => {
     try {

@@ -5,21 +5,39 @@ const LOGIN_URL = "http://localhost:3000/api/auth/login";
 const PROFILE_URL = "http://localhost:3000/api/pharmacist/professional-info";
 const ORG_URL = "http://localhost:3000/api/pharmacist/organizations";
 
+// Secure credential handling
+const testEmail = process.env.PHARMACIST_TEST_EMAIL || process.env.TEST_EMAIL;
+const testPassword = process.env.PHARMACIST_TEST_PASSWORD || process.env.TEST_PASSWORD;
+
 async function testWithAuth() {
   console.log("🧪 Testing Pharmacist Professional Profile APIs with Authentication");
   console.log("=".repeat(70));
 
+  // Validate required environment variables
+  if (!testEmail || !testPassword) {
+    console.log("❌ Missing required environment variables:");
+    console.log("   Please set PHARMACIST_TEST_EMAIL and PHARMACIST_TEST_PASSWORD");
+    console.log("   Or set TEST_EMAIL and TEST_PASSWORD");
+    console.log("\n   Example:");
+    console.log("   export PHARMACIST_TEST_EMAIL='pharmhana@gmail.com'");
+    console.log("   export PHARMACIST_TEST_PASSWORD='your-password'");
+    console.log("   node scripts/test-pharmacist-api-with-auth.js");
+    process.exit(1);
+  }
+
   try {
     // Step 1: Login to get auth token
     console.log("\n🔐 Step 1: Logging in as pharmacist...");
+    console.log(`   Email: ${testEmail}`);
+
     const loginResponse = await fetch(LOGIN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: "pharmhana@gmail.com",
-        password: "password123", // Default test password
+        email: testEmail,
+        password: testPassword,
       }),
     });
 
@@ -28,6 +46,8 @@ async function testWithAuth() {
       console.log("   Response status:", loginResponse.status);
       const errorData = await loginResponse.json().catch(() => ({}));
       console.log("   Error:", errorData.error || "Unknown error");
+      console.log("\n   💡 To reset password, run:");
+      console.log(`   node scripts/reset-pharmacist-password.js ${testEmail}`);
       return;
     }
 
