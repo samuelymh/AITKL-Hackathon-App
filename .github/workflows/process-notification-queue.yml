@@ -19,7 +19,10 @@ jobs:
       - name: Process Notification Jobs
         run: |
           echo "Processing notification queue..."
-          response=$(curl -s -w "%{http_code}" -X POST ${{ secrets.APP_URL }}/api/admin/queue/process)
+          response=$(curl -s -w "%{http_code}" -X POST ${{ secrets.APP_URL }}/api/admin/queue/process \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"batchSize": 20}')
           http_code="${response: -3}"
           body="${response%???}"
 
@@ -36,12 +39,13 @@ jobs:
       - name: Check Queue Health
         run: |
           echo "Checking queue statistics..."
-          stats=$(curl -s ${{ secrets.APP_URL }}/api/admin/queue/process)
+          stats=$(curl -s ${{ secrets.APP_URL }}/api/admin/queue/process \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}")
           echo "Queue Stats: $stats"
 
           # Parse JSON and check for issues (requires jq)
-          pending=$(echo "$stats" | jq -r '.data.pending // 0')
-          failed=$(echo "$stats" | jq -r '.data.failed // 0')
+          pending=$(echo "$stats" | jq -r '.data.stats.pending // 0')
+          failed=$(echo "$stats" | jq -r '.data.stats.failed // 0')
 
           echo "Pending jobs: $pending"
           echo "Failed jobs: $failed"
@@ -68,15 +72,14 @@ jobs:
         run: |
           echo "Cleaning up old notification jobs..."
           response=$(curl -s -X POST ${{ secrets.APP_URL }}/api/admin/queue/cleanup \
+            -H "x-api-key: ${{ secrets.CRON_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d '{"olderThanHours": 48}')
 
           echo "Cleanup Response: $response"
 
           deleted_count=$(echo "$response" | jq -r '.data.deletedCount // 0')
-          echo "Deleted $deleted_count old jobs"
-
-  # Optional: Send notifications on failure
+          echo "Deleted $deleted_count old jobs"  # Optional: Send notifications on failure
   notify-on-failure:
     runs-on: ubuntu-latest
     if: failure()
