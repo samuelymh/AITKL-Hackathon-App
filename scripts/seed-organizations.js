@@ -8,21 +8,21 @@ const sampleOrganizations = [
   {
     organizationInfo: {
       name: "General Hospital",
-      type: "hospital",
+      type: "HOSPITAL",
       registrationNumber: "GH001",
       description: "A leading healthcare facility providing comprehensive medical services",
     },
     address: {
-      street: "123 Medical Center Drive",
-      city: "Houston",
-      state: "Texas",
-      postalCode: "77001",
-      country: "United States",
+      street: "Jalan Hospital 123",
+      city: "Kuala Lumpur",
+      state: "Selangor",
+      postalCode: "50000",
+      country: "Malaysia",
     },
     contact: {
-      phone: "+1-713-555-0100",
-      email: "info@generalhospital.com",
-      website: "https://www.generalhospital.com",
+      phone: "+60-3-555-0100",
+      email: "info@generalhospital.com.my",
+      website: "https://www.generalhospital.com.my",
     },
     verification: {
       isVerified: true,
@@ -38,21 +38,21 @@ const sampleOrganizations = [
   {
     organizationInfo: {
       name: "City Medical Center",
-      type: "clinic",
+      type: "CLINIC",
       registrationNumber: "CMC002",
       description: "Community medical center serving the local area",
     },
     address: {
-      street: "456 Healthcare Boulevard",
-      city: "Austin",
-      state: "Texas",
-      postalCode: "73301",
-      country: "United States",
+      street: "Jalan Kesihatan 456",
+      city: "Petaling Jaya",
+      state: "Selangor",
+      postalCode: "46200",
+      country: "Malaysia",
     },
     contact: {
-      phone: "+1-512-555-0200",
-      email: "contact@citymedical.com",
-      website: "https://www.citymedical.com",
+      phone: "+60-3-555-0200",
+      email: "contact@citymedical.com.my",
+      website: "https://www.citymedical.com.my",
     },
     verification: {
       isVerified: true,
@@ -68,21 +68,21 @@ const sampleOrganizations = [
   {
     organizationInfo: {
       name: "MedPharm Pharmacy",
-      type: "pharmacy",
+      type: "PHARMACY",
       registrationNumber: "MP003",
       description: "Full-service pharmacy with prescription and OTC medications",
     },
     address: {
-      street: "789 Pharmacy Lane",
-      city: "Dallas",
-      state: "Texas",
-      postalCode: "75201",
-      country: "United States",
+      street: "Jalan Farmasi 789",
+      city: "Johor Bahru",
+      state: "Johor",
+      postalCode: "80000",
+      country: "Malaysia",
     },
     contact: {
-      phone: "+1-214-555-0300",
-      email: "info@medpharm.com",
-      website: "https://www.medpharm.com",
+      phone: "+60-7-555-0300",
+      email: "info@medpharm.com.my",
+      website: "https://www.medpharm.com.my",
     },
     verification: {
       isVerified: true,
@@ -98,21 +98,21 @@ const sampleOrganizations = [
   {
     organizationInfo: {
       name: "Wellness Clinic",
-      type: "clinic",
+      type: "CLINIC",
       registrationNumber: "WC004",
       description: "Specialized wellness and preventive care clinic",
     },
     address: {
-      street: "321 Wellness Way",
-      city: "San Antonio",
-      state: "Texas",
-      postalCode: "78201",
-      country: "United States",
+      street: "Jalan Wellness 321",
+      city: "Penang",
+      state: "Pulau Pinang",
+      postalCode: "10000",
+      country: "Malaysia",
     },
     contact: {
-      phone: "+1-210-555-0400",
-      email: "hello@wellnessclinic.com",
-      website: "https://www.wellnessclinic.com",
+      phone: "+60-4-555-0400",
+      email: "hello@wellnessclinic.com.my",
+      website: "https://www.wellnessclinic.com.my",
     },
     verification: {
       isVerified: true,
@@ -128,21 +128,21 @@ const sampleOrganizations = [
   {
     organizationInfo: {
       name: "Metro Pharmacy",
-      type: "pharmacy",
+      type: "PHARMACY",
       registrationNumber: "MP005",
       description: "Urban pharmacy serving downtown area",
     },
     address: {
-      street: "555 Metro Street",
-      city: "Houston",
-      state: "Texas",
-      postalCode: "77002",
-      country: "United States",
+      street: "Jalan Metro 555",
+      city: "Shah Alam",
+      state: "Selangor",
+      postalCode: "40000",
+      country: "Malaysia",
     },
     contact: {
-      phone: "+1-713-555-0500",
-      email: "service@metropharmacy.com",
-      website: "https://www.metropharmacy.com",
+      phone: "+60-3-555-0500",
+      email: "service@metropharmacy.com.my",
+      website: "https://www.metropharmacy.com.my",
     },
     verification: {
       isVerified: true,
@@ -153,6 +153,36 @@ const sampleOrganizations = [
       isActive: true,
       memberCount: 0,
       establishedDate: new Date("2012-11-05"),
+    },
+  },
+  {
+    organizationInfo: {
+      name: "DiagnoLab Diagnostics",
+      type: "LABORATORY",
+      registrationNumber: "DL006",
+      description: "Comprehensive diagnostic laboratory services",
+    },
+    address: {
+      street: "Jalan Diagnostik 888",
+      city: "Johor Bahru",
+      state: "Johor",
+      postalCode: "80100",
+      country: "Malaysia",
+    },
+    contact: {
+      phone: "+60-7-555-0600",
+      email: "lab@diagnolab.com.my",
+      website: "https://www.diagnolab.com.my",
+    },
+    verification: {
+      isVerified: true,
+      verifiedAt: new Date(),
+      verifiedBy: "system-admin",
+    },
+    metadata: {
+      isActive: true,
+      memberCount: 0,
+      establishedDate: new Date("2008-04-12"),
     },
   },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -8,18 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GeneralOrganizationSelect } from "@/components/ui/organization-select";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Organization interface for dropdown
-interface OrganizationOption {
-  id: string;
-  name: string;
-  type: string;
-  city: string;
-  state: string;
-  verified: boolean;
-  registrationNumber?: string;
-}
 
 const RegisterSchema = z
   .object({
@@ -98,38 +88,9 @@ export function RegisterForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
 
   const { register } = useAuth();
   const router = useRouter();
-
-  // Fetch organizations when role changes to doctor or pharmacist
-  useEffect(() => {
-    if (formData.role === "doctor" || formData.role === "pharmacist") {
-      fetchOrganizations();
-    }
-  }, [formData.role]);
-
-  const fetchOrganizations = async () => {
-    setLoadingOrganizations(true);
-    try {
-      // In development, also show unverified organizations for testing
-      const verifiedParam = process.env.NODE_ENV === "development" ? "false" : "true";
-      const response = await fetch(`/api/organizations/list?verified=${verifiedParam}&limit=50`);
-      const data = await response.json();
-
-      if (data.success) {
-        setOrganizations(data.data.organizations);
-      } else {
-        console.error("Failed to fetch organizations:", data.error);
-      }
-    } catch (error) {
-      console.error("Error fetching organizations:", error);
-    } finally {
-      setLoadingOrganizations(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,44 +255,22 @@ export function RegisterForm() {
 
           {/* Organization Selection for Healthcare Professionals */}
           {(formData.role === "doctor" || formData.role === "pharmacist") && (
-            <div>
-              <Select
-                value={formData.organizationId}
-                onValueChange={(value) => handleInputChange("organizationId", value)}
-                disabled={loadingOrganizations}
-              >
-                <SelectTrigger className={errors.organizationId ? "border-red-500" : ""}>
-                  <SelectValue
-                    placeholder={loadingOrganizations ? "Loading organizations..." : "Select your organization"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{org.name}</span>
-                        <span className="text-sm text-gray-500">
-                          {org.type} • {org.city}, {org.state}
-                          {org.verified && " ✓"}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                  {organizations.length === 0 && !loadingOrganizations && (
-                    <SelectItem value="" disabled>
-                      No verified organizations found
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              {errors.organizationId && <p className="text-sm text-red-600 mt-1">{errors.organizationId}</p>}
-              <p className="text-xs text-gray-500 mt-1">
-                Can't find your organization?{" "}
-                <a href="/demo/organization-management" target="_blank" className="text-blue-600 hover:underline">
-                  Register it here
-                </a>
-              </p>
-            </div>
+            <GeneralOrganizationSelect
+              value={formData.organizationId}
+              onValueChange={(value) => handleInputChange("organizationId", value)}
+              placeholder="Select your organization"
+              required={true}
+              errorMessage={errors.organizationId}
+              includeUnverified={process.env.NODE_ENV === "development"}
+              showBadge={true}
+              showLocation={true}
+              showType={true}
+              helperText="Can't find your organization?"
+              helperLink={{
+                text: "Register it here",
+                href: "/demo/organization-management",
+              }}
+            />
           )}
 
           {/* Professional Information for Healthcare Professionals */}

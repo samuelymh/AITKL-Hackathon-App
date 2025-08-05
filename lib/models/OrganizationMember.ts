@@ -172,13 +172,13 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     practitionerId: {
       type: Schema.Types.ObjectId,
       ref: "Practitioner",
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
 
     membershipDetails: {
@@ -302,7 +302,7 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
       type: String,
       enum: ["active", "inactive", "pending", "suspended", "terminated"],
       default: "pending",
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
 
     verificationInfo: {

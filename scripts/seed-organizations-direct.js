@@ -1,6 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import connectToDatabase from "@/lib/db.connection";
-import Organization from "@/lib/models/Organization";
+#!/usr/bin/env node
+
+/**
+ * Seed Organizations Script (Direct MongoDB)
+ * Seeds organizations using direct MongoDB connection
+ *
+ * Usage: MONGODB_URI="..." node scripts/seed-organizations-direct.js
+ */
+
+const { MongoClient } = require("mongodb");
+
+// Get MongoDB URI from environment or use default
+const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mongodb://localhost:27017/healthcare-app";
 
 const sampleOrganizations = [
   {
@@ -165,62 +175,94 @@ const sampleOrganizations = [
   },
 ];
 
-/**
- * POST endpoint to seed organizations (development only)
- */
-export async function POST(request: NextRequest) {
+async function seedOrganizations() {
+  let client;
+
   try {
-    // Only allow in development
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Seed endpoint not available in production" }, { status: 403 });
-    }
+    console.log("\n🌱 Seeding Organizations\n");
 
-    await connectToDatabase();
+    // Connect to MongoDB
+    client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    console.log("✅ Connected to database");
 
-    const existingCount = await Organization.countDocuments();
-    console.log(`Found ${existingCount} existing organizations`);
+    const db = client.db();
+    const orgsCollection = db.collection("organizations");
 
-    if (existingCount > 0) {
-      return NextResponse.json({
-        success: true,
-        message: "Organizations already exist, skipping seed",
-        existingCount,
-      });
-    }
-
-    const createdOrgs = [];
-    for (const orgData of sampleOrganizations) {
-      const organization = new Organization(orgData);
-      const saved = await organization.save();
-      createdOrgs.push({
-        id: saved._id,
-        name: saved.organizationInfo.name,
-        type: saved.organizationInfo.type,
-      });
-      console.log(`Created organization: ${orgData.organizationInfo.name}`);
-    }
-
-    const finalCount = await Organization.countDocuments();
-    const verifiedCount = await Organization.countDocuments({ "verification.isVerified": true });
-
-    return NextResponse.json({
-      success: true,
-      message: `Successfully seeded ${createdOrgs.length} organizations`,
-      created: createdOrgs,
-      stats: {
-        totalCount: finalCount,
-        verifiedCount,
-      },
+    // Check existing organizations
+    const existingCount = await orgsCollection.countDocuments({
+      auditDeletedDateTime: { $exists: false },
     });
+    console.log(`📊 Found ${existingCount} existing organization(s)`);
+
+    if (existingCount < 6) { // Add organizations if we have less than 6
+      console.log("🚀 Seeding additional organizations...\n");
+
+      // Only add organizations that don't already exist (check by registration number)
+      const organizationsToAdd = [];
+      for (const org of sampleOrganizations) {
+        const exists = await orgsCollection.findOne({
+          "organizationInfo.registrationNumber": org.organizationInfo.registrationNumber,
+          auditDeletedDateTime: { $exists: false },
+        });
+        if (!exists) {
+          organizationsToAdd.push(org);
+        }
+      }
+
+      if (organizationsToAdd.length > 0) {
+        const results = await orgsCollection.insertMany(organizationsToAdd);
+        console.log(`✅ Successfully inserted ${results.insertedCount} new organizations`);
+        
+        // Log each inserted organization
+        for (let i = 0; i < organizationsToAdd.length; i++) {
+          const org = organizationsToAdd[i];
+          console.log(`   ${i + 1}. ${org.organizationInfo.name} (${org.organizationInfo.type}) - ${org.address.city}, ${org.address.state}`);
+        }
+      } else {
+        console.log("ℹ️  All organizations already exist");
+      }
+    } else {
+      console.log("⚠️  Already have sufficient organizations (6+), skipping seed");
+    }
+
+    // Final verification
+    const finalCount = await orgsCollection.countDocuments({
+      auditDeletedDateTime: { $exists: false },
+    });
+    const verifiedCount = await orgsCollection.countDocuments({
+      "verification.isVerified": true,
+      auditDeletedDateTime: { $exists: false },
+    });
+
+    console.log("\n📈 SUMMARY:");
+    console.log(`   Total organizations: ${finalCount}`);
+    console.log(`   Verified organizations: ${verifiedCount}`);
+    
+    if (verifiedCount > 0) {
+      console.log("\n🎉 Seed completed successfully! Organizations are now available for the organization select component.");
+    }
+
   } catch (error) {
-    console.error("Seed API error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Seed failed",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    console.error("❌ Error seeding organizations:", error.message);
+    console.error("Full error:", error);
+    process.exit(1);
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
+
+// Handle graceful shutdown
+process.on("SIGINT", () => {
+  console.log("\n\n👋 Seed operation cancelled");
+  process.exit(0);
+});
+
+// Run the script
+if (require.main === module) {
+  seedOrganizations().catch(console.error);
+}
+
+module.exports = { seedOrganizations };
