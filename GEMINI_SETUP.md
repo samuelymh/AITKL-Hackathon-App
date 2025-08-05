@@ -46,12 +46,6 @@ GOOGLE_AI_API_KEY=your_gemini_api_key_here
 The Gemini API integration provides:
 
 - **Document Analysis**: AI-powered analysis of medical documents
-- **Key Findings**: Extraction of important medical information
-- **Risk Assessment**: Evaluation of health risks across different categories
-- **Recommendations**: AI-generated medical and lifestyle recommendations
-- **Timeline**: Chronological medical event timeline
-- **Medication Tracking**: Extraction and tracking of medications
-- **Lab Results**: Analysis of laboratory test results
 
 ## API Endpoints
 
