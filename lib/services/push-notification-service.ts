@@ -1,10 +1,11 @@
 /**
- * Push Notification Service for Authorization Requests
- * Handles real-time notifications to patients when healthcare providers request access
+ * Enhanced Push Notification Service with Queue Support
+ * Refactored to use database-backed job queue for Vercel compatibility
  */
 
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
+import { NotificationHelpers, NotificationQueueProcessor } from "./notification-queue-processor";
 
 export interface NotificationPayload {
   title: string;
@@ -21,14 +22,24 @@ export interface NotificationPayload {
 
 export class PushNotificationService {
   /**
-   * Send authorization request notification to patient
+   * Send authorization request notification to patient (now uses queue)
    */
   static async sendAuthorizationRequest(userId: string, grantId: string): Promise<boolean> {
     try {
       const user = await User.findById(userId);
       const grant = await AuthorizationGrant.findById(grantId)
-        .populate("organizationId")
-        .populate("requestingPractitionerId");
+        .populate({
+          path: "organizationId",
+          select: "organizationInfo.name organizationInfo.type",
+        })
+        .populate({
+          path: "requestingPractitionerId",
+          select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+          populate: {
+            path: "userId",
+            select: "personalInfo.firstName personalInfo.lastName",
+          },
+        });
 
       if (!user || !grant) {
         console.error("User or grant not found for notification");
@@ -38,58 +49,31 @@ export class PushNotificationService {
       const organization = grant.organizationId as any;
       const practitioner = grant.requestingPractitionerId as any;
 
-      const practitionerSuffix = practitioner
-        ? ` for Dr. ${practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "Unknown"}`
-        : "";
+      // Extract practitioner name with fallbacks
+      const practitionerLastName =
+        practitioner?.userId?.personalInfo?.lastName || practitioner?.personalInfo?.lastName || "Unknown";
 
-      const notification: NotificationPayload = {
-        title: "Healthcare Access Request",
-        body: `${organization.organizationInfo.name} is requesting access to your medical records${practitionerSuffix}`,
-        icon: "/icons/health-request.png",
-        badge: "/icons/badge.png",
-        data: {
-          type: "authorization_request",
-          grantId: grantId,
-          organizationId: organization._id.toString(),
-          urgent: grant.grantDetails.timeWindowHours <= 2,
-        },
-        actions: [
-          {
-            action: "approve",
-            title: "Approve",
-            icon: "/icons/approve.png",
-          },
-          {
-            action: "deny",
-            title: "Deny",
-            icon: "/icons/deny.png",
-          },
-          {
-            action: "view",
-            title: "View Details",
-            icon: "/icons/view.png",
-          },
-        ],
-      };
+      const isUrgent = grant.grantDetails.timeWindowHours <= 2;
 
-      // TODO: Implement actual push notification sending
-      // This would integrate with:
-      // - Web Push API for browser notifications
-      // - Firebase Cloud Messaging (FCM) for mobile apps
-      // - Apple Push Notification Service (APNS) for iOS
+      // Enqueue the notification job instead of sending directly
+      const jobId = await NotificationHelpers.enqueueAuthorizationRequest(
+        userId,
+        grantId,
+        organization.organizationInfo.name,
+        practitionerLastName,
+        isUrgent
+      );
 
-      console.log("🔔 Push notification would be sent:", notification);
-
-      // For now, return true to indicate the notification would be sent
+      console.log(`🔔 Authorization request notification enqueued: ${jobId}`);
       return true;
     } catch (error) {
-      console.error("Failed to send authorization request notification:", error);
+      console.error("Failed to enqueue authorization request notification:", error);
       return false;
     }
   }
 
   /**
-   * Send notification when authorization status changes
+   * Send notification when authorization status changes (now uses queue)
    */
   static async sendAuthorizationStatusUpdate(
     userId: string,
@@ -97,29 +81,13 @@ export class PushNotificationService {
     status: "approved" | "denied" | "revoked" | "expired"
   ): Promise<boolean> {
     try {
-      const statusMessages = {
-        approved: "Your healthcare access request has been approved",
-        denied: "Your healthcare access request has been denied",
-        revoked: "Healthcare access has been revoked",
-        expired: "Healthcare access has expired",
-      };
+      // Enqueue the status update notification
+      const jobId = await NotificationHelpers.enqueueStatusUpdate(userId, grantId, status);
 
-      const notification: NotificationPayload = {
-        title: "Access Status Update",
-        body: statusMessages[status],
-        icon: "/icons/status-update.png",
-        data: {
-          type: "status_update",
-          grantId: grantId,
-          status: status,
-        },
-      };
-
-      // TODO: Implement actual push notification sending
-      console.log("🔔 Status update notification would be sent:", notification);
+      console.log(`🔔 Status update notification enqueued: ${jobId}`);
       return true;
     } catch (error) {
-      console.error("Failed to send status update notification:", error);
+      console.error("Failed to enqueue status update notification:", error);
       return false;
     }
   }
@@ -159,6 +127,38 @@ export class PushNotificationService {
       console.error("Failed to unregister device:", error);
       return false;
     }
+  }
+
+  /**
+   * Process pending notification jobs (for use in API routes/cron)
+   */
+  static async processPendingNotifications(batchSize: number = 10): Promise<{
+    processed: number;
+    succeeded: number;
+    failed: number;
+    errors: string[];
+  }> {
+    return await NotificationQueueProcessor.processBatch(batchSize);
+  }
+
+  /**
+   * Get notification queue statistics
+   */
+  static async getQueueStats(): Promise<{
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+    retrying: number;
+  }> {
+    return await NotificationQueueProcessor.getStats();
+  }
+
+  /**
+   * Clean up old notification jobs
+   */
+  static async cleanupOldJobs(olderThanHours: number = 24): Promise<number> {
+    return await NotificationQueueProcessor.cleanup(olderThanHours);
   }
 }
 
