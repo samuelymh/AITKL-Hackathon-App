@@ -1,5 +1,11 @@
 # Admin Login Credentials Reference
 
+## ✅ **Schema Issue Fixed**
+
+**Issue Resolved**: The admin users were missing required schema fields (`auditCreatedBy`, `auditCreatedDateTime`, `personalInfo.dateOfBirth`). All existing admin users have been updated with the required fields.
+
+**Fix Applied**: `scripts/fix-existing-admins.js` has been used to update all existing admin users with missing required fields.
+
 ## 🔑 Current Admin Users & Passwords
 
 ### **Test Environment Admins**

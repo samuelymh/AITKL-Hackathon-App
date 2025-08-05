@@ -135,26 +135,57 @@ async function createAdmin(email, password, firstName, lastName, phone = "") {
     const digitalIdentifier = randomUUID();
 
     // Create admin user document
+    const now = new Date();
     const adminUser = {
       digitalIdentifier,
+      
+      // Authentication
       auth: {
         email: email.toLowerCase().trim(),
         passwordHash,
+        role: "admin",
+        emailVerified: true,
+        phoneVerified: !!phone,
+        lastLogin: null,
+        loginAttempts: 0,
+        accountLocked: false,
+        accountLockedUntil: null,
+        tokenVersion: 1,
       },
+      
+      // Personal Information
       personalInfo: {
         firstName,
         lastName,
+        dateOfBirth: new Date("1990-01-01"), // Default birth date for admin users
         contact: {
           email: email.toLowerCase().trim(),
           searchableEmail: email.toLowerCase().trim(),
           ...(phone && { phone }),
+          verified: {
+            email: true,
+            phone: !!phone,
+          },
         },
       },
+      
+      // Medical Info (minimal for admin users)
+      medicalInfo: {
+        smokingStatus: "never",
+      },
+      
+      // Role and permissions
       role: "admin",
+      
+      // Audit fields (required by BaseSchema)
+      auditCreatedBy: "admin-manager-script",
+      auditCreatedDateTime: now.toISOString(),
+      
+      // Metadata (legacy fields)
       metadata: {
         isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
         version: 1,
       },
     };
