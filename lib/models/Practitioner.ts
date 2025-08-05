@@ -131,7 +131,7 @@ const PractitionerSchema = new Schema<IPractitioner>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
+      // index: true, // Removed: covered by unique compound index
     },
 
     // Professional Information
@@ -139,8 +139,8 @@ const PractitionerSchema = new Schema<IPractitioner>(
       licenseNumber: {
         type: String,
         required: true,
-        unique: true,
-        index: true,
+        // unique: true, // Removed: explicit index at end of file provides uniqueness
+        // index: true, // Removed: explicit index at end of file creates the index
       },
       specialty: {
         type: String,
@@ -188,7 +188,7 @@ const PractitionerSchema = new Schema<IPractitioner>(
       type: String,
       enum: ["active", "inactive", "suspended", "pending_verification"],
       default: "pending_verification",
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     lastActiveDate: Date,
 

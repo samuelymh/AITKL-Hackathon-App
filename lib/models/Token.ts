@@ -32,45 +32,45 @@ const TokenSchema = new Schema<ITokenDocument>(
       type: String,
       required: true,
       unique: true,
-      index: true,
+      // index: true, // Removed: unique constraint already creates an index
     },
     grantId: {
       type: String,
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     userId: {
       type: String,
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     organizationId: {
       type: String,
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     tokenType: {
       type: String,
       required: true,
       enum: ["access", "qr", "scan"],
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     createdAt: {
       type: Date,
       required: true,
       default: Date.now,
-      index: true,
+      // index: true, // Removed: not needed for individual queries
     },
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     isRevoked: {
       type: Boolean,
       required: true,
       default: false,
-      index: true,
+      // index: true, // Removed: covered by compound indexes
     },
     revokedAt: {
       type: Date,
