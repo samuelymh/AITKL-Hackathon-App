@@ -195,7 +195,8 @@ async function seedOrganizations() {
     });
     console.log(`📊 Found ${existingCount} existing organization(s)`);
 
-    if (existingCount < 6) { // Add organizations if we have less than 6
+    if (existingCount < 6) {
+      // Add organizations if we have less than 6
       console.log("🚀 Seeding additional organizations...\n");
 
       // Only add organizations that don't already exist (check by registration number)
@@ -213,11 +214,13 @@ async function seedOrganizations() {
       if (organizationsToAdd.length > 0) {
         const results = await orgsCollection.insertMany(organizationsToAdd);
         console.log(`✅ Successfully inserted ${results.insertedCount} new organizations`);
-        
+
         // Log each inserted organization
         for (let i = 0; i < organizationsToAdd.length; i++) {
           const org = organizationsToAdd[i];
-          console.log(`   ${i + 1}. ${org.organizationInfo.name} (${org.organizationInfo.type}) - ${org.address.city}, ${org.address.state}`);
+          console.log(
+            `   ${i + 1}. ${org.organizationInfo.name} (${org.organizationInfo.type}) - ${org.address.city}, ${org.address.state}`
+          );
         }
       } else {
         console.log("ℹ️  All organizations already exist");
@@ -238,11 +241,12 @@ async function seedOrganizations() {
     console.log("\n📈 SUMMARY:");
     console.log(`   Total organizations: ${finalCount}`);
     console.log(`   Verified organizations: ${verifiedCount}`);
-    
-    if (verifiedCount > 0) {
-      console.log("\n🎉 Seed completed successfully! Organizations are now available for the organization select component.");
-    }
 
+    if (verifiedCount > 0) {
+      console.log(
+        "\n🎉 Seed completed successfully! Organizations are now available for the organization select component."
+      );
+    }
   } catch (error) {
     console.error("❌ Error seeding organizations:", error.message);
     console.error("Full error:", error);
