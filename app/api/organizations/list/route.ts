@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OrganizationService } from "@/lib/services/organizationService";
+import { logger } from "@/lib/logger";
+import { InputSanitizer } from "@/lib/utils/input-sanitizer";
 
 /**
  * GET endpoint to retrieve list of organizations for dropdown selection
@@ -8,8 +10,8 @@ import { OrganizationService } from "@/lib/services/organizationService";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const verified = searchParams.get("verified") || "true"; // Default to verified organizations only
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100); // Max 100 results
+    const verified = InputSanitizer.sanitizeText(searchParams.get("verified") || "true"); // Default to verified organizations only
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "50")), 100); // Max 100 results
 
     // Search organizations with basic filters
     const organizations = await OrganizationService.searchOrganizations(
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Organization list retrieval error:", error);
+    logger.error("Organization list retrieval error:", error);
     return NextResponse.json(
       {
         error: "Failed to retrieve organizations",

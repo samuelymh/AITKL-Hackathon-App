@@ -9,6 +9,8 @@ import Organization from "@/lib/models/Organization";
 import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
+import { InputSanitizer } from "@/lib/utils/input-sanitizer";
+import { logger } from "@/lib/logger";
 
 // Validation schemas
 const RegisterSchema = z
@@ -90,7 +92,20 @@ const LoginSchema = z.object({
 async function registerHandler(request: NextRequest) {
   try {
     const body = await request.json();
-    const validatedData: RegisterData = RegisterSchema.parse(body);
+
+    // Sanitize input data before validation
+    const sanitizedBody = InputSanitizer.sanitizeObject(body, {
+      "personalInfo.contact.email": "email",
+      "personalInfo.contact.phone": "phone",
+      "personalInfo.firstName": "text",
+      "personalInfo.lastName": "text",
+      "professionalInfo.licenseNumber": "text",
+      "professionalInfo.specialty": "text",
+      "professionalInfo.currentPosition": "text",
+      "professionalInfo.department": "text",
+    });
+
+    const validatedData: RegisterData = RegisterSchema.parse(sanitizedBody);
 
     const result = await executeDatabaseOperation(async () => {
       // Check if user already exists using searchableEmail for uniqueness
@@ -172,6 +187,8 @@ async function registerHandler(request: NextRequest) {
         practitionerId = savedPractitioner._id;
 
         // Create OrganizationMember record
+        // Note: During registration, users are creating membership for themselves
+        // This is validated by the business logic and organization verification status
         const membershipData = {
           organizationId: new mongoose.Types.ObjectId(validatedData.organizationId),
           practitionerId: savedPractitioner._id,
@@ -260,7 +277,7 @@ async function registerHandler(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    logger.error("Registration error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

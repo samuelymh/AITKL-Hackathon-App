@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withDevOnly } from "@/lib/middleware/dev-only";
+import { logger } from "@/lib/logger";
 import connectToDatabase from "@/lib/db.connection";
 import Organization from "@/lib/models/Organization";
 
 /**
  * Debug endpoint to check organization data
  */
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   try {
     await connectToDatabase();
 
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Debug API error:", error);
+    logger.error("Debug API error:", error);
     return NextResponse.json(
       {
         success: false,
@@ -45,3 +47,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withDevOnly(handler);
