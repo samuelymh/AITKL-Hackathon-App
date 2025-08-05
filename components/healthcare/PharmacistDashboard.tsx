@@ -18,6 +18,7 @@ import {
   MessageSquare,
   History,
   Settings,
+  User,
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import { useAuth } from "@/contexts/AuthContext";
@@ -557,9 +558,10 @@ export function PharmacistDashboard() {
                     <p className="font-medium">Professional Profile</p>
                     <p className="text-sm text-gray-600">Complete your pharmacist credentials</p>
                   </div>
-                  <Link href="/dashboard/pharmacist-profile">
+                  <Link href="/dashboard/pharmacist/professional-profile">
                     <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      Edit Profile
+                      <User className="w-4 h-4" />
+                      Manage Profile
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
