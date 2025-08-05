@@ -64,7 +64,7 @@ export default function OrganizationRegistrationForm({
   onSuccess,
   onCancel,
   className,
-}: OrganizationRegistrationFormProps) {
+}: Readonly<OrganizationRegistrationFormProps>) {
   const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();

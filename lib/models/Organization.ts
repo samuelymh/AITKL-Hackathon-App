@@ -345,7 +345,7 @@ OrganizationSchema.statics = {
     };
 
     // Add search query
-    if (query && query.trim()) {
+    if (query?.trim()) {
       filters.$or = [
         { "organizationInfo.name": { $regex: query, $options: "i" } },
         { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },

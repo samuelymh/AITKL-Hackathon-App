@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Search, Building2, MapPin, CheckCircle, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +52,7 @@ export default function OrganizationSelector({
   placeholder = "Search for your organization...",
   className,
   required = false,
-}: OrganizationSelectorProps) {
+}: Readonly<OrganizationSelectorProps>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -186,12 +186,18 @@ export default function OrganizationSelector({
           <CardContent className="p-0">
             {isLoading && (
               <div className="p-4 space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                ))}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
               </div>
             )}
 
@@ -263,6 +269,6 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T
   let timeoutId: NodeJS.Timeout;
   return ((...args: any[]) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay);
   }) as T;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Organization, { OrganizationType } from "@/lib/models/Organization";
+import Organization from "@/lib/models/Organization";
 import connectToDatabase from "@/lib/mongodb";
 import { z } from "zod";
 

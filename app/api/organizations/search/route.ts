@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       auditDeletedDateTime: { $exists: false },
     };
 
-    if (query && query.trim()) {
+    if (query?.trim()) {
       countFilters.$or = [
         { "organizationInfo.name": { $regex: query, $options: "i" } },
         { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },

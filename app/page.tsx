@@ -68,6 +68,15 @@ export default function HomePage() {
                   QR Code Scanner Demo
                 </Button>
               </Link>
+              <Link href="/demo/organization-management">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-blue-700 border-blue-300 hover:bg-blue-50"
+                >
+                  Create Organization Demo
+                </Button>
+              </Link>
               <Link href="/provider">
                 <Button
                   variant="outline"
