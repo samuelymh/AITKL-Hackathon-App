@@ -89,23 +89,42 @@ export async function GET(request: NextRequest) {
         pastSurgicalHistory: [], // Always initialize as empty array
         smokingStatus: user.medicalInfo?.smokingStatus || "never",
         emergencyContact: {
-          name: user.medicalInfo?.emergencyContact?.name
-            ? (await user.decryptField("medicalInfo.emergencyContact.name")) || ""
-            : "",
-          phone: user.medicalInfo?.emergencyContact?.phone
-            ? (await user.decryptField("medicalInfo.emergencyContact.phone")) || ""
-            : "",
+          name: "",
+          phone: "",
           relationship: user.medicalInfo?.emergencyContact?.relationship || "",
         },
         additionalNotes: user.medicalInfo?.additionalNotes || "",
         lastUpdated: (user as any).auditModifiedDateTime || (user as any).updatedAt,
       };
 
+      // Helper function to safely decrypt or return plaintext
+      const { encryptionService, encryptionUtils } = await import("@/lib/services/encryption-service");
+
+      const safeDecrypt = async (field: any): Promise<string> => {
+        try {
+          if (encryptionUtils.isEncrypted(field)) {
+            return await encryptionService.decryptField(field);
+          }
+          return typeof field === "string" ? field : "";
+        } catch (error) {
+          console.warn("Failed to decrypt field:", error);
+          return typeof field === "string" ? field : "";
+        }
+      };
+
+      // Decrypt emergency contact information
+      if (user.medicalInfo?.emergencyContact?.name) {
+        medicalInfo.emergencyContact.name = await safeDecrypt(user.medicalInfo.emergencyContact.name);
+      }
+      if (user.medicalInfo?.emergencyContact?.phone) {
+        medicalInfo.emergencyContact.phone = await safeDecrypt(user.medicalInfo.emergencyContact.phone);
+      }
+
       // Process knownAllergies if they exist
       if (user.medicalInfo?.knownAllergies && Array.isArray(user.medicalInfo.knownAllergies)) {
         for (let i = 0; i < user.medicalInfo.knownAllergies.length; i++) {
           try {
-            const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${i}`);
+            const decrypted = await safeDecrypt(user.medicalInfo.knownAllergies[i]);
             if (decrypted) {
               if (decrypted.startsWith("food:")) {
                 medicalInfo.foodAllergies.push(decrypted.replace("food:", ""));

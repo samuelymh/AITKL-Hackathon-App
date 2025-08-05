@@ -49,10 +49,10 @@ export interface IUser extends IBaseDocument {
   getAge(): number;
   toPublicJSON(): Promise<any>;
 
-  // Encryption-specific methods
-  decryptField(fieldPath: string): Promise<string | null>;
-  needsReEncryption(fieldPath: string): boolean;
-  reEncryptField(fieldPath: string): Promise<void>;
+  // Encryption-specific methods (provided by plugin)
+  decryptField?(fieldPath: string): Promise<string | null>;
+  needsReEncryption?(fieldPath: string): boolean;
+  reEncryptField?(fieldPath: string): Promise<void>;
 }
 
 // Static methods interface
@@ -286,9 +286,23 @@ UserSchema.statics = {
 UserSchema.methods = {
   // Get full name
   getFullName: async function () {
-    const firstName = (await this.decryptField("personalInfo.firstName")) || this.personalInfo.firstName;
-    const lastName = (await this.decryptField("personalInfo.lastName")) || this.personalInfo.lastName;
-    return `${firstName} ${lastName}`;
+    try {
+      // The encryption plugin should automatically decrypt fields during query
+      // But we'll add a safety check for the decryptField method
+      if (typeof this.decryptField === "function") {
+        const firstName = (await this.decryptField("personalInfo.firstName")) || "Unknown";
+        const lastName = (await this.decryptField("personalInfo.lastName")) || "Unknown";
+        return `${firstName} ${lastName}`;
+      } else {
+        // Fallback: fields should already be decrypted by post-query middleware
+        const firstName = this.personalInfo.firstName || "Unknown";
+        const lastName = this.personalInfo.lastName || "Unknown";
+        return `${firstName} ${lastName}`;
+      }
+    } catch (error) {
+      console.warn("Error in getFullName:", error);
+      return "Unknown User";
+    }
   },
 
   // Check if contact info is verified
