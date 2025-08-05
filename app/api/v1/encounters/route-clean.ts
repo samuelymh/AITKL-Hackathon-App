@@ -3,7 +3,7 @@ import { withEncounterAuth, withEncounterAuthAndBody } from "@/lib/middleware/ap
 import { EncounterService } from "@/lib/services/encounter-service";
 import { createSuccessResponse } from "@/lib/api-helpers";
 import { auditLogger } from "@/lib/services/audit-logger";
-import { encounterQuerySchema } from "@/lib/validation/encounter-schemas";
+import { encounterQuerySchema, type EncounterQueryParams } from "@/lib/validation/encounter-schemas";
 
 /**
  * GET /api/v1/encounters
