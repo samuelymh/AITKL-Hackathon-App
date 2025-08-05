@@ -3,7 +3,7 @@
 /**
  * Show Admin User Structure Script
  * Displays the complete structure of an admin user for debugging
- * 
+ *
  * Usage: node scripts/show-admin-structure.js <adminEmail>
  */
 
@@ -14,7 +14,7 @@ const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mong
 
 async function showAdminStructure(email) {
   let client;
-  
+
   try {
     console.log(`\n🔍 Admin User Structure for: ${email}\n`);
 
@@ -33,10 +33,10 @@ async function showAdminStructure(email) {
         {
           $or: [
             { "auth.email": email.toLowerCase().trim() },
-            { "personalInfo.contact.email": email.toLowerCase().trim() }
-          ]
-        }
-      ]
+            { "personalInfo.contact.email": email.toLowerCase().trim() },
+          ],
+        },
+      ],
     });
 
     if (!admin) {
@@ -50,32 +50,27 @@ async function showAdminStructure(email) {
 
     console.log("\n🔍 Field Validation Check:");
     console.log("=====================================");
-    
-    // Check required fields
-    const requiredFields = [
-      'auditCreatedBy',
-      'auditCreatedDateTime', 
-      'personalInfo.dateOfBirth'
-    ];
 
-    requiredFields.forEach(field => {
-      const value = field.split('.').reduce((obj, key) => obj?.[key], admin);
+    // Check required fields
+    const requiredFields = ["auditCreatedBy", "auditCreatedDateTime", "personalInfo.dateOfBirth"];
+
+    requiredFields.forEach((field) => {
+      const value = field.split(".").reduce((obj, key) => obj?.[key], admin);
       const exists = value !== undefined && value !== null;
-      console.log(`${exists ? '✅' : '❌'} ${field}: ${exists ? value : 'MISSING'}`);
+      console.log(`${exists ? "✅" : "❌"} ${field}: ${exists ? value : "MISSING"}`);
     });
 
     // Check auth structure
     console.log("\n🔐 Auth Structure:");
     console.log("==================");
     if (admin.auth) {
-      Object.keys(admin.auth).forEach(key => {
+      Object.keys(admin.auth).forEach((key) => {
         const value = admin.auth[key];
-        console.log(`✅ auth.${key}: ${typeof value} ${key === 'passwordHash' ? '(hidden)' : value}`);
+        console.log(`✅ auth.${key}: ${typeof value} ${key === "passwordHash" ? "(hidden)" : value}`);
       });
     } else {
       console.log("❌ No auth object found");
     }
-
   } catch (error) {
     console.error("❌ Error showing admin structure:", error.message);
     process.exit(1);
@@ -89,7 +84,7 @@ async function showAdminStructure(email) {
 // Parse command line arguments
 function parseArguments() {
   const args = process.argv.slice(2);
-  
+
   if (args.length === 0) {
     console.log("\n🔍 Admin User Structure Tool\n");
     console.log("Usage:");

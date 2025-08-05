@@ -3,7 +3,7 @@
 /**
  * Test Admin Login Process
  * Simulates the login validation that happens in the application
- * 
+ *
  * Usage: node scripts/test-admin-login.js <email> <password>
  */
 
@@ -15,11 +15,11 @@ const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mong
 
 async function testAdminLogin(email, password) {
   let client;
-  
+
   try {
     console.log("\n🧪 Testing Admin Login Process\n");
     console.log(`📧 Email: ${email}`);
-    console.log(`🔒 Password: ${'*'.repeat(password.length)}`);
+    console.log(`🔒 Password: ${"*".repeat(password.length)}`);
 
     // Connect to MongoDB
     client = new MongoClient(MONGODB_URI);
@@ -30,14 +30,14 @@ async function testAdminLogin(email, password) {
     const usersCollection = db.collection("users");
 
     console.log("\n🔍 Step 1: Finding user by email...");
-    
+
     // Find user (simulating application login logic)
     const user = await usersCollection.findOne({
       $or: [
         { "auth.email": email.toLowerCase().trim() },
         { "personalInfo.contact.email": email.toLowerCase().trim() },
-        { "personalInfo.contact.searchableEmail": email.toLowerCase().trim() }
-      ]
+        { "personalInfo.contact.searchableEmail": email.toLowerCase().trim() },
+      ],
     });
 
     if (!user) {
@@ -56,12 +56,12 @@ async function testAdminLogin(email, password) {
     console.log("✅ User is admin");
 
     console.log("\n🔍 Step 3: Checking required schema fields...");
-    
+
     // Check required fields that caused the original error
     const requiredChecks = [
-      { field: 'auditCreatedBy', value: user.auditCreatedBy },
-      { field: 'auditCreatedDateTime', value: user.auditCreatedDateTime },
-      { field: 'personalInfo.dateOfBirth', value: user.personalInfo?.dateOfBirth }
+      { field: "auditCreatedBy", value: user.auditCreatedBy },
+      { field: "auditCreatedDateTime", value: user.auditCreatedDateTime },
+      { field: "personalInfo.dateOfBirth", value: user.personalInfo?.dateOfBirth },
     ];
 
     let schemaValid = true;
@@ -82,7 +82,7 @@ async function testAdminLogin(email, password) {
     console.log("✅ All required schema fields present");
 
     console.log("\n🔍 Step 4: Checking account status...");
-    
+
     // Check if account is active
     if (user.metadata?.isActive === false) {
       console.log("❌ Account is deactivated");
@@ -97,7 +97,7 @@ async function testAdminLogin(email, password) {
     console.log("✅ Account is active and unlocked");
 
     console.log("\n🔍 Step 5: Verifying password...");
-    
+
     const passwordHash = user.auth?.passwordHash;
     if (!passwordHash) {
       console.log("❌ No password hash found");
@@ -113,7 +113,7 @@ async function testAdminLogin(email, password) {
     console.log("✅ Password is valid");
 
     console.log("\n🔍 Step 6: Preparing user data for session...");
-    
+
     // Simulate what the application would do
     const sessionData = {
       userId: user._id.toString(),
@@ -123,7 +123,7 @@ async function testAdminLogin(email, password) {
       firstName: user.personalInfo?.firstName,
       lastName: user.personalInfo?.lastName,
       emailVerified: user.auth?.emailVerified || false,
-      phoneVerified: user.auth?.phoneVerified || false
+      phoneVerified: user.auth?.phoneVerified || false,
     };
 
     console.log("✅ Session data prepared:");
@@ -136,12 +136,11 @@ async function testAdminLogin(email, password) {
     console.log("✅ All schema validations passed");
     console.log("✅ All authentication checks passed");
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       user: sessionData,
-      message: "Login successful"
+      message: "Login successful",
     };
-
   } catch (error) {
     console.error("\n❌ LOGIN FAILED!");
     console.error(`Error: ${error.message}`);
@@ -156,7 +155,7 @@ async function testAdminLogin(email, password) {
 // Parse command line arguments
 function parseArguments() {
   const args = process.argv.slice(2);
-  
+
   if (args.length === 0) {
     console.log("\n🧪 Admin Login Test Tool\n");
     console.log("Usage:");
@@ -176,7 +175,7 @@ function parseArguments() {
 
   return {
     email: args[0],
-    password: args[1]
+    password: args[1],
   };
 }
 

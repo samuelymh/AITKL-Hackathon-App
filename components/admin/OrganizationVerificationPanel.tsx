@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -34,6 +35,7 @@ interface PaginationInfo {
 }
 
 export function OrganizationVerificationPanel() {
+  const { token } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,8 +55,25 @@ export function OrganizationVerificationPanel() {
     setError("");
 
     try {
-      const response = await fetch(`/api/admin/organizations/verification?status=${status}&page=${page}&limit=10`);
+      if (!token) {
+        setError("Authentication token not found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/admin/organizations/verification?status=${status}&page=${page}&limit=10`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       const data = await response.json();
+
+      if (response.status === 401) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
 
       if (data.success) {
         setOrganizations(data.data.organizations);
@@ -76,6 +95,12 @@ export function OrganizationVerificationPanel() {
     setSuccess("");
 
     try {
+      if (!token) {
+        setError("Authentication token not found. Please log in again.");
+        setProcessingId(null);
+        return;
+      }
+
       const requestBody: any = { organizationId, action };
 
       // Add notes if provided
@@ -91,12 +116,18 @@ export function OrganizationVerificationPanel() {
       const response = await fetch("/api/admin/organizations/verification", {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+
+      if (response.status === 401) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
 
       if (data.success) {
         setSuccess(`Organization ${action === "verify" ? "verified" : "rejected"} successfully`);
@@ -122,6 +153,54 @@ export function OrganizationVerificationPanel() {
 
   const getStatusBadge = (isVerified: boolean) => {
     return <Badge variant={isVerified ? "default" : "secondary"}>{isVerified ? "Verified" : "Pending"}</Badge>;
+  };
+
+  const formatAddress = (address: any) => {
+    if (!address) return "No address provided";
+
+    // Handle encrypted address object
+    if (typeof address === "object" && address.data && address.iv) {
+      // This is an encrypted field, return a placeholder
+      return "Address data (encrypted)";
+    }
+
+    // Handle regular address object
+    if (typeof address === "object") {
+      const parts = [];
+      if (address.street) parts.push(address.street);
+      if (address.city) parts.push(address.city);
+      if (address.state) parts.push(address.state);
+      if (address.postalCode) parts.push(address.postalCode);
+      if (address.country) parts.push(address.country);
+      return parts.join(", ") || "Address information incomplete";
+    }
+
+    // Handle string address (fallback)
+    return String(address);
+  };
+
+  const formatContact = (contact: any, field: string) => {
+    if (!contact?.[field]) return "Not provided";
+
+    const value = contact[field];
+
+    // Handle encrypted field
+    if (typeof value === "object" && value.data && value.iv) {
+      return `${field} (encrypted)`;
+    }
+
+    return String(value);
+  };
+
+  const formatSimpleField = (value: any, fieldName: string = "field") => {
+    if (!value) return "Not provided";
+
+    // Handle encrypted field
+    if (typeof value === "object" && value.data && value.iv) {
+      return `${fieldName} (encrypted)`;
+    }
+
+    return String(value);
   };
 
   const getTypeColor = (type: string) => {
@@ -162,23 +241,25 @@ export function OrganizationVerificationPanel() {
         </Alert>
       )}
 
-      {loading ? (
-        <div className="text-center py-8">Loading organizations...</div>
-      ) : organizations.length === 0 ? (
+      {loading && <div className="text-center py-8">Loading organizations...</div>}
+
+      {!loading && organizations.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">No organizations found for status: {status}</p>
         </div>
-      ) : (
+      )}
+
+      {!loading && organizations.length > 0 && (
         <div className="space-y-4">
           {organizations.map((org) => (
             <Card key={org.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{org.name}</CardTitle>
+                    <CardTitle className="text-lg">{formatSimpleField(org.name, "Organization name")}</CardTitle>
                     <div className="flex gap-2 mt-2">
                       {getStatusBadge(org.verification.isVerified)}
-                      <Badge className={getTypeColor(org.type)}>{org.type}</Badge>
+                      <Badge className={getTypeColor(org.type)}>{formatSimpleField(org.type, "Type")}</Badge>
                     </div>
                   </div>
                   <div className="text-sm text-gray-500">Submitted: {formatDate(org.submittedAt)}</div>
@@ -191,17 +272,18 @@ export function OrganizationVerificationPanel() {
                     <div className="space-y-1 text-sm">
                       {org.registrationNumber && (
                         <p>
-                          <span className="font-medium">Registration:</span> {org.registrationNumber}
+                          <span className="font-medium">Registration:</span>{" "}
+                          {formatSimpleField(org.registrationNumber, "Registration number")}
                         </p>
                       )}
                       <p>
-                        <span className="font-medium">Address:</span> {org.address}
+                        <span className="font-medium">Address:</span> {formatAddress(org.address)}
                       </p>
                       <p>
-                        <span className="font-medium">Email:</span> {org.contact.email}
+                        <span className="font-medium">Email:</span> {formatContact(org.contact, "email")}
                       </p>
                       <p>
-                        <span className="font-medium">Phone:</span> {org.contact.phone}
+                        <span className="font-medium">Phone:</span> {formatContact(org.contact, "phone")}
                       </p>
                     </div>
                   </div>
@@ -261,7 +343,9 @@ export function OrganizationVerificationPanel() {
                   {org.verification.verificationNotes && (
                     <div className="md:col-span-2">
                       <h4 className="font-medium text-sm text-gray-700 mb-2">Verification Notes</h4>
-                      <p className="text-sm bg-gray-50 p-2 rounded">{org.verification.verificationNotes}</p>
+                      <p className="text-sm bg-gray-50 p-2 rounded">
+                        {formatSimpleField(org.verification.verificationNotes, "Verification notes")}
+                      </p>
                       {org.verification.verifiedAt && (
                         <p className="text-xs text-gray-500 mt-1">
                           Verified: {formatDate(org.verification.verifiedAt)}

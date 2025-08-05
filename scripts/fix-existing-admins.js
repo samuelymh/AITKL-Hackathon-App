@@ -3,7 +3,7 @@
 /**
  * Fix Existing Admin Users Script
  * Updates existing admin users to include required schema fields
- * 
+ *
  * Usage: node scripts/fix-existing-admins.js
  */
 
@@ -14,7 +14,7 @@ const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mong
 
 async function fixExistingAdmins() {
   let client;
-  
+
   try {
     console.log("\n🔧 Fixing Existing Admin Users\n");
 
@@ -27,9 +27,11 @@ async function fixExistingAdmins() {
     const usersCollection = db.collection("users");
 
     // Find all admin users that might be missing required fields
-    const adminUsers = await usersCollection.find({ 
-      role: "admin" 
-    }).toArray();
+    const adminUsers = await usersCollection
+      .find({
+        role: "admin",
+      })
+      .toArray();
 
     if (adminUsers.length === 0) {
       console.log("📭 No admin users found");
@@ -42,8 +44,8 @@ async function fixExistingAdmins() {
 
     for (const admin of adminUsers) {
       console.log(`🔍 Checking admin: ${admin._id}`);
-      console.log(`   Email: ${admin.auth?.email || admin.personalInfo?.contact?.email || 'N/A'}`);
-      console.log(`   Name: ${admin.personalInfo?.firstName || 'N/A'} ${admin.personalInfo?.lastName || 'N/A'}`);
+      console.log(`   Email: ${admin.auth?.email || admin.personalInfo?.contact?.email || "N/A"}`);
+      console.log(`   Name: ${admin.personalInfo?.firstName || "N/A"} ${admin.personalInfo?.lastName || "N/A"}`);
 
       const updateFields = {};
       const setOperations = {};
@@ -122,7 +124,7 @@ async function fixExistingAdmins() {
       if (admin.personalInfo?.contact && !admin.personalInfo.contact.verified) {
         setOperations["personalInfo.contact.verified"] = {
           email: true,
-          phone: !!admin.personalInfo.contact.phone
+          phone: !!admin.personalInfo.contact.phone,
         };
         needsUpdate = true;
         console.log("   ➕ Adding personalInfo.contact.verified");
@@ -131,7 +133,7 @@ async function fixExistingAdmins() {
       // Add basic medical info if missing
       if (!admin.medicalInfo) {
         setOperations.medicalInfo = {
-          smokingStatus: "never"
+          smokingStatus: "never",
         };
         needsUpdate = true;
         console.log("   ➕ Adding medicalInfo");
@@ -139,10 +141,7 @@ async function fixExistingAdmins() {
 
       // Apply updates if needed
       if (needsUpdate) {
-        const result = await usersCollection.updateOne(
-          { _id: admin._id },
-          { $set: setOperations }
-        );
+        const result = await usersCollection.updateOne({ _id: admin._id }, { $set: setOperations });
 
         if (result.modifiedCount > 0) {
           console.log("   ✅ Admin user updated successfully");
@@ -161,24 +160,25 @@ async function fixExistingAdmins() {
 
     // Verify all admins now have required fields
     console.log("\n🔍 Verifying all admins have required fields...");
-    const problematicAdmins = await usersCollection.find({
-      role: "admin",
-      $or: [
-        { auditCreatedBy: { $exists: false } },
-        { auditCreatedDateTime: { $exists: false } },
-        { "personalInfo.dateOfBirth": { $exists: false } }
-      ]
-    }).toArray();
+    const problematicAdmins = await usersCollection
+      .find({
+        role: "admin",
+        $or: [
+          { auditCreatedBy: { $exists: false } },
+          { auditCreatedDateTime: { $exists: false } },
+          { "personalInfo.dateOfBirth": { $exists: false } },
+        ],
+      })
+      .toArray();
 
     if (problematicAdmins.length === 0) {
       console.log("✅ All admin users now have required fields!");
     } else {
       console.log(`⚠️ Still found ${problematicAdmins.length} admin(s) with missing fields:`);
-      problematicAdmins.forEach(admin => {
+      problematicAdmins.forEach((admin) => {
         console.log(`- ${admin._id}: ${admin.auth?.email || admin.personalInfo?.contact?.email}`);
       });
     }
-
   } catch (error) {
     console.error("❌ Error fixing admin users:", error.message);
     process.exit(1);

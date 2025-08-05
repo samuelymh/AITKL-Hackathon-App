@@ -138,7 +138,7 @@ async function createAdmin(email, password, firstName, lastName, phone = "") {
     const now = new Date();
     const adminUser = {
       digitalIdentifier,
-      
+
       // Authentication
       auth: {
         email: email.toLowerCase().trim(),
@@ -152,7 +152,7 @@ async function createAdmin(email, password, firstName, lastName, phone = "") {
         accountLockedUntil: null,
         tokenVersion: 1,
       },
-      
+
       // Personal Information
       personalInfo: {
         firstName,
@@ -168,19 +168,19 @@ async function createAdmin(email, password, firstName, lastName, phone = "") {
           },
         },
       },
-      
+
       // Medical Info (minimal for admin users)
       medicalInfo: {
         smokingStatus: "never",
       },
-      
+
       // Role and permissions
       role: "admin",
-      
+
       // Audit fields (required by BaseSchema)
       auditCreatedBy: "admin-manager-script",
       auditCreatedDateTime: now.toISOString(),
-      
+
       // Metadata (legacy fields)
       metadata: {
         isActive: true,
