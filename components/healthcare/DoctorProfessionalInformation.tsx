@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Stethoscope, Award, Plus, X, Save, AlertCircle, CheckCircle, User, BadgeCheck, Shield } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useProfessionalInfo } from "@/hooks/api/useProfessionalInfo";
 
 interface ProfessionalInformation {
   licenseNumber: string;
@@ -97,32 +96,16 @@ const PRACTITIONER_TYPES = [
 ];
 
 export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfessionalInformationProps>) {
-  const { user, token, logout, refreshAuthToken } = useAuth();
-  const { toast } = useToast();
+  const {
+    professionalInfo,
+    setProfessionalInfo,
+    loading,
+    saving,
+    isComplete,
+    saveProfessionalInfo,
+    requiredFieldsComplete,
+  } = useProfessionalInfo();
 
-  const [professionalInfo, setProfessionalInfo] = useState<ProfessionalInformation>({
-    licenseNumber: "",
-    specialty: "",
-    practitionerType: "doctor",
-    yearsOfExperience: 0,
-    currentPosition: "",
-    department: "",
-    metadata: {
-      specializations: [],
-      languages: [],
-      certifications: [],
-      emergencyContact: {
-        name: "",
-        relationship: "",
-        phone: "",
-        email: "",
-      },
-    },
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
   const [newSpecialization, setNewSpecialization] = useState("");
   const [newLanguage, setNewLanguage] = useState("");
   const [newCertification, setNewCertification] = useState({
@@ -133,113 +116,11 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
   });
   const [showCertificationForm, setShowCertificationForm] = useState(false);
 
-  useEffect(() => {
-    fetchProfessionalInfo();
-  }, [userId]);
+  const handleSave = useCallback(async () => {
+    await saveProfessionalInfo();
+  }, [saveProfessionalInfo]);
 
-  const fetchProfessionalInfo = async () => {
-    try {
-      setLoading(true);
-
-      if (!token) {
-        throw new Error("No authentication token available");
-      }
-
-      const response = await fetch("/api/doctor/professional-info", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Try to refresh token
-          await refreshAuthToken();
-          return fetchProfessionalInfo(); // Retry after refresh
-        }
-        throw new Error("Failed to fetch professional information");
-      }
-
-      const result: { success: boolean; data: ProfessionalInfoResponse } = await response.json();
-
-      if (result.success && result.data.practitioner) {
-        setProfessionalInfo(result.data.practitioner.professionalInfo);
-        setIsComplete(result.data.isComplete);
-      } else {
-        setIsComplete(false);
-      }
-    } catch (error) {
-      console.error("Error fetching professional info:", error);
-      if (error instanceof Error && error.message.includes("No authentication token")) {
-        logout();
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to load professional information",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-
-      if (!token) {
-        throw new Error("No authentication token available");
-      }
-
-      const response = await fetch("/api/doctor/professional-info", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(professionalInfo),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Try to refresh token
-          await refreshAuthToken();
-          return handleSave(); // Retry after refresh
-        }
-        throw new Error("Failed to save professional information");
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Professional information saved successfully",
-        });
-        setIsComplete(true);
-        await fetchProfessionalInfo(); // Refresh data
-      } else {
-        throw new Error(result.error || "Failed to save");
-      }
-    } catch (error) {
-      console.error("Error saving professional info:", error);
-      if (error instanceof Error && error.message.includes("No authentication token")) {
-        logout();
-        return;
-      }
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save professional information",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const addSpecialization = () => {
+  const addSpecialization = useCallback(() => {
     if (newSpecialization.trim() && !professionalInfo.metadata?.specializations?.includes(newSpecialization.trim())) {
       setProfessionalInfo((prev) => ({
         ...prev,
@@ -250,19 +131,22 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
       }));
       setNewSpecialization("");
     }
-  };
+  }, [newSpecialization, professionalInfo.metadata?.specializations, setProfessionalInfo]);
 
-  const removeSpecialization = (index: number) => {
-    setProfessionalInfo((prev) => ({
-      ...prev,
-      metadata: {
-        ...prev.metadata,
-        specializations: prev.metadata?.specializations?.filter((_, i) => i !== index) || [],
-      },
-    }));
-  };
+  const removeSpecialization = useCallback(
+    (index: number) => {
+      setProfessionalInfo((prev) => ({
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          specializations: prev.metadata?.specializations?.filter((_, i) => i !== index) || [],
+        },
+      }));
+    },
+    [setProfessionalInfo]
+  );
 
-  const addLanguage = () => {
+  const addLanguage = useCallback(() => {
     if (newLanguage.trim() && !professionalInfo.metadata?.languages?.includes(newLanguage.trim())) {
       setProfessionalInfo((prev) => ({
         ...prev,
@@ -273,19 +157,22 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
       }));
       setNewLanguage("");
     }
-  };
+  }, [newLanguage, professionalInfo.metadata?.languages, setProfessionalInfo]);
 
-  const removeLanguage = (index: number) => {
-    setProfessionalInfo((prev) => ({
-      ...prev,
-      metadata: {
-        ...prev.metadata,
-        languages: prev.metadata?.languages?.filter((_, i) => i !== index) || [],
-      },
-    }));
-  };
+  const removeLanguage = useCallback(
+    (index: number) => {
+      setProfessionalInfo((prev) => ({
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          languages: prev.metadata?.languages?.filter((_, i) => i !== index) || [],
+        },
+      }));
+    },
+    [setProfessionalInfo]
+  );
 
-  const addCertification = () => {
+  const addCertification = useCallback(() => {
     if (newCertification.name && newCertification.issuingBody && newCertification.issueDate) {
       const certification = {
         ...newCertification,
@@ -303,17 +190,20 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
       setNewCertification({ name: "", issuingBody: "", issueDate: "", expiryDate: "" });
       setShowCertificationForm(false);
     }
-  };
+  }, [newCertification, setProfessionalInfo]);
 
-  const removeCertification = (index: number) => {
-    setProfessionalInfo((prev) => ({
-      ...prev,
-      metadata: {
-        ...prev.metadata,
-        certifications: prev.metadata?.certifications?.filter((_, i) => i !== index) || [],
-      },
-    }));
-  };
+  const removeCertification = useCallback(
+    (index: number) => {
+      setProfessionalInfo((prev) => ({
+        ...prev,
+        metadata: {
+          ...prev.metadata,
+          certifications: prev.metadata?.certifications?.filter((_, i) => i !== index) || [],
+        },
+      }));
+    },
+    [setProfessionalInfo]
+  );
 
   if (loading) {
     return (
@@ -325,13 +215,6 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
       </div>
     );
   }
-
-  const requiredFieldsComplete = !!(
-    professionalInfo.licenseNumber &&
-    professionalInfo.specialty &&
-    professionalInfo.practitionerType &&
-    professionalInfo.yearsOfExperience !== undefined
-  );
 
   return (
     <div className="space-y-6">

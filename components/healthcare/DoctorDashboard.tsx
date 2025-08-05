@@ -31,6 +31,7 @@ import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProfileStatusIcon } from "@/components/ui/profile-status-icon";
 
 interface PatientAccess {
   grantId: string;
@@ -608,11 +609,7 @@ export function DoctorDashboard() {
                       professionalProfileComplete ? "bg-green-100" : "bg-orange-100"
                     }`}
                   >
-                    {professionalProfileComplete ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-orange-600" />
-                    )}
+                    <ProfileStatusIcon isComplete={professionalProfileComplete || false} />
                   </div>
                   <div>
                     <h3 className="font-medium">

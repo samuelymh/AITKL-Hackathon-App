@@ -145,21 +145,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function updatePractitionerInfo(userId: string, userRole: string, professionalData: any) {
+async function validateUserAndOrganization(userId: string, organizationId?: string) {
   const user = await User.findById(userId);
   if (!user) {
     throw new Error("User not found");
   }
 
-  // Validate organization exists
-  if (professionalData.organizationId) {
-    const organization = await Organization.findById(professionalData.organizationId);
+  if (organizationId) {
+    const organization = await Organization.findById(organizationId);
     if (!organization) {
       throw new Error("Organization not found");
     }
   }
 
-  // Find or create practitioner record
+  return user;
+}
+
+async function updatePractitionerInfo(userId: string, userRole: string, professionalData: any) {
+  await validateUserAndOrganization(userId, professionalData.organizationId);
+
   let practitioner = await Practitioner.findOne({ userId });
 
   if (!practitioner) {
@@ -222,19 +226,21 @@ async function updateExistingPractitioner(practitioner: any, professionalData: a
     "professionalInfo.department": professionalData.department,
   };
 
-  // Only update defined fields
-  Object.keys(updates).forEach((key) => {
-    const value = updates[key as keyof typeof updates];
-    if (value !== undefined) {
-      if (key.includes(".")) {
-        const [parent, child] = key.split(".");
-        if (!practitioner[parent]) practitioner[parent] = {};
-        practitioner[parent][child] = value;
-      } else {
-        practitioner[key] = value;
+  // Only update defined fields with improved iteration
+  for (const key in updates) {
+    if (updates.hasOwnProperty(key)) {
+      const value = updates[key as keyof typeof updates];
+      if (value !== undefined) {
+        if (key.includes(".")) {
+          const [parent, child] = key.split(".");
+          practitioner[parent] = practitioner[parent] || {};
+          practitioner[parent][child] = value;
+        } else {
+          practitioner[key] = value;
+        }
       }
     }
-  });
+  }
 
   if (professionalData.metadata) {
     practitioner.metadata = { ...practitioner.metadata, ...professionalData.metadata };
