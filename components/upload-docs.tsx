@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
+import { supabaseStorageService, UploadedFile } from "@/lib/services/supabase-storage-service";
 import { useToast } from "@/hooks/use-toast";
 import AIDocumentAnalysis from "./ai-document-analysis";
 
@@ -21,15 +21,6 @@ interface UploadDocsProps {
   userId: string;
 }
 
-interface UploadedFile {
-  id: string;
-  name: string;
-  size: number;
-  url: string;
-  path: string;
-  uploadedAt: Date;
-}
-
 export default function UploadDocs({
   onBack,
   onDataUploaded,
@@ -38,7 +29,6 @@ export default function UploadDocs({
   const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [storageName, setStorageName] = useState('medical-records');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
@@ -47,59 +37,13 @@ export default function UploadDocs({
     const loadExistingFiles = async () => {
       try {
         setIsLoadingFiles(true);
-        
-        // List all files in the user's folder
-        const { data: files, error } = await supabase.storage
-          .from('medical-records')
-          .list(`${userId}/`, {
-            limit: 100,
-            offset: 0,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
-
-        if (error) {
-          console.error('Error loading existing files:', error);
-          toast({
-            title: "Load Failed",
-            description: "Unable to load previously uploaded files.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (files?.length > 0) {
-          const existingFiles: UploadedFile[] = [];
-          
-          for (const file of files) {
-            if (file?.name) {
-              // Get public URL for each file
-              const { data: urlData } = supabase.storage
-                .from('medical-records')
-                .getPublicUrl(`${userId}/${file.name}`);
-
-              // Extract original filename from the stored filename (remove timestamp prefix)
-              const originalName = file.name.replace(/^\d+-/, '');
-              
-              const uploadedFile: UploadedFile = {
-                id: `${userId}/${file.name}`, // Use the full path as unique ID
-                name: originalName,
-                size: file.metadata?.size || 0,
-                url: urlData.publicUrl,
-                path: `${userId}/${file.name}`,
-                uploadedAt: new Date(file.created_at || Date.now()),
-              };
-
-              existingFiles.push(uploadedFile);
-            }
-          }
-
-          setUploadedFiles(existingFiles);
-        }
+        const files = await supabaseStorageService.listUserFiles(userId);
+        setUploadedFiles(files);
       } catch (error) {
         console.error('Error loading existing files:', error);
         toast({
-          title: "Load Error",
-          description: "An unexpected error occurred while loading files.",
+          title: "Load Failed",
+          description: "Unable to load previously uploaded files.",
           variant: "destructive",
         });
       } finally {
@@ -129,62 +73,8 @@ export default function UploadDocs({
 
   const uploadFile = async (file: File) => {
     try {
-      // Validate file type
-      if (!file.type.includes('pdf')) {
-        toast({
-          title: "Invalid File Type",
-          description: "Only PDF files are allowed",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validate file size (100MB limit)
-      if (file.size > 100 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "File size must be less than 100MB",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsUploading(true);
-
-      // Generate unique filename with user ID folder
-      const timestamp = Date.now();
-      const fileName = `${userId}/${timestamp}-${file.name}`;
-      
-      const { data, error } = await supabase.storage
-        .from(storageName)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        toast({
-          title: "Upload Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(storageName)
-        .getPublicUrl(fileName);
-
-      const uploadedFile: UploadedFile = {
-        id: data.path,
-        name: file.name,
-        size: file.size,
-        url: urlData.publicUrl,
-        path: data.path,
-        uploadedAt: new Date(),
-      };
-
+      const uploadedFile = await supabaseStorageService.uploadFile(file, userId);
       setUploadedFiles((prev) => [...prev, uploadedFile]);
 
       toast({
@@ -205,34 +95,13 @@ export default function UploadDocs({
 
   const handleViewFile = async (file: UploadedFile) => {
     try {
-      // First, try to get a fresh download URL (in case the previous one expired)
-      const { data, error } = await supabase.storage
-        .from(storageName)
-        .createSignedUrl(file.path, 60); // 60 seconds expiry
-
-      if (error) {
-        toast({
-          title: "View Failed",
-          description: "Unable to access the file. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Open the file in a new tab
-      window.open(data.signedUrl, '_blank');
-      
+      await supabaseStorageService.viewFile(file);
     } catch (error) {
-      // Fallback to the stored URL if signed URL fails
-      if (file.url) {
-        window.open(file.url, '_blank');
-      } else {
-        toast({
-          title: "View Error",
-          description: "Unable to open the file. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "View Error",
+        description: error instanceof Error ? error.message : "Unable to open the file. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -241,40 +110,19 @@ export default function UploadDocs({
     if (!file) return;
 
     try {
-      const { error } = await supabase.storage
-        .from(storageName)
-        .remove([file.path]);
-
-      if (error) {
-        toast({
-          title: "Delete Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
+      await supabaseStorageService.deleteFile(file.path);
       setUploadedFiles((prev) => prev.filter(f => f.id !== fileId));
       toast({
         title: "File Deleted",
         description: `${file.name} has been deleted.`,
       });
-
     } catch (error) {
       toast({
         title: "Delete Error",
-        description: "An unexpected error occurred while deleting the file.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred while deleting the file.",
         variant: "destructive",
       });
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -347,7 +195,7 @@ export default function UploadDocs({
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium block truncate" title={file.name}>{file.name}</span>
                     <span className="text-xs text-gray-500">
-                      {formatFileSize(file.size)} • {file.uploadedAt.toLocaleDateString()}
+                      {supabaseStorageService.formatFileSize(file.size)} • {file.uploadedAt.toLocaleDateString()}
                     </span>
                   </div>
                   <div className="flex items-center flex-shrink-0">
