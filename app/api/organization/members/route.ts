@@ -5,7 +5,22 @@ import { Practitioner } from "@/lib/models/Practitioner";
 import Organization from "@/lib/models/Organization";
 import { createErrorResponse, createSuccessResponse } from "@/lib/api-helpers";
 import { getAuthContext } from "@/lib/auth";
+import { ORGANIZATION_MEMBER_STATUS, ORGANIZATION_MEMBER_ROLES } from "@/lib/constants/organization-member";
 import mongoose from "mongoose";
+
+/**
+ * Check if user has admin permissions in an organization
+ */
+async function checkOrganizationAdminPermission(userId: string, organizationId: string): Promise<boolean> {
+  const adminMembership = await OrganizationMember.findOne({
+    organizationId,
+    practitionerId: userId,
+    status: ORGANIZATION_MEMBER_STATUS.ACTIVE,
+    $or: [{ "membershipDetails.role": ORGANIZATION_MEMBER_ROLES.ADMIN }, { "permissions.canManageMembers": true }],
+  });
+
+  return !!adminMembership;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +54,12 @@ export async function POST(request: NextRequest) {
       return createErrorResponse("Invalid practitioner or organization ID", 400);
     }
 
+    // Authorization check: Only admins of the organization can add members
+    const hasAdminPermission = await checkOrganizationAdminPermission(authContext.userId, organizationId);
+    if (!hasAdminPermission) {
+      return createErrorResponse("Insufficient permissions to manage organization members", 403);
+    }
+
     // Check if practitioner exists
     const practitioner = await Practitioner.findById(practitionerId);
     if (!practitioner) {
@@ -61,9 +82,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse("Practitioner is already a member of this organization", 409);
     }
 
-    // TODO: Check if requesting user has permission to manage this organization
-    // For now, we'll allow any authenticated user to create memberships
-
     // Create the organization membership
     const membershipData = {
       organizationId,
@@ -77,7 +95,7 @@ export async function POST(request: NextRequest) {
         isPrimary,
         startDate: new Date(),
       },
-      status: "pending", // Default to pending, can be activated by admin
+      status: ORGANIZATION_MEMBER_STATUS.PENDING, // Default to pending, can be activated by admin
       metadata: {
         invitedBy: authContext.userId,
         invitationDate: new Date(),
