@@ -5,6 +5,31 @@ import User from "@/lib/models/User";
 import { verifyToken } from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 
+// Type definitions for better type safety
+interface MedicalInformation {
+  bloodType: string;
+  foodAllergies: string[];
+  drugAllergies: string[];
+  knownMedicalConditions: string[];
+  currentMedications: string[];
+  pastSurgicalHistory: string[];
+  smokingStatus: "never" | "current" | "former";
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  additionalNotes: string;
+  lastUpdated?: Date;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: Date;
+}
+
 // Medical information validation schema
 const MedicalInfoSchema = z.object({
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
@@ -54,69 +79,14 @@ export async function GET(request: NextRequest) {
         throw new Error("Access denied");
       }
 
-      // Decrypt and return medical information
-      const medicalInfo = {
+      // Decrypt and return medical information with guaranteed array types
+      const medicalInfo: MedicalInformation = {
         bloodType: user.medicalInfo?.bloodType || "",
-        foodAllergies: user.medicalInfo?.knownAllergies
-          ? await Promise.all(
-              user.medicalInfo.knownAllergies
-                .filter((allergy) => allergy.includes("food:"))
-                .map(async (allergy) => {
-                  const decrypted = await user.decryptField(
-                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
-                  );
-                  return decrypted?.replace("food:", "") || "";
-                })
-            )
-          : [],
-        drugAllergies: user.medicalInfo?.knownAllergies
-          ? await Promise.all(
-              user.medicalInfo.knownAllergies
-                .filter((allergy) => allergy.includes("drug:"))
-                .map(async (allergy) => {
-                  const decrypted = await user.decryptField(
-                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
-                  );
-                  return decrypted?.replace("drug:", "") || "";
-                })
-            )
-          : [],
-        knownMedicalConditions: user.medicalInfo?.knownAllergies
-          ? await Promise.all(
-              user.medicalInfo.knownAllergies
-                .filter((allergy) => allergy.includes("condition:"))
-                .map(async (allergy) => {
-                  const decrypted = await user.decryptField(
-                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
-                  );
-                  return decrypted?.replace("condition:", "") || "";
-                })
-            )
-          : [],
-        currentMedications: user.medicalInfo?.knownAllergies
-          ? await Promise.all(
-              user.medicalInfo.knownAllergies
-                .filter((allergy) => allergy.includes("medication:"))
-                .map(async (allergy) => {
-                  const decrypted = await user.decryptField(
-                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
-                  );
-                  return decrypted?.replace("medication:", "") || "";
-                })
-            )
-          : [],
-        pastSurgicalHistory: user.medicalInfo?.knownAllergies
-          ? await Promise.all(
-              user.medicalInfo.knownAllergies
-                .filter((allergy) => allergy.includes("surgery:"))
-                .map(async (allergy) => {
-                  const decrypted = await user.decryptField(
-                    `medicalInfo.knownAllergies.${user.medicalInfo.knownAllergies.indexOf(allergy)}`
-                  );
-                  return decrypted?.replace("surgery:", "") || "";
-                })
-            )
-          : [],
+        foodAllergies: [], // Always initialize as empty array
+        drugAllergies: [], // Always initialize as empty array
+        knownMedicalConditions: [], // Always initialize as empty array
+        currentMedications: [], // Always initialize as empty array
+        pastSurgicalHistory: [], // Always initialize as empty array
         smokingStatus: user.medicalInfo?.smokingStatus || "never",
         emergencyContact: {
           name: user.medicalInfo?.emergencyContact?.name
@@ -128,8 +98,32 @@ export async function GET(request: NextRequest) {
           relationship: user.medicalInfo?.emergencyContact?.relationship || "",
         },
         additionalNotes: user.medicalInfo?.additionalNotes || "",
-        lastUpdated: user.audit?.updatedAt,
+        lastUpdated: (user as any).auditModifiedDateTime || (user as any).updatedAt,
       };
+
+      // Process knownAllergies if they exist
+      if (user.medicalInfo?.knownAllergies && Array.isArray(user.medicalInfo.knownAllergies)) {
+        for (let i = 0; i < user.medicalInfo.knownAllergies.length; i++) {
+          try {
+            const decrypted = await user.decryptField(`medicalInfo.knownAllergies.${i}`);
+            if (decrypted) {
+              if (decrypted.startsWith("food:")) {
+                medicalInfo.foodAllergies.push(decrypted.replace("food:", ""));
+              } else if (decrypted.startsWith("drug:")) {
+                medicalInfo.drugAllergies.push(decrypted.replace("drug:", ""));
+              } else if (decrypted.startsWith("condition:")) {
+                medicalInfo.knownMedicalConditions.push(decrypted.replace("condition:", ""));
+              } else if (decrypted.startsWith("medication:")) {
+                medicalInfo.currentMedications.push(decrypted.replace("medication:", ""));
+              } else if (decrypted.startsWith("surgery:")) {
+                medicalInfo.pastSurgicalHistory.push(decrypted.replace("surgery:", ""));
+              }
+            }
+          } catch (error) {
+            console.warn(`Failed to decrypt knownAllergies[${i}]:`, error);
+          }
+        }
+      }
 
       return medicalInfo;
     }, "Get Medical Information");
@@ -145,14 +139,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    return NextResponse.json<ApiResponse<MedicalInformation>>({
       success: true,
       data: result.data,
       timestamp: result.timestamp,
     });
   } catch (error) {
     console.error("Get medical info error:", error);
-    return NextResponse.json(
+    return NextResponse.json<ApiResponse>(
       {
         success: false,
         error: error instanceof Error ? error.message : "Failed to fetch medical information",
@@ -252,7 +246,7 @@ export async function PUT(request: NextRequest) {
 
       return {
         message: "Medical information updated successfully",
-        lastUpdated: savedUser.audit?.updatedAt,
+        lastUpdated: (savedUser as any).auditModifiedDateTime || (savedUser as any).updatedAt,
       };
     }, "Update Medical Information");
 
