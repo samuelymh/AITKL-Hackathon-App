@@ -62,6 +62,16 @@ interface AdminUser {
   createdAt: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  verificationStatus: "pending" | "verified" | "rejected";
+  createdAt: string;
+}
+
 export function AdminDashboard() {
   const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
@@ -75,18 +85,57 @@ export function AdminDashboard() {
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizationStats, setOrganizationStats] = useState({
+    total: 0,
+    verified: 0,
+    pending: 0,
+    rejected: 0,
+  });
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(false);
 
   useEffect(() => {
     loadSystemStats();
     loadRecentActivity();
     loadAdminUsers();
+    loadOrganizations();
   }, []);
 
   const loadSystemStats = async () => {
     try {
       setIsLoading(true);
-      // Mock data - in real implementation, these would be API calls
+
+      if (!token) {
+        // No token, use mock data
+        setStats({
+          totalUsers: 847,
+          activeAdmins: 3,
+          pendingOrganizations: 12,
+          systemHealth: "healthy",
+          auditLogs: 15234,
+          dailyLogins: 127,
+        });
+        return;
+      }
+
+      // Try to load real system stats from API
+      const response = await fetch("/api/admin/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setStats(result.data);
+          return; // Don't use fallback data if API succeeds
+        }
+      }
+
+      // Fallback to mock data if API fails
       setStats({
         totalUsers: 847,
         activeAdmins: 3,
@@ -97,55 +146,133 @@ export function AdminDashboard() {
       });
     } catch (error) {
       console.error("Error loading system stats:", error);
+      // Use fallback data on error
+      setStats({
+        totalUsers: 847,
+        activeAdmins: 3,
+        pendingOrganizations: 12,
+        systemHealth: "healthy",
+        auditLogs: 15234,
+        dailyLogins: 127,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const loadRecentActivity = async () => {
-    // Mock data - in real implementation, this would be an API call
-    setRecentActivity([
-      {
-        id: "1",
-        action: "Admin user created",
-        user: "system-admin@healthcare.com",
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-        type: "user",
-        status: "success",
-      },
-      {
-        id: "2",
-        action: "Organization verification request",
-        user: "City General Hospital",
-        timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-        type: "organization",
-        status: "warning",
-      },
-      {
-        id: "3",
-        action: "System backup completed",
-        user: "automated-system",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        type: "system",
-        status: "success",
-      },
-      {
-        id: "4",
-        action: "Failed login attempt detected",
-        user: "unknown-user@suspicious.com",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-        type: "security",
-        status: "error",
-      },
-      {
-        id: "5",
-        action: "Doctor profile updated",
-        user: "dr.smith@medicenter.com",
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-        type: "user",
-        status: "success",
-      },
-    ]);
+    try {
+      if (!token) {
+        // No token, use mock data
+        setRecentActivity([
+          {
+            id: "1",
+            action: "Admin user created",
+            user: "system-admin@healthcare.com",
+            timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+            type: "user",
+            status: "success",
+          },
+          {
+            id: "2",
+            action: "Organization verification request",
+            user: "City General Hospital",
+            timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+            type: "organization",
+            status: "warning",
+          },
+          {
+            id: "3",
+            action: "System backup completed",
+            user: "automated-system",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+            type: "system",
+            status: "success",
+          },
+          {
+            id: "4",
+            action: "Failed login attempt detected",
+            user: "unknown-user@suspicious.com",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+            type: "security",
+            status: "error",
+          },
+          {
+            id: "5",
+            action: "Doctor profile updated",
+            user: "dr.smith@medicenter.com",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+            type: "user",
+            status: "success",
+          },
+        ]);
+        return;
+      }
+
+      // Try to load real activity from API
+      const response = await fetch("/api/admin/activity", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setRecentActivity(result.data);
+          return; // Don't use fallback data if API succeeds
+        }
+      }
+
+      // Fallback to mock data if API fails
+      setRecentActivity([
+        {
+          id: "1",
+          action: "Admin user created",
+          user: "system-admin@healthcare.com",
+          timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+          type: "user",
+          status: "success",
+        },
+        {
+          id: "2",
+          action: "Organization verification request",
+          user: "City General Hospital",
+          timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+          type: "organization",
+          status: "warning",
+        },
+        {
+          id: "3",
+          action: "System backup completed",
+          user: "automated-system",
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+          type: "system",
+          status: "success",
+        },
+        {
+          id: "4",
+          action: "Failed login attempt detected",
+          user: "unknown-user@suspicious.com",
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+          type: "security",
+          status: "error",
+        },
+        {
+          id: "5",
+          action: "Doctor profile updated",
+          user: "dr.smith@medicenter.com",
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+          type: "user",
+          status: "success",
+        },
+      ]);
+    } catch (error) {
+      console.error("Error loading recent activity:", error);
+      // Use fallback data on error
+      setRecentActivity([]);
+    }
   };
 
   const loadAdminUsers = async () => {
@@ -162,9 +289,9 @@ export function AdminDashboard() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.admins) {
           setAdminUsers(
-            result.data.map((admin: any) => ({
+            result.data.admins.map((admin: any) => ({
               id: admin.id,
               name: admin.name,
               email: admin.email,
@@ -173,6 +300,7 @@ export function AdminDashboard() {
               createdAt: admin.createdAt,
             }))
           );
+          return; // Don't use fallback data if API succeeds
         }
       } else {
         // Fallback to mock data if API fails
@@ -205,6 +333,57 @@ export function AdminDashboard() {
       }
     } catch (error) {
       console.error("Error loading admin users:", error);
+    }
+  };
+
+  const loadOrganizations = async () => {
+    try {
+      setIsLoadingOrganizations(true);
+      if (!token) return;
+
+      // Try to load organizations from API
+      const response = await fetch("/api/admin/organizations", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setOrganizations(result.data.organizations || []);
+          setOrganizationStats(
+            result.data.stats || {
+              total: 0,
+              verified: 0,
+              pending: 0,
+              rejected: 0,
+            }
+          );
+          return; // Don't use fallback data if API succeeds
+        }
+      }
+
+      // Fallback to empty array if API fails
+      setOrganizations([]);
+      setOrganizationStats({
+        total: 0,
+        verified: 0,
+        pending: 0,
+        rejected: 0,
+      });
+    } catch (error) {
+      console.error("Error loading organizations:", error);
+      setOrganizations([]);
+      setOrganizationStats({
+        total: 0,
+        verified: 0,
+        pending: 0,
+        rejected: 0,
+      });
+    } finally {
+      setIsLoadingOrganizations(false);
     }
   };
 
@@ -257,6 +436,19 @@ export function AdminDashboard() {
         return "text-red-600 bg-red-100";
       default:
         return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  const getVerificationStatusBadge = (status: string) => {
+    switch (status) {
+      case "verified":
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Verified</Badge>;
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -404,9 +596,14 @@ export function AdminDashboard() {
           <TabsTrigger value="organizations" className="flex items-center gap-2">
             <Building className="h-4 w-4" />
             Organizations
-            {stats.pendingOrganizations > 0 && (
+            {organizationStats.total > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {organizationStats.total}
+              </Badge>
+            )}
+            {organizationStats.pending > 0 && (
               <Badge variant="destructive" className="ml-1">
-                {stats.pendingOrganizations}
+                {organizationStats.pending} pending
               </Badge>
             )}
           </TabsTrigger>
@@ -476,9 +673,9 @@ export function AdminDashboard() {
                 >
                   <Building className="h-4 w-4 mr-2" />
                   Review Organization Requests
-                  {stats.pendingOrganizations > 0 && (
+                  {organizationStats.pending > 0 && (
                     <Badge variant="destructive" className="ml-auto">
-                      {stats.pendingOrganizations}
+                      {organizationStats.pending}
                     </Badge>
                   )}
                 </Button>
@@ -651,30 +848,117 @@ export function AdminDashboard() {
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Building className="h-5 w-5" />
-                  Organization Verification
+                  Organizations Management
                 </div>
-                <Link href="/admin/organizations/verification">
-                  <Button>
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Open Verification Panel
-                  </Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link href="/admin/organizations/verification">
+                    <Button variant="outline">
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Verification Panel
+                    </Button>
+                  </Link>
+                </div>
               </CardTitle>
-              <CardDescription>Review and approve organization registration requests</CardDescription>
+              <CardDescription>All organizations in the system - verified, pending, and rejected</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground mb-4">
-                  You have {stats.pendingOrganizations} pending organization verification requests.
-                </p>
-                <Link href="/admin/organizations/verification">
-                  <Button>
-                    Review Pending Organizations
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
+              {/* Organization Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600">{organizationStats.total}</p>
+                  <p className="text-sm text-blue-600">Total</p>
+                </div>
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">{organizationStats.verified}</p>
+                  <p className="text-sm text-green-600">Verified</p>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                  <p className="text-2xl font-bold text-yellow-600">{organizationStats.pending}</p>
+                  <p className="text-sm text-yellow-600">Pending</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{organizationStats.rejected}</p>
+                  <p className="text-sm text-red-600">Rejected</p>
+                </div>
               </div>
+
+              {/* Organizations List */}
+              {organizations.length > 0 ? (
+                <ScrollArea className="h-96">
+                  <div className="space-y-4">
+                    {organizations.map((org) => (
+                      <div key={org.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg">{org.name}</h3>
+                            <p className="text-sm text-muted-foreground">{org.email}</p>
+                          </div>
+                          {getVerificationStatusBadge(org.verificationStatus)}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Phone</p>
+                            <p className="text-xs">{org.phone}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Address</p>
+                            <p className="text-xs">{org.address}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Created</p>
+                            <p className="text-xs">{new Date(org.createdAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" variant="outline">
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                          {org.verificationStatus === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Verify
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          <Link href="/admin/organizations/verification">
+                            <Button size="sm" variant="outline">
+                              <ArrowRight className="h-4 w-4 mr-2" />
+                              Manage
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center py-8">
+                  <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground mb-4">No organizations found in the system.</p>
+                  <Link href="/admin/organizations/verification">
+                    <Button>
+                      View Verification Panel
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -31,12 +31,12 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
 
     const validatedData = createAdminSchema.parse(sanitizedBody);
 
-    logger.info(`Admin ${authContext.user.userId} attempting to create new admin user for ${validatedData.email}`);
+    logger.info(`Admin ${authContext.userId} attempting to create new admin user for ${validatedData.email}`);
 
     const result = await AdminCreationService.createAdmin(validatedData);
 
     if (result.success) {
-      logger.info(`New admin user created: ${result.admin.id} by ${authContext.user.userId}`);
+      logger.info(`New admin user created: ${result.admin.id} by ${authContext.userId}`);
 
       return NextResponse.json({
         success: true,
@@ -97,7 +97,7 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
  */
 async function listAdminsHandler(request: NextRequest, authContext: any) {
   try {
-    logger.info(`Admin ${authContext.user.userId} requesting admin user list`);
+    logger.info(`Admin ${authContext.userId} requesting admin user list`);
 
     const admins = await AdminCreationService.listAdmins();
 
@@ -141,16 +141,16 @@ async function deactivateAdminHandler(request: NextRequest, authContext: any) {
     }
 
     // Prevent self-deactivation
-    if (sanitizedAdminId === authContext.user.userId) {
+    if (sanitizedAdminId === authContext.userId) {
       return NextResponse.json({ success: false, error: "Cannot deactivate your own admin account" }, { status: 400 });
     }
 
-    logger.info(`Admin ${authContext.user.userId} attempting to deactivate admin ${sanitizedAdminId}`);
+    logger.info(`Admin ${authContext.userId} attempting to deactivate admin ${sanitizedAdminId}`);
 
-    const result = await AdminCreationService.deactivateAdmin(sanitizedAdminId, authContext.user.userId);
+    const result = await AdminCreationService.deactivateAdmin(sanitizedAdminId, authContext.userId);
 
     if (result.success) {
-      logger.info(`Admin user ${sanitizedAdminId} deactivated by ${authContext.user.userId}`);
+      logger.info(`Admin user ${sanitizedAdminId} deactivated by ${authContext.userId}`);
 
       return NextResponse.json({
         success: true,

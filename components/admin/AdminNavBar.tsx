@@ -7,17 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  Home,
-  Building,
-  Users,
-  Shield,
-  Settings,
-  Menu,
-  LogOut,
-  ChevronLeft,
-  User,
-} from "lucide-react";
+import { Home, Building, Users, Shield, Settings, Menu, LogOut, ChevronLeft, User } from "lucide-react";
 
 interface NavItem {
   title: string;
@@ -131,9 +121,7 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
                     </Badge>
                   )}
                 </div>
-                {isMobile && item.description && (
-                  <p className="text-xs text-gray-500 ml-7 mb-2">{item.description}</p>
-                )}
+                {isMobile && item.description && <p className="text-xs text-gray-500 ml-7 mb-2">{item.description}</p>}
               </Link>
             );
           })}
