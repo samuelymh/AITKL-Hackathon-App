@@ -13,7 +13,7 @@ export type MembershipRole =
   | "staff"
   | "guest";
 
-export type MembershipStatus = "active" | "inactive" | "pending" | "suspended" | "terminated";
+export type MembershipStatus = "active" | "inactive" | "pending" | "pending_verification" | "suspended" | "terminated";
 
 export type AccessLevel = "full" | "limited" | "read-only" | "emergency-only";
 
@@ -68,7 +68,9 @@ export const OrganizationMemberZodSchema = z.object({
     })
     .optional(),
 
-  status: z.enum(["active", "inactive", "pending", "suspended", "terminated"] as const).default("pending"),
+  status: z
+    .enum(["active", "inactive", "pending", "pending_verification", "suspended", "terminated"] as const)
+    .default("pending"),
 
   verificationInfo: z
     .object({
@@ -300,7 +302,7 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "pending", "suspended", "terminated"],
+      enum: ["active", "inactive", "pending", "pending_verification", "suspended", "terminated"],
       default: "pending",
       // index: true, // Removed: covered by compound indexes
     },

@@ -76,10 +76,16 @@ interface PharmacyOrganization {
   type: string;
   registrationNumber: string;
   verified: boolean;
+  status?: string;
+  isPending?: boolean;
+  isVerified?: boolean;
+  department?: string;
+  position?: string;
+  role?: string;
 }
 
 export function PharmacistDashboard() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("prescriptions");
   const [stats, setStats] = useState<PharmacistStats>({
     prescriptionsToday: 0,
@@ -188,10 +194,29 @@ export function PharmacistDashboard() {
     // Simulate loading stats from API
     setStats(mockStats);
 
+    // Only fetch organization if user is authenticated and we have a token
+    if (!user || !token) {
+      setLoadingOrg(false);
+      return;
+    }
+
     // Fetch pharmacist's organization from membership
     const fetchPharmacyOrg = async () => {
       try {
-        const response = await fetch("/api/pharmacist/organization");
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+
+        // Add Authorization header if token is available
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const response = await fetch("/api/pharmacist/organization", {
+          method: "GET",
+          headers,
+        });
+
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.organization) {
@@ -200,7 +225,13 @@ export function PharmacistDashboard() {
               name: data.organization.name,
               type: data.organization.type,
               registrationNumber: data.organization.registrationNumber || "",
-              verified: true,
+              verified: data.organization.isVerified || false,
+              status: data.organization.status,
+              isPending: data.organization.isPending || false,
+              isVerified: data.organization.isVerified || false,
+              department: data.organization.department,
+              position: data.organization.position,
+              role: data.organization.role,
             });
           } else {
             console.error("No organization found for pharmacist");
@@ -220,7 +251,7 @@ export function PharmacistDashboard() {
     };
 
     fetchPharmacyOrg();
-  }, []);
+  }, [user, token]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -413,12 +444,47 @@ export function PharmacistDashboard() {
                   </div>
                 )}
                 {!loadingOrg && pharmacyOrg && (
-                  <QRScannerWidget
-                    organizationId={pharmacyOrg.id}
-                    practitionerId={user?.digitalIdentifier || user?.id}
-                    organizationName={pharmacyOrg.name}
-                    compact={true}
-                  />
+                  <div className="space-y-4">
+                    {/* Membership Status Banner */}
+                    {pharmacyOrg.isPending && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-yellow-800">
+                          <AlertTriangle className="w-4 h-4" />
+                          <div className="text-sm">
+                            <p className="font-medium">Membership Pending Verification</p>
+                            <p className="text-xs mt-1">
+                              Your pharmacy membership is pending administrative approval. You can scan QR codes, but
+                              some features may be limited until verification is complete.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Organization Info */}
+                    <div className="text-sm text-gray-600 mb-3">
+                      <p>
+                        <strong>Organization:</strong> {pharmacyOrg.name}
+                      </p>
+                      {pharmacyOrg.department && (
+                        <p>
+                          <strong>Department:</strong> {pharmacyOrg.department}
+                        </p>
+                      )}
+                      {pharmacyOrg.position && (
+                        <p>
+                          <strong>Position:</strong> {pharmacyOrg.position}
+                        </p>
+                      )}
+                    </div>
+
+                    <QRScannerWidget
+                      organizationId={pharmacyOrg.id}
+                      practitionerId={user?.digitalIdentifier || user?.id}
+                      organizationName={pharmacyOrg.name}
+                      compact={true}
+                    />
+                  </div>
                 )}
               </CardContent>
             </Card>
