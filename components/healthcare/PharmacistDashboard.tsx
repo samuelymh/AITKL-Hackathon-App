@@ -480,7 +480,7 @@ export function PharmacistDashboard() {
 
                     <QRScannerWidget
                       organizationId={pharmacyOrg.id}
-                      practitionerId={user?.digitalIdentifier || user?.id}
+                      practitionerId={user?.id}
                       organizationName={pharmacyOrg.name}
                       compact={true}
                     />
