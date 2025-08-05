@@ -1,4 +1,7 @@
-import { NextRequest } from "next/server";
+import { getClientIP, getUserAgent } from "./network";
+
+// Re-export network utilities for backward compatibility
+export { getClientIP, getUserAgent };
 
 /**
  * Extract and validate required authentication parameters from URL search params
@@ -62,26 +65,4 @@ export function validateAuthParamFormat(params: {
   if (!isValidObjectId(organizationId)) {
     throw new Error("Invalid organizationId format");
   }
-}
-
-/**
- * Extract client IP address from request
- */
-export function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIP = request.headers.get("x-real-ip");
-  const clientIP = request.headers.get("x-client-ip");
-
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-
-  return realIP || clientIP || "unknown";
-}
-
-/**
- * Extract user agent from request
- */
-export function getUserAgent(request: NextRequest): string {
-  return request.headers.get("user-agent") || "unknown";
 }

@@ -11,6 +11,7 @@ import Organization from "@/lib/models/Organization";
 import Practitioner from "@/lib/models/Practitioner";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { PushNotificationService } from "@/lib/services/push-notification-service";
+import { getClientIP } from "@/lib/utils/network";
 
 // Mock external dependencies
 jest.mock("@/lib/mongodb");
@@ -461,15 +462,7 @@ describe("Authorization Grant Flow", () => {
         },
       };
 
-      const getClientIP = (req: any) => {
-        const forwarded = req.headers.get("x-forwarded-for");
-        if (forwarded) {
-          return forwarded.split(",")[0].trim();
-        }
-        return req.headers.get("x-real-ip") || "unknown";
-      };
-
-      const clientIP = getClientIP(mockRequest);
+      const clientIP = getClientIP(mockRequest as any);
       expect(clientIP).toBe("192.168.1.1");
     });
   });

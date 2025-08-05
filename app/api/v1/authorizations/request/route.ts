@@ -6,19 +6,7 @@ import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { PushNotificationService } from "@/lib/services/push-notification-service";
-
-/**
- * Securely extracts client IP address from request headers
- */
-const getClientIP = (req: NextRequest): string => {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    // Get the first IP in the comma-separated list and validate it's not empty
-    const firstIP = forwarded.split(",")[0].trim();
-    if (firstIP) return firstIP;
-  }
-  return req.headers.get("x-real-ip") || "unknown";
-};
+import { getClientIP } from "@/lib/utils/network";
 
 /**
  * POST /api/v1/authorizations/request
