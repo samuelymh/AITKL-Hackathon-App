@@ -70,6 +70,14 @@ interface ConsultationAppointment {
   status: "scheduled" | "in_progress" | "completed" | "cancelled";
 }
 
+interface PharmacyOrganization {
+  id: string;
+  name: string;
+  type: string;
+  registrationNumber: string;
+  verified: boolean;
+}
+
 export function PharmacistDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("prescriptions");
@@ -79,6 +87,8 @@ export function PharmacistDashboard() {
     consultationsScheduled: 0,
     inventoryAlerts: 0,
   });
+  const [pharmacyOrg, setPharmacyOrg] = useState<PharmacyOrganization | null>(null);
+  const [loadingOrg, setLoadingOrg] = useState(true);
 
   // Mock data for development - will be replaced with real API calls
   const mockStats: PharmacistStats = {
@@ -177,6 +187,39 @@ export function PharmacistDashboard() {
   useEffect(() => {
     // Simulate loading stats from API
     setStats(mockStats);
+
+    // Fetch pharmacist's organization from membership
+    const fetchPharmacyOrg = async () => {
+      try {
+        const response = await fetch("/api/pharmacist/organization");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.organization) {
+            setPharmacyOrg({
+              id: data.organization.id,
+              name: data.organization.name,
+              type: data.organization.type,
+              registrationNumber: data.organization.registrationNumber || "",
+              verified: true,
+            });
+          } else {
+            console.error("No organization found for pharmacist");
+            setPharmacyOrg(null);
+          }
+        } else {
+          const errorData = await response.json();
+          console.error("Failed to fetch pharmacist organization:", errorData.error);
+          setPharmacyOrg(null);
+        }
+      } catch (error) {
+        console.error("Error fetching pharmacist organization:", error);
+        setPharmacyOrg(null);
+      } finally {
+        setLoadingOrg(false);
+      }
+    };
+
+    fetchPharmacyOrg();
   }, []);
 
   const getStatusBadge = (status: string) => {
@@ -353,12 +396,30 @@ export function PharmacistDashboard() {
                 <CardDescription>Scan prescription QR codes to verify and process medications</CardDescription>
               </CardHeader>
               <CardContent>
-                <QRScannerWidget
-                  organizationId="demo-pharmacy"
-                  practitionerId={user?.digitalIdentifier || user?.id}
-                  organizationName="Pharmacy"
-                  compact={true}
-                />
+                {loadingOrg && (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-sm text-muted-foreground">Loading scanner...</div>
+                  </div>
+                )}
+                {!loadingOrg && !pharmacyOrg && (
+                  <div className="flex flex-col items-center justify-center p-8 text-center space-y-3">
+                    <AlertTriangle className="w-8 h-8 text-orange-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">No pharmacy organization found</p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Please contact your administrator to add you to a pharmacy organization.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {!loadingOrg && pharmacyOrg && (
+                  <QRScannerWidget
+                    organizationId={pharmacyOrg.id}
+                    practitionerId={user?.digitalIdentifier || user?.id}
+                    organizationName={pharmacyOrg.name}
+                    compact={true}
+                  />
+                )}
               </CardContent>
             </Card>
 
