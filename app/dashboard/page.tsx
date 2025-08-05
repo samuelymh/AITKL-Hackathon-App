@@ -4,11 +4,13 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DoctorOrAdmin, PatientOnly, HealthcareStaff } from "@/components/auth/PermissionGuard";
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
-import { AccessControl } from "@/components/patient/AccessControl";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
+import { Settings, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 function WelcomeCard() {
   const { user } = useAuth();
@@ -90,6 +92,7 @@ function QuickActionsCard() {
                 <li>• Check prescriptions</li>
                 <li>• Update profile information</li>
                 <li>• Share records with QR code</li>
+                <li>• Manage access control settings</li>
               </ul>
             </div>
           </PatientOnly>
@@ -205,7 +208,28 @@ export default function DashboardPage() {
                 <QRCodeManager user={user} className="xl:col-span-1" />
                 <div className="space-y-6">
                   <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
-                  <AccessControl userId={user.digitalIdentifier || user.id} />
+
+                  {/* Settings Card - Link to dedicated settings page */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        Settings & Privacy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 mb-4">
+                        Manage your access control settings, privacy preferences, and account configuration.
+                      </p>
+                      <Link href="/dashboard/settings">
+                        <Button className="w-full flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          Open Settings
+                          <ArrowRight className="h-4 w-4 ml-auto" />
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
