@@ -38,7 +38,9 @@ export class PushNotificationService {
       const organization = grant.organizationId as any;
       const practitioner = grant.requestingPractitionerId as any;
 
-      const practitionerSuffix = practitioner ? ` for Dr. ${practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "Unknown"}` : "";
+      const practitionerSuffix = practitioner
+        ? ` for Dr. ${practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "Unknown"}`
+        : "";
 
       const notification: NotificationPayload = {
         title: "Healthcare Access Request",

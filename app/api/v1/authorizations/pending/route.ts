@@ -23,9 +23,11 @@ async function transformPendingGrant(grant: any) {
       practitioner: practitioner
         ? {
             id: practitioner._id.toString(),
-            firstName: practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
+            firstName:
+              practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
             lastName: practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User",
-            role: practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+            role:
+              practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
             specialty: practitioner.professionalInfo?.specialty || "General",
           }
         : null,

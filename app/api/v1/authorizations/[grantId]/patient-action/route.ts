@@ -145,7 +145,10 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
         practitioner: practitioner
           ? {
               name: `${practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown"} ${practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User"}`,
-              role: practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+              role:
+                practitioner.professionalInfo?.practitionerType ||
+                practitioner.professionalInfo?.role ||
+                "practitioner",
             }
           : null,
         accessScope: updatedGrant.accessScope,
