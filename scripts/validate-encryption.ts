@@ -55,7 +55,7 @@ async function validateEncryptedUserModel() {
     }
 
     console.log("✅ User retrieved successfully");
-    console.log(`   Name: ${foundUser.getFullName()}`);
+    console.log(`   Name: ${await foundUser.getFullName()}`);
     console.log(`   Email: ${String(foundUser.personalInfo.contact.email)}`);
     console.log(`   Phone: ${String(foundUser.personalInfo.contact.phone)}`);
 
