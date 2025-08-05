@@ -4,6 +4,7 @@ import { executeDatabaseOperation } from "@/lib/db-utils";
 import User from "@/lib/models/User";
 import Practitioner from "@/lib/models/Practitioner";
 import Organization from "@/lib/models/Organization";
+import { OrganizationMember } from "@/lib/models/OrganizationMember";
 
 /**
  * GET /api/doctor/professional-info - Get doctor's professional information
@@ -36,45 +37,41 @@ export async function GET(request: NextRequest) {
       }
 
       // Find practitioner record
-      const practitioner = await Practitioner.findOne({ userId: decoded.userId })
-        .populate("organizationId", "name type")
-        .lean();
+      const practitioner = (await Practitioner.findOne({ userId: decoded.userId }).lean()) as any;
 
       if (!practitioner) {
         // Return empty structure for new doctors to complete
         return {
           practitioner: null,
+          memberships: [],
           isComplete: false,
           requiredFields: ["licenseNumber", "specialty", "practitionerType", "yearsOfExperience", "organizationId"],
         };
       }
 
-      // Check if profile is complete
-      let requiredFields: any[] = [];
-      if (Array.isArray(practitioner)) {
-        // If practitioner is an array, use the first element or handle accordingly
-        const firstPractitioner = practitioner[0];
-        requiredFields = [
-          firstPractitioner?.professionalInfo?.licenseNumber,
-          firstPractitioner?.professionalInfo?.specialty,
-          firstPractitioner?.professionalInfo?.practitionerType,
-          firstPractitioner?.professionalInfo?.yearsOfExperience,
-          firstPractitioner?.organizationId,
-        ];
-      } else {
-        requiredFields = [
-          practitioner.professionalInfo?.licenseNumber,
-          practitioner.professionalInfo?.specialty,
-          practitioner.professionalInfo?.practitionerType,
-          practitioner.professionalInfo?.yearsOfExperience,
-          practitioner.organizationId,
-        ];
-      }
+      // Get organization memberships for this practitioner
+      const memberships = await OrganizationMember.find({
+        practitionerId: practitioner._id,
+      })
+        .populate("organizationId", "name type")
+        .lean();
 
-      const isComplete = requiredFields.every((field) => field !== undefined && field !== null && field !== "");
+      // Check if profile is complete
+      const requiredFields = [
+        practitioner.professionalInfo?.licenseNumber,
+        practitioner.professionalInfo?.specialty,
+        practitioner.professionalInfo?.practitionerType,
+        practitioner.professionalInfo?.yearsOfExperience,
+      ];
+
+      const hasOrganizationMembership = memberships.length > 0;
+      const isComplete =
+        requiredFields.every((field) => field !== undefined && field !== null && field !== "") &&
+        hasOrganizationMembership;
 
       return {
         practitioner,
+        memberships,
         isComplete,
         requiredFields: ["licenseNumber", "specialty", "practitionerType", "yearsOfExperience", "organizationId"],
       };
@@ -84,6 +81,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         practitioner: result?.data?.practitioner ?? null,
+        memberships: result?.data?.memberships ?? [],
         isComplete: result?.data?.isComplete ?? false,
         requiredFields: result?.data?.requiredFields ?? [],
       },
@@ -174,27 +172,13 @@ async function updatePractitionerInfo(userId: string, userRole: string, professi
 
   // Audit log for updating professional info
   // TODO: Add audit logging when audit system is available
-  // await auditLogger.logDataAccess({
-  //   userId,
-  //   action: practitioner.isNew ? "CREATE_PROFESSIONAL_INFO" : "UPDATE_PROFESSIONAL_INFO",
-  //   resourceType: "practitioner",
-  //   resourceId: practitioner._id.toString(),
-  //   metadata: {
-  //     userRole,
-  //     updatedFields: Object.keys(professionalData),
-  //     accessType: "self_update"
-  //   }
-  // });
 
-  // Populate organization for response
-  await practitioner.populate("organizationId", "name type");
   return practitioner;
 }
 
 async function createNewPractitioner(userId: string, userRole: string, professionalData: any) {
   const practitioner = new Practitioner({
     userId,
-    organizationId: professionalData.organizationId,
     professionalInfo: {
       licenseNumber: professionalData.licenseNumber,
       specialty: professionalData.specialty,
@@ -212,12 +196,38 @@ async function createNewPractitioner(userId: string, userRole: string, professio
   });
 
   await practitioner.save();
+
+  // Create organization membership if organizationId is provided
+  if (professionalData.organizationId) {
+    const membershipData = {
+      organizationId: professionalData.organizationId,
+      practitionerId: practitioner._id,
+      membershipDetails: {
+        role: professionalData.practitionerType || userRole,
+        accessLevel: "limited",
+        department: professionalData.department,
+        position: professionalData.currentPosition,
+        isPrimary: true, // First organization is usually primary
+        startDate: new Date(),
+      },
+      status: "pending", // Requires activation by admin
+    };
+
+    const membership = new OrganizationMember(membershipData);
+    await membership.save();
+  }
+
   return practitioner;
 }
 
 async function updateExistingPractitioner(practitioner: any, professionalData: any) {
+  await updatePractitionerFields(practitioner, professionalData);
+  await handleOrganizationMembership(practitioner, professionalData);
+  return practitioner;
+}
+
+async function updatePractitionerFields(practitioner: any, professionalData: any) {
   const updates = {
-    organizationId: professionalData.organizationId,
     "professionalInfo.licenseNumber": professionalData.licenseNumber,
     "professionalInfo.specialty": professionalData.specialty,
     "professionalInfo.practitionerType": professionalData.practitionerType,
@@ -226,7 +236,7 @@ async function updateExistingPractitioner(practitioner: any, professionalData: a
     "professionalInfo.department": professionalData.department,
   };
 
-  // Only update defined fields with improved iteration
+  // Update defined fields
   for (const key in updates) {
     if (updates.hasOwnProperty(key)) {
       const value = updates[key as keyof typeof updates];
@@ -247,5 +257,40 @@ async function updateExistingPractitioner(practitioner: any, professionalData: a
   }
 
   await practitioner.save();
-  return practitioner;
+}
+
+async function handleOrganizationMembership(practitioner: any, professionalData: any) {
+  if (!professionalData.organizationId) {
+    return;
+  }
+
+  const existingMembership = await OrganizationMember.findOne({
+    practitionerId: practitioner._id,
+    organizationId: professionalData.organizationId,
+  });
+
+  if (existingMembership) {
+    return; // Membership already exists
+  }
+
+  const existingMemberships = await OrganizationMember.find({
+    practitionerId: practitioner._id,
+  });
+
+  const membershipData = {
+    organizationId: professionalData.organizationId,
+    practitionerId: practitioner._id,
+    membershipDetails: {
+      role: professionalData.practitionerType || practitioner.professionalInfo.practitionerType,
+      accessLevel: "limited",
+      department: professionalData.department,
+      position: professionalData.currentPosition,
+      isPrimary: existingMemberships.length === 0, // First membership is primary
+      startDate: new Date(),
+    },
+    status: "pending",
+  };
+
+  const membership = new OrganizationMember(membershipData);
+  await membership.save();
 }
