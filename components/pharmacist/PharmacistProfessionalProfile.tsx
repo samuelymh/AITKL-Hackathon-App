@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { PharmacyOrganizationSelect } from "@/components/ui/organization-select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Save, User, Building, Award, Clock, Phone, Loader2 } from "lucide-react";
 
@@ -78,27 +79,10 @@ const PharmacistProfessionalInfoSchema = z.object({
 
 type PharmacistProfessionalInfo = z.infer<typeof PharmacistProfessionalInfoSchema>;
 
-interface Organization {
-  id: string;
-  name: string;
-  type: string;
-  description?: string;
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    country: string;
-  };
-  verificationStatus: string;
-  isVerified: boolean;
-}
-
 export default function PharmacistProfessionalProfile() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
 
   const form = useForm<PharmacistProfessionalInfo>({
@@ -142,22 +126,19 @@ export default function PharmacistProfessionalProfile() {
     name: "certifications",
   });
 
-  // Load professional information and organizations on component mount
+  // Load professional information on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfileData = async () => {
       try {
         setLoading(true);
-        const [profileResponse, orgResponse] = await Promise.all([
-          fetch("/api/pharmacist/professional-info"),
-          fetch("/api/pharmacist/organizations?verified=true&limit=100"),
-        ]);
+        const response = await fetch("/api/pharmacist/professional-info");
 
         // Handle profile response
-        if (!profileResponse.ok) {
-          throw new Error(`Failed to load profile: ${profileResponse.status} ${profileResponse.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load profile: ${response.status} ${response.statusText}`);
         }
 
-        const profileData = await profileResponse.json();
+        const profileData = await response.json();
 
         if (profileData.success && profileData.data) {
           const profile = profileData.data;
@@ -201,33 +182,14 @@ export default function PharmacistProfessionalProfile() {
             variant: "default",
           });
         }
-
-        // Handle organizations response
-        if (!orgResponse.ok) {
-          throw new Error(`Failed to load organizations: ${orgResponse.status} ${orgResponse.statusText}`);
-        }
-
-        const orgData = await orgResponse.json();
-
-        if (orgData.success) {
-          setOrganizations(orgData.data.organizations || []);
-        } else {
-          console.error("Organizations fetch failed:", orgData.message);
-          toast({
-            title: "Warning",
-            description: "Failed to load organizations. You can still save your profile.",
-            variant: "destructive",
-          });
-          setOrganizations([]); // Ensure empty state if loading fails
-        }
       } catch (error) {
-        console.error("Data fetch error:", error);
+        console.error("Profile fetch error:", error);
         toast({
           title: "Error",
           description:
             error instanceof Error
-              ? `Failed to load data: ${error.message}`
-              : "Failed to load data. Please refresh the page and try again.",
+              ? `Failed to load profile: ${error.message}`
+              : "Failed to load profile. Please refresh the page and try again.",
           variant: "destructive",
         });
       } finally {
@@ -235,7 +197,7 @@ export default function PharmacistProfessionalProfile() {
       }
     };
 
-    fetchData();
+    fetchProfileData();
   }, [toast, form]);
 
   // Legacy functions removed - all data loading now handled in unified useEffect
@@ -430,32 +392,14 @@ export default function PharmacistProfessionalProfile() {
             <CardDescription>Select your current organization or workplace</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="organizationId">Organization</Label>
-              <Select
-                value={form.watch("organizationId")}
-                onValueChange={(value) => form.setValue("organizationId", value)}
-                disabled={loadingOrganizations}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      <div className="flex items-center space-x-2">
-                        <span>{org.name}</span>
-                        {org.isVerified && (
-                          <Badge variant="secondary" className="text-xs">
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <PharmacyOrganizationSelect
+              value={form.watch("organizationId")}
+              onValueChange={(value) => form.setValue("organizationId", value)}
+              label="Organization"
+              placeholder="Select organization"
+              showBadge={true}
+              showLocation={true}
+            />
           </CardContent>
         </Card>
 
