@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       {
         page: 1,
         limit: limit,
-        onlyVerified: verified === "true"
+        onlyVerified: verified === "true",
       }
     );
 
