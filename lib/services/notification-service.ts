@@ -187,6 +187,7 @@ export async function getNotificationsForUser(
 
       // Get practitioner name by loading the user model instance
       let practitionerName = "Unknown Practitioner";
+      let practitionerType = "practitioner";
       const practitionerId = notification.payload?.data?.requestingPractitionerId;
       
       if (practitionerId) {
@@ -196,6 +197,20 @@ export async function getNotificationsForUser(
           const practitionerUser = await User.findById(practitionerId);
           if (practitionerUser) {
             practitionerName = await practitionerUser.getFullName();
+            // Get basic role from User model
+            practitionerType = practitionerUser.auth?.role || "practitioner";
+          }
+
+          // Try to get more detailed practitioner type from Practitioner model
+          try {
+            const Practitioner = (await import("../models/Practitioner")).default;
+            const practitionerProfile = await Practitioner.findOne({ userId: practitionerId });
+            if (practitionerProfile?.professionalInfo?.practitionerType) {
+              practitionerType = practitionerProfile.professionalInfo.practitionerType;
+            }
+          } catch (practitionerError) {
+            // If Practitioner model lookup fails, we'll use the role from User model
+            console.debug(`Could not fetch detailed practitioner info for ${practitionerId}:`, practitionerError);
           }
         } catch (error) {
           console.warn(`Failed to get practitioner name for ${practitionerId}:`, error);
@@ -212,6 +227,7 @@ export async function getNotificationsForUser(
         data: notification.payload.data,
         createdAt: notification.scheduledAt,
         practitionerName: practitionerName,
+        practitionerType: practitionerType,
         ...additionalData,
       };
     })

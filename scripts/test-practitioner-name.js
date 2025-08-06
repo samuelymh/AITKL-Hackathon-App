@@ -45,6 +45,7 @@ async function testPractitionerNameMapping() {
       console.log(`   Type: ${notification.type}`);
       console.log(`   Title: ${notification.title || 'N/A'}`);
       console.log(`   Practitioner Name: ${notification.practitionerName || 'N/A'}`);
+      console.log(`   Practitioner Type: ${notification.practitionerType || 'N/A'}`);
       console.log(`   Status: ${notification.status}`);
     });
 
@@ -52,8 +53,12 @@ async function testPractitionerNameMapping() {
       console.log('\n⚠️  No notifications found for this patient.');
     } else {
       const hasValidNames = notifications.some(n => n.practitionerName && n.practitionerName !== 'Unknown Practitioner');
-      if (hasValidNames) {
-        console.log('\n✅ Successfully retrieving practitioner names!');
+      const hasValidTypes = notifications.some(n => n.practitionerType && n.practitionerType !== 'practitioner');
+      
+      if (hasValidNames && hasValidTypes) {
+        console.log('\n✅ Successfully retrieving practitioner names and types!');
+      } else if (hasValidNames) {
+        console.log('\n✅ Successfully retrieving practitioner names, but types may be missing');
       } else {
         console.log('\n⚠️  All practitioner names are showing as "Unknown Practitioner"');
       }
