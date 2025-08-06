@@ -189,7 +189,7 @@ export async function getNotificationsForUser(
       let practitionerName = "Unknown Practitioner";
       let practitionerType = "practitioner";
       const practitionerId = notification.payload?.data?.requestingPractitionerId;
-      
+
       if (practitionerId) {
         try {
           // Import User model to get access to decryption methods

@@ -93,9 +93,11 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         },
         practitioner: {
           id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-          firstName: item.practitionerName ? item.practitionerName.split(' ')[0] || "Unknown" : "Unknown",
-          lastName: item.practitionerName ? item.practitionerName.split(' ').slice(1).join(' ') || "Practitioner" : "Practitioner",
-          role: item.practitionerType || (item.practitioner?.professionalInfo?.practitionerType || "doctor") as any,
+          firstName: item.practitionerName ? item.practitionerName.split(" ")[0] || "Unknown" : "Unknown",
+          lastName: item.practitionerName
+            ? item.practitionerName.split(" ").slice(1).join(" ") || "Practitioner"
+            : "Practitioner",
+          role: item.practitionerType || ((item.practitioner?.professionalInfo?.practitionerType || "doctor") as any),
           specialty: item.practitioner?.professionalInfo?.specialty,
         },
         requestedScope: item.accessScope ||
@@ -332,7 +334,7 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
   const formatPractitionerType = (type: string) => {
     const typeMap: { [key: string]: string } = {
       doctor: "Doctor",
-      pharmacist: "Pharmacist", 
+      pharmacist: "Pharmacist",
       nurse: "Nurse",
       technician: "Technician",
       admin: "Administrator",
