@@ -169,31 +169,69 @@ export async function getNotificationsForUser(
 
   const notifications = await NotificationJob.aggregate(aggregationPipeline);
 
-  return notifications.map((notification: any) => {
-    const grant = notification.grantDetails; // Access grant details directly
+  // Post-process to get practitioner names with proper decryption
+  const notificationsWithNames = await Promise.all(
+    notifications.map(async (notification: any) => {
+      const grant = notification.grantDetails;
+      let additionalData = {};
 
-    let additionalData = {};
+      if (grant) {
+        additionalData = {
+          grantStatus: grant.grantDetails?.status,
+          expiresAt: grant.grantDetails?.expiresAt,
+          accessScope: grant.accessScope,
+          organization: grant.organizationId,
+          practitioner: grant.requestingPractitionerId,
+        };
+      }
 
-    if (grant) {
-      additionalData = {
-        grantStatus: grant.grantDetails?.status,
-        expiresAt: grant.grantDetails?.expiresAt,
-        accessScope: grant.accessScope,
-        organization: grant.organizationId,
-        practitioner: grant.requestingPractitionerId,
+      // Get practitioner name by loading the user model instance
+      let practitionerName = "Unknown Practitioner";
+      let practitionerType = "practitioner";
+      const practitionerId = notification.payload?.data?.requestingPractitionerId;
+
+      if (practitionerId) {
+        try {
+          // Import User model to get access to decryption methods
+          const User = (await import("../models/User")).default;
+          const practitionerUser = await User.findById(practitionerId);
+          if (practitionerUser) {
+            practitionerName = await practitionerUser.getFullName();
+            // Get basic role from User model
+            practitionerType = practitionerUser.auth?.role || "practitioner";
+          }
+
+          // Try to get more detailed practitioner type from Practitioner model
+          try {
+            const Practitioner = (await import("../models/Practitioner")).default;
+            const practitionerProfile = await Practitioner.findOne({ userId: practitionerId });
+            if (practitionerProfile?.professionalInfo?.practitionerType) {
+              practitionerType = practitionerProfile.professionalInfo.practitionerType;
+            }
+          } catch (practitionerError) {
+            // If Practitioner model lookup fails, we'll use the role from User model
+            console.debug(`Could not fetch detailed practitioner info for ${practitionerId}:`, practitionerError);
+          }
+        } catch (error) {
+          console.warn(`Failed to get practitioner name for ${practitionerId}:`, error);
+        }
+      }
+
+      return {
+        id: notification._id,
+        type: notification.type,
+        status: notification.status,
+        priority: notification.priority,
+        title: notification.payload.title,
+        body: notification.payload.body,
+        data: notification.payload.data,
+        createdAt: notification.scheduledAt,
+        practitionerName: practitionerName,
+        practitionerType: practitionerType,
+        ...additionalData,
       };
-    }
+    })
+  );
 
-    return {
-      id: notification._id,
-      type: notification.type,
-      status: notification.status,
-      priority: notification.priority,
-      title: notification.payload.title,
-      body: notification.payload.body,
-      data: notification.payload.data,
-      createdAt: notification.scheduledAt,
-      ...additionalData,
-    };
-  });
+  return notificationsWithNames;
 }

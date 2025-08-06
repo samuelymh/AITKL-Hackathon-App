@@ -93,9 +93,15 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         },
         practitioner: {
           id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-          firstName: item.practitioner?.userId?.personalInfo?.firstName || "Unknown",
-          lastName: item.practitioner?.userId?.personalInfo?.lastName || "Practitioner",
-          role: (item.practitioner?.professionalInfo?.practitionerType || "DOCTOR") as any,
+          // Simplified name parsing using destructuring and nullish coalescing
+          ...(() => {
+            const [firstName, ...rest] = item.practitionerName?.split(" ") || [];
+            return {
+              firstName: firstName || "Unknown",
+              lastName: rest.join(" ") || "Practitioner",
+            };
+          })(),
+          role: item.practitionerType || ((item.practitioner?.professionalInfo?.practitionerType || "doctor") as any),
           specialty: item.practitioner?.professionalInfo?.specialty,
         },
         requestedScope: item.accessScope ||
@@ -110,6 +116,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
           requestedAt: new Date(item.createdAt),
           expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
+        timeWindowHours: item.data?.timeWindowHours || 24,
+        createdAt: new Date(item.createdAt),
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
         status: item.grantStatus || (item.status === "COMPLETED" ? "APPROVED" : "PENDING"),
         urgency: item.priority >= 8 ? "urgent" : "normal",
         metadata: {
@@ -325,6 +334,19 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
     }
   };
 
+  // Format practitioner type for display
+  const formatPractitionerType = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      doctor: "Doctor",
+      pharmacist: "Pharmacist",
+      nurse: "Nurse",
+      technician: "Technician",
+      admin: "Administrator",
+      other: "Healthcare Professional",
+    };
+    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   // Render access scope
   const renderAccessScope = (scope: AccessScope) => {
     const permissions = [
@@ -416,6 +438,7 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                         <h4 className="font-medium">{request.organization.name}</h4>
                         <p className="text-sm text-muted-foreground">
                           {request.practitioner.firstName} {request.practitioner.lastName}
+                          {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
                           {request.practitioner.specialty && ` • ${request.practitioner.specialty}`}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
@@ -481,6 +504,8 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                           <h4 className="font-medium">{request.organization.name}</h4>
                           <p className="text-sm text-muted-foreground">
                             {request.practitioner.firstName} {request.practitioner.lastName}
+                            {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
+                            {request.practitioner.specialty && ` • ${request.practitioner.specialty}`}
                           </p>
                           {request.expiresAt && (
                             <div className="flex items-center gap-2 mt-1">
@@ -547,6 +572,7 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                         <span className="font-medium">{request.organization.name}</span>
                         <span className="text-muted-foreground ml-2">
                           {request.practitioner.firstName} {request.practitioner.lastName}
+                          {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
                         </span>
                       </div>
                       {getStatusBadge(request.status)}

@@ -108,7 +108,7 @@ const encounterSchemaFields = {
     type: mongoose.Schema.Types.ObjectId,
     ref: "AuthorizationGrant",
     required: true,
-    index: true,
+    // Remove index: true to avoid duplicate with explicit index below
   },
 
   encounter: {

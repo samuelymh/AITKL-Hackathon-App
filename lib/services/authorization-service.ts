@@ -162,3 +162,89 @@ export async function getAuthorizationGrantsBatch(grantIds: string[]): Promise<M
 
   return new Map(grants.map((grant) => [grant._id.toString(), grant]));
 }
+
+/**
+ * Get authorization grants for a specific patient
+ * Shows the patient's complete grant history
+ */
+export async function getAuthorizationGrantsForPatient(
+  patientId: string,
+  options: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+    includeExpired?: boolean;
+  } = {}
+): Promise<{ grants: GrantData[]; total: number }> {
+  await connectToDatabase();
+
+  const { status, limit = 20, offset = 0, includeExpired = true } = options;
+
+  const query: any = { userId: patientId };
+
+  if (status) {
+    query["grantDetails.status"] = status;
+  }
+
+  if (!includeExpired) {
+    query.$or = [{ "grantDetails.status": { $ne: "EXPIRED" } }, { "grantDetails.expiresAt": { $gt: new Date() } }];
+  }
+
+  // Get total count for pagination
+  const total = await AuthorizationGrant.countDocuments(query);
+
+  // Get paginated grants
+  const grants = await AuthorizationGrant.find(query)
+    .populate({
+      path: "organizationId",
+      select: "organizationInfo address",
+    })
+    .populate({
+      path: "requestingPractitionerId",
+      select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+      populate: {
+        path: "userId",
+        select: "personalInfo.firstName personalInfo.lastName auth.role",
+      },
+    })
+    .sort({ createdAt: -1 })
+    .skip(offset)
+    .limit(limit)
+    .lean();
+
+  const grantData = grants.map((grant: any) => ({
+    grantId: grant._id.toString(),
+    patient: {
+      name: "Current User", // Patient viewing their own grants
+      digitalIdentifier: grant.userId,
+    },
+    organization: grant.organizationId,
+    requester: grant.requestingPractitionerId
+      ? {
+          name:
+            grant.requestingPractitionerId.userId?.personalInfo?.firstName &&
+            grant.requestingPractitionerId.userId?.personalInfo?.lastName
+              ? `${grant.requestingPractitionerId.userId.personalInfo.firstName} ${grant.requestingPractitionerId.userId.personalInfo.lastName}`
+              : "Unknown Practitioner",
+          type:
+            grant.requestingPractitionerId.professionalInfo?.practitionerType ||
+            grant.requestingPractitionerId.userId?.auth?.role ||
+            "practitioner",
+          specialty: grant.requestingPractitionerId.professionalInfo?.specialty,
+        }
+      : null,
+    accessScope: grant.accessScope || [],
+    status: grant.grantDetails?.status || "UNKNOWN",
+    createdAt: grant.createdAt,
+    grantedAt: grant.grantDetails?.grantedAt,
+    expiresAt:
+      grant.grantDetails?.expiresAt ||
+      new Date(grant.createdAt.getTime() + (grant.grantDetails?.timeWindowHours || 24) * 60 * 60 * 1000),
+    timeWindowHours: grant.grantDetails?.timeWindowHours || 24,
+  }));
+
+  return {
+    grants: grantData,
+    total,
+  };
+}
