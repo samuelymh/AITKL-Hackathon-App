@@ -319,11 +319,9 @@ export function PharmacistDashboard() {
       }
     };
 
-    fetchPrescriptionQueue(); // Initial fetch
+    fetchPrescriptionQueue(); // Initial fetch only
 
-    // Poll for updates every 30 minutes
-    const interval = setInterval(fetchPrescriptionQueue, 1800000); // 30 minutes = 1800000ms
-    return () => clearInterval(interval);
+    // No automatic polling - data refreshes only on page reload or manual action
   }, [token, pharmacyOrg]);
 
   const handlePrescriptionAction = async (prescriptionId: string, action: "approve" | "reject") => {
