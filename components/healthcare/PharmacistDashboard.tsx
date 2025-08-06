@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import PrescriptionQueue, {
-  pharmacistActions,
+  createPharmacistActions,
   type PrescriptionRequest,
 } from "@/components/healthcare/PrescriptionQueue";
 import { useAuth } from "@/contexts/AuthContext";
@@ -483,15 +483,10 @@ export function PharmacistDashboard() {
               emptyMessage="No pending prescriptions"
               title="Prescription Queue"
               description="Pending prescriptions requiring attention"
-              actions={pharmacistActions.map((action) => ({
-                ...action,
-                onClick:
-                  action.id === "dispense"
-                    ? (prescriptionId: string) => handlePrescriptionAction(prescriptionId, "dispense")
-                    : action.id === "cancel"
-                      ? (prescriptionId: string) => handlePrescriptionAction(prescriptionId, "cancel")
-                      : action.onClick,
-              }))}
+              actions={createPharmacistActions({
+                onDispense: (prescriptionId: string) => handlePrescriptionAction(prescriptionId, "dispense"),
+                onCancel: (prescriptionId: string) => handlePrescriptionAction(prescriptionId, "cancel"),
+              })}
               onViewPatientRecord={handleViewPatientRecord}
             />
           </div>

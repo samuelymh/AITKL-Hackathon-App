@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import PrescriptionQueue, {
-  organizationActions,
+  createOrganizationActions,
   type PrescriptionRequest,
 } from "@/components/healthcare/PrescriptionQueue";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,10 +51,13 @@ const OrganizationPrescriptionOverview: React.FC = () => {
     window.open(`/organization/patients/${patientId}`, "_blank");
   };
 
-  const organizationPrescriptionActions = organizationActions.map((action) => ({
-    ...action,
-    onClick: action.id === "review" ? handleReviewPrescription : action.onClick,
-  }));
+  const organizationPrescriptionActions = createOrganizationActions({
+    onView: handleReviewPrescription,
+    onAudit: (prescriptionId: string) => {
+      console.log("Auditing prescription:", prescriptionId);
+      // Add audit functionality
+    },
+  });
 
   const pendingPrescriptions = allPrescriptions.filter((p) => p.status === "ISSUED");
   const filledPrescriptions = allPrescriptions.filter((p) => p.status === "FILLED");

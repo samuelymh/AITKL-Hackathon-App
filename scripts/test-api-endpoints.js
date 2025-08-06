@@ -12,7 +12,14 @@ const jwt = require("jsonwebtoken");
 const MONGODB_URI =
   process.env.MONGODB_URI ||
   "mongodb+srv://extraordinary:9mrswpQP4adJ5e8T@cluster0.clxqg86.mongodb.net/healthapp?retryWrites=true&w=majority&appName=Cluster0";
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+
+// Security: Get JWT secret from environment variable
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("❌ JWT_SECRET environment variable is required");
+  process.exit(1);
+}
+
 const API_BASE_URL = "http://localhost:3000";
 
 async function generateTestJWT(userId, digitalIdentifier, role = "patient") {

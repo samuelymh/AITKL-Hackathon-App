@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import PrescriptionQueue, { doctorActions, type PrescriptionRequest } from "@/components/healthcare/PrescriptionQueue";
+import PrescriptionQueue, { createDoctorActions, type PrescriptionRequest } from "@/components/healthcare/PrescriptionQueue";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -69,15 +69,12 @@ const DoctorPrescriptionsView: React.FC = () => {
     window.open(`/doctor/patients/${patientId}`, "_blank");
   };
 
-  const doctorPrescriptionActions = doctorActions.map((action) => ({
-    ...action,
-    onClick:
-      action.id === "edit"
-        ? handleEditPrescription
-        : action.id === "cancel"
-          ? handleCancelPrescription
-          : action.onClick,
-  }));
+    const doctorPrescriptionActions = createDoctorActions({
+    onEdit: handleEditPrescription,
+    onCancel: (prescriptionId: string) => {
+      handleCancelPrescription(prescriptionId).catch(console.error);
+    },
+  });
 
   return (
     <div className="space-y-6">

@@ -185,15 +185,18 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
   );
 };
 
-// Pre-configured action sets for different user roles
-export const pharmacistActions: PrescriptionAction[] = [
+// Factory functions to create customized actions
+export const createPharmacistActions = (handlers: {
+  onDispense?: (prescriptionId: string) => void;
+  onCancel?: (prescriptionId: string) => void;
+}): PrescriptionAction[] => [
   {
     id: "dispense",
     label: "Dispense",
     icon: <CheckCircle className="w-4 h-4 mr-1" />,
     variant: "default",
     className: "bg-green-600 hover:bg-green-700",
-    onClick: () => {}, // Will be overridden by parent component
+    onClick: handlers.onDispense || (() => {}),
     showForStatus: ["ISSUED"],
   },
   {
@@ -202,18 +205,21 @@ export const pharmacistActions: PrescriptionAction[] = [
     icon: <XCircle className="w-4 h-4 mr-1" />,
     variant: "outline",
     className: "border-red-200 text-red-600 hover:bg-red-50",
-    onClick: () => {}, // Will be overridden by parent component
+    onClick: handlers.onCancel || (() => {}),
     showForStatus: ["ISSUED"],
   },
 ];
 
-export const doctorActions: PrescriptionAction[] = [
+export const createDoctorActions = (handlers: {
+  onEdit?: (prescriptionId: string) => void;
+  onCancel?: (prescriptionId: string) => void;
+}): PrescriptionAction[] => [
   {
     id: "edit",
     label: "Edit",
     icon: <Edit className="w-4 h-4 mr-1" />,
     variant: "outline",
-    onClick: () => {}, // Will be overridden by parent component
+    onClick: handlers.onEdit || (() => {}),
     showForStatus: ["ISSUED"],
   },
   {
@@ -221,19 +227,30 @@ export const doctorActions: PrescriptionAction[] = [
     label: "Cancel",
     icon: <XCircle className="w-4 h-4 mr-1" />,
     variant: "destructive",
-    onClick: () => {}, // Will be overridden by parent component
+    onClick: handlers.onCancel || (() => {}),
     showForStatus: ["ISSUED"],
   },
 ];
 
-export const organizationActions: PrescriptionAction[] = [
+export const createOrganizationActions = (handlers: {
+  onView?: (prescriptionId: string) => void;
+  onAudit?: (prescriptionId: string) => void;
+}): PrescriptionAction[] => [
   {
     id: "review",
     label: "Review",
     icon: <FileText className="w-4 h-4 mr-1" />,
     variant: "outline",
-    onClick: () => {}, // Will be overridden by parent component
+    onClick: handlers.onView || (() => {}),
     showForStatus: ["ISSUED", "FILLED"],
+  },
+  {
+    id: "audit",
+    label: "Audit",
+    icon: <FileText className="w-4 h-4 mr-1" />,
+    variant: "outline",
+    onClick: handlers.onAudit || (() => {}),
+    showForStatus: ["FILLED", "COMPLETED"],
   },
 ];
 
