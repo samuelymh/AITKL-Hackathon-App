@@ -179,16 +179,15 @@ export async function getAuthorizationGrantsForPatient(
 
   const { status, limit = 50, includeExpired = true } = options;
 
-  const query: any = { patientId };
+  const query: any = { userId: patientId };
 
   if (status) {
-    query.status = status;
+    query["grantDetails.status"] = status;
   }
 
   if (!includeExpired) {
-    query.$or = [{ status: { $ne: "EXPIRED" } }, { "grantDetails.expiresAt": { $gt: new Date() } }];
+    query.$or = [{ "grantDetails.status": { $ne: "EXPIRED" } }, { "grantDetails.expiresAt": { $gt: new Date() } }];
   }
-
   const grants = await AuthorizationGrant.find(query)
     .populate({
       path: "organizationId",
@@ -210,7 +209,7 @@ export async function getAuthorizationGrantsForPatient(
     grantId: grant._id.toString(),
     patient: {
       name: "Current User", // Patient viewing their own grants
-      digitalIdentifier: grant.patientId,
+      digitalIdentifier: grant.userId,
     },
     organization: grant.organizationId,
     requester: grant.requestingPractitionerId
@@ -228,12 +227,12 @@ export async function getAuthorizationGrantsForPatient(
         }
       : null,
     accessScope: grant.accessScope || [],
-    status: grant.status,
+    status: grant.grantDetails?.status || "UNKNOWN",
     createdAt: grant.createdAt,
-    grantedAt: grant.grantedAt,
+    grantedAt: grant.grantDetails?.grantedAt,
     expiresAt:
       grant.grantDetails?.expiresAt ||
-      new Date(grant.createdAt.getTime() + (grant.timeWindowHours || 24) * 60 * 60 * 1000),
-    timeWindowHours: grant.timeWindowHours || 24,
+      new Date(grant.createdAt.getTime() + (grant.grantDetails?.timeWindowHours || 24) * 60 * 60 * 1000),
+    timeWindowHours: grant.grantDetails?.timeWindowHours || 24,
   }));
 }
