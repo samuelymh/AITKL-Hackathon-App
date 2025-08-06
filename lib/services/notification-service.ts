@@ -91,7 +91,7 @@ export async function markNotificationCompleted(notificationId: string, userId: 
 }
 
 /**
- * Get notifications for a user with optimized data fetching
+ * Get notifications for a user with optimized data fetching using aggregation pipeline
  * @param userId - ID of the user
  * @param options - Query options
  */
@@ -105,20 +105,20 @@ export async function getNotificationsForUser(
 ) {
   const { status, limit = 20, includeGrantDetails = false } = options;
 
-  // Build query
-  const query: any = {
+  // Build match query
+  const matchQuery: any = {
     userId: userId,
     $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
   };
 
   if (status) {
-    query.status = status;
+    matchQuery.status = status;
   }
 
-  // Fetch notification jobs
-  const notifications = await NotificationJob.find(query).sort({ scheduledAt: -1 }).limit(limit).lean();
-
+  // If grant details are not needed, use simple query
   if (!includeGrantDetails) {
+    const notifications = await NotificationJob.find(matchQuery).sort({ scheduledAt: -1 }).limit(limit).lean();
+
     return notifications.map((notification) => ({
       id: notification._id,
       type: notification.type,
@@ -131,30 +131,37 @@ export async function getNotificationsForUser(
     }));
   }
 
-  // If grant details are needed, batch fetch them
-  const grantIds = notifications.filter((n) => n.payload.data?.grantId).map((n) => n.payload.data.grantId);
+  // Use aggregation pipeline to join with authorization grants in a single query
+  const aggregationPipeline: any[] = [
+    { $match: matchQuery },
+    {
+      $lookup: {
+        from: "authorizationgrants", // Name of the authorization grant collection
+        localField: "payload.data.grantId",
+        foreignField: "_id",
+        as: "grantDetails",
+      },
+    },
+    { $unwind: { path: "$grantDetails", preserveNullAndEmptyArrays: true } }, // Unwind even if no grant details
+    { $sort: { scheduledAt: -1 } },
+    { $limit: limit },
+  ];
 
-  let grantMap = new Map();
-  if (grantIds.length > 0) {
-    const { getAuthorizationGrantsBatch } = await import("./authorization-service");
-    grantMap = await getAuthorizationGrantsBatch(grantIds);
-  }
+  const notifications = await NotificationJob.aggregate(aggregationPipeline);
 
-  // Transform notifications with grant details
-  return notifications.map((notification) => {
+  return notifications.map((notification: any) => {
+    const grant = notification.grantDetails; // Access grant details directly
+
     let additionalData = {};
 
-    if (notification.payload.data?.grantId) {
-      const grant = grantMap.get(notification.payload.data.grantId);
-      if (grant) {
-        additionalData = {
-          grantStatus: grant.grantDetails.status,
-          expiresAt: grant.grantDetails.expiresAt,
-          accessScope: grant.accessScope,
-          organization: grant.organizationId,
-          practitioner: grant.requestingPractitionerId,
-        };
-      }
+    if (grant) {
+      additionalData = {
+        grantStatus: grant.grantDetails?.status,
+        expiresAt: grant.grantDetails?.expiresAt,
+        accessScope: grant.accessScope,
+        organization: grant.organizationId,
+        practitioner: grant.requestingPractitionerId,
+      };
     }
 
     return {

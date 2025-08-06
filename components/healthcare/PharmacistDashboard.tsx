@@ -259,12 +259,12 @@ export function PharmacistDashboard() {
 
   // Fetch prescription queue (notification jobs related to this pharmacist)
   useEffect(() => {
-    const fetchPrescriptionQueue = async () => {
-      if (!token || !pharmacyOrg) {
-        setLoadingPrescriptions(false);
-        return;
-      }
+    if (!token || !pharmacyOrg) {
+      setLoadingPrescriptions(false);
+      return;
+    }
 
+    const fetchPrescriptionQueue = async () => {
       try {
         const response = await fetch(`/api/practitioner/notifications?organizationId=${pharmacyOrg.id}&limit=20`, {
           headers: {
@@ -319,7 +319,7 @@ export function PharmacistDashboard() {
       }
     };
 
-    fetchPrescriptionQueue();
+    fetchPrescriptionQueue(); // Initial fetch
 
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchPrescriptionQueue, 30000);
