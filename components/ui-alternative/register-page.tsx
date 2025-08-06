@@ -129,7 +129,7 @@ function RegisterForm() {
       await register(registrationData);
 
       // Redirect to login page with success message
-      router.push("/login");
+      router.push("/login?message=registration-success");
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Handle validation errors
@@ -173,19 +173,6 @@ function RegisterForm() {
     // Clear field error when user starts typing
     if (errors[path]) {
       setErrors({ ...errors, [path]: "" });
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "patient":
-        return <User className="w-5 h-5" />;
-      case "doctor":
-        return <Stethoscope className="w-5 h-5" />;
-      case "pharmacist":
-        return <Pill className="w-5 h-5" />;
-      default:
-        return <User className="w-5 h-5" />;
     }
   };
 

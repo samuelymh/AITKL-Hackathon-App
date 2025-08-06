@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Lock, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { Alert, AlertDescription } from "../ui/alert";
 
@@ -20,13 +20,33 @@ const LoginSchema = z.object({
 });
 
 function LoginForm() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+  const searchParams = useSearchParams();
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const router = useRouter();
   const { login } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  });
+
+  useEffect(() => {
+    const message = searchParams.get("message");
+    if (message === "registration-success") {
+      setShowSuccessMessage(true);
+      // Clear the URL parameter after showing the message
+      const url = new URL(window.location.href);
+      url.searchParams.delete("message");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +163,14 @@ function LoginForm() {
           </div>
         </CardContent>
       </Card>
+      {showSuccessMessage && (
+        <Alert className="border-green-200 bg-green-50 mt-2">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Account created successfully! Please sign in with your credentials.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
