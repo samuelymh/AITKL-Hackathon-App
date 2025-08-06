@@ -162,3 +162,78 @@ export async function getAuthorizationGrantsBatch(grantIds: string[]): Promise<M
 
   return new Map(grants.map((grant) => [grant._id.toString(), grant]));
 }
+
+/**
+ * Get authorization grants for a specific patient
+ * Shows the patient's complete grant history
+ */
+export async function getAuthorizationGrantsForPatient(
+  patientId: string,
+  options: {
+    status?: string;
+    limit?: number;
+    includeExpired?: boolean;
+  } = {}
+): Promise<GrantData[]> {
+  await connectToDatabase();
+
+  const { status, limit = 50, includeExpired = true } = options;
+
+  const query: any = { patientId };
+
+  if (status) {
+    query.status = status;
+  }
+
+  if (!includeExpired) {
+    query.$or = [{ status: { $ne: "EXPIRED" } }, { "grantDetails.expiresAt": { $gt: new Date() } }];
+  }
+
+  const grants = await AuthorizationGrant.find(query)
+    .populate({
+      path: "organizationId",
+      select: "organizationInfo address",
+    })
+    .populate({
+      path: "requestingPractitionerId",
+      select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+      populate: {
+        path: "userId",
+        select: "personalInfo.firstName personalInfo.lastName auth.role",
+      },
+    })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+
+  return grants.map((grant: any) => ({
+    grantId: grant._id.toString(),
+    patient: {
+      name: "Current User", // Patient viewing their own grants
+      digitalIdentifier: grant.patientId,
+    },
+    organization: grant.organizationId,
+    requester: grant.requestingPractitionerId
+      ? {
+          name:
+            grant.requestingPractitionerId.userId?.personalInfo?.firstName &&
+            grant.requestingPractitionerId.userId?.personalInfo?.lastName
+              ? `${grant.requestingPractitionerId.userId.personalInfo.firstName} ${grant.requestingPractitionerId.userId.personalInfo.lastName}`
+              : "Unknown Practitioner",
+          type:
+            grant.requestingPractitionerId.professionalInfo?.practitionerType ||
+            grant.requestingPractitionerId.userId?.auth?.role ||
+            "practitioner",
+          specialty: grant.requestingPractitionerId.professionalInfo?.specialty,
+        }
+      : null,
+    accessScope: grant.accessScope || [],
+    status: grant.status,
+    createdAt: grant.createdAt,
+    grantedAt: grant.grantedAt,
+    expiresAt:
+      grant.grantDetails?.expiresAt ||
+      new Date(grant.createdAt.getTime() + (grant.timeWindowHours || 24) * 60 * 60 * 1000),
+    timeWindowHours: grant.timeWindowHours || 24,
+  }));
+}
