@@ -6,10 +6,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import WelcomePage from "@/components/ui-alternative/welcome-page";
 
 export default function HomePage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+    // Switch to minimalist UI
+    const isMinimalist = process.env.NEXT_PUBLIC_UI_MINIMALIST === "true";
+    if (isMinimalist) {
+      return <WelcomePage />
+    }
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
