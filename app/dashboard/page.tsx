@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
+import { AuthorizationHistory } from "@/components/patient/AuthorizationHistory";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
 import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
 import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard";
@@ -283,6 +284,9 @@ export default function DashboardPage() {
                 </Card>
               </div>
             </div>
+
+            {/* Full-width Authorization Grant History */}
+            <AuthorizationHistory userId={user.digitalIdentifier || user.id} />
           </div>
         )}
       </div>
