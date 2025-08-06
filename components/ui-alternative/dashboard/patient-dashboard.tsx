@@ -2,11 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Share2, FileText, Shield, Upload } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientDashboard() {
-  const { user } = useAuth();
-
   return (
     <div className="p-6 space-y-6">
       {/* Info Box */}

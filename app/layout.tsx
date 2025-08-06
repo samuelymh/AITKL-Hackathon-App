@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useState } from "react";
 import "./globals.css";
+import MobileEmulator from "@/components/ui-alternative/mobile-emulator";
 
 export default function RootLayout({
   children,
@@ -26,7 +27,7 @@ export default function RootLayout({
             retry: 1,
           },
         },
-      }),
+      })
   );
 
   return (
@@ -42,7 +43,9 @@ html {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <MobileEmulator>{children}</MobileEmulator>
+          </AuthProvider>
         </QueryClientProvider>
       </body>
     </html>

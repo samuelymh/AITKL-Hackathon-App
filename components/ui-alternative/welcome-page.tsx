@@ -1,14 +1,13 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Heart, Shield } from "lucide-react"
-import Link from "next/link"
+import { Button } from "@/components/ui/button";
+import { CardContent, CardHeader } from "@/components/ui/card";
+import { Heart, Shield } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-
 
 export default function WelcomePage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,7 +24,7 @@ export default function WelcomePage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-10 h-10 mx-auto text-blue-500 animate-spin" />
       </div>
-    )
+    );
   }
 
   if (isAuthenticated) {
@@ -33,8 +32,8 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-full">
+      <div className="w-full max-w-md">
         <CardHeader className="text-center pb-2">
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <div className="relative">
@@ -42,8 +41,12 @@ export default function WelcomePage() {
               <Shield className="w-6 h-6 text-blue-800 absolute -top-1 -right-1" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HealthPass</h1>
-          <p className="text-gray-600">Access and share your medical records securely.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Welcome to HealthPass
+          </h1>
+          <p className="text-gray-600">
+            Access and share your medical records securely.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
           <Link href="/login">
@@ -57,7 +60,7 @@ export default function WelcomePage() {
             </Button>
           </Link>
         </CardContent>
-      </Card>
+      </div>
     </div>
-  )
+  );
 }

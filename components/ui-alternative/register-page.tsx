@@ -177,8 +177,8 @@ function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+    <div className="flex items-center justify-center min-h-full">
+      <div className="w-full max-w-md bg-white rounded-2xl p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <Link href="/login">

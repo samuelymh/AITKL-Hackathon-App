@@ -1,10 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 
 type UserRole = "patient" | "doctor" | "pharmacist" | "admin";
 
@@ -50,7 +50,7 @@ export default function ProtectedLayout({
   children,
   requiredRoles,
 }: ProtectedLayoutProps) {
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -78,10 +78,8 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {children}
-      </main>
+    <div className="min-h-screen bg-gray-50 relative">
+      <main className="pb-20">{children}</main>
     </div>
   );
 }
