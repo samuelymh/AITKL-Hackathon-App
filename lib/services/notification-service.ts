@@ -33,25 +33,34 @@ export async function createAuthorizationRequestNotification(
   scope: string[],
   timeWindowHours: number
 ): Promise<void> {
-  await NotificationJob.createJob({
-    type: NotificationJobType.AUTHORIZATION_REQUEST,
-    priority: timeWindowHours <= 2 ? JobPriority.URGENT : JobPriority.NORMAL,
-    userId: new mongoose.Types.ObjectId(patientId),
-    payload: {
-      title: "Healthcare Access Request",
-      body: `${organization.organizationInfo.name} has requested access to your medical records`,
-      data: {
-        grantId: grantId,
-        organizationId: organization._id.toString(),
-        organizationName: organization.organizationInfo.name,
-        requestingPractitionerId: requestingPractitionerId,
-        accessScope: scope,
-        timeWindowHours: timeWindowHours,
+  try {
+    console.log("Creating notification job for patient:", patientId, "grant:", grantId);
+
+    const notificationJob = await NotificationJob.createJob({
+      type: NotificationJobType.AUTHORIZATION_REQUEST,
+      priority: timeWindowHours <= 2 ? JobPriority.URGENT : JobPriority.NORMAL,
+      userId: new mongoose.Types.ObjectId(patientId),
+      payload: {
+        title: "Healthcare Access Request",
+        body: `${organization.organizationInfo.name} has requested access to your medical records`,
+        data: {
+          grantId: grantId,
+          organizationId: organization._id.toString(),
+          organizationName: organization.organizationInfo.name,
+          requestingPractitionerId: requestingPractitionerId,
+          accessScope: scope,
+          timeWindowHours: timeWindowHours,
+        },
       },
-    },
-    maxRetries: 3,
-    expiresAt: new Date(Date.now() + timeWindowHours * 60 * 60 * 1000), // Same as grant expiration
-  });
+      maxRetries: 3,
+      expiresAt: new Date(Date.now() + timeWindowHours * 60 * 60 * 1000), // Same as grant expiration
+    });
+
+    console.log("Notification job created successfully:", notificationJob._id);
+  } catch (error) {
+    console.error("Error creating notification job:", error);
+    throw error;
+  }
 }
 
 /**
@@ -107,7 +116,7 @@ export async function getNotificationsForUser(
 
   // Build match query
   const matchQuery: any = {
-    userId: userId,
+    userId: new mongoose.Types.ObjectId(userId),
     $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
   };
 
@@ -135,9 +144,20 @@ export async function getNotificationsForUser(
   const aggregationPipeline: any[] = [
     { $match: matchQuery },
     {
+      $addFields: {
+        "payload.data.grantObjectId": {
+          $cond: {
+            if: { $ne: ["$payload.data.grantId", null] },
+            then: { $toObjectId: "$payload.data.grantId" },
+            else: null,
+          },
+        },
+      },
+    },
+    {
       $lookup: {
-        from: "authorizationgrants", // Name of the authorization grant collection
-        localField: "payload.data.grantId",
+        from: "authorization_grants", // Correct collection name with underscore
+        localField: "payload.data.grantObjectId",
         foreignField: "_id",
         as: "grantDetails",
       },

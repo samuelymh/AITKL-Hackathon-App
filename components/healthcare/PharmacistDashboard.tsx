@@ -321,8 +321,8 @@ export function PharmacistDashboard() {
 
     fetchPrescriptionQueue(); // Initial fetch
 
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchPrescriptionQueue, 30000);
+    // Poll for updates every 30 minutes
+    const interval = setInterval(fetchPrescriptionQueue, 1800000); // 30 minutes = 1800000ms
     return () => clearInterval(interval);
   }, [token, pharmacyOrg]);
 
