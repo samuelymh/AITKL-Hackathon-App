@@ -3,10 +3,10 @@ import connectToDatabase from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import Organization from "@/lib/models/Organization";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
-import NotificationJob, { NotificationJobType, JobPriority } from "@/lib/services/notification-queue";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { PushNotificationService } from "@/lib/services/push-notification-service";
+import { createAuthorizationRequestNotification } from "@/lib/services/notification-service";
 import { getClientIP } from "@/lib/utils/network";
 
 /**
@@ -146,25 +146,19 @@ export async function POST(request: NextRequest) {
 
     // Create notification job for polling-based notifications
     try {
-      await NotificationJob.createJob({
-        type: NotificationJobType.AUTHORIZATION_REQUEST,
-        priority: timeWindowHours <= 2 ? JobPriority.URGENT : JobPriority.NORMAL,
-        userId: patient._id,
-        payload: {
-          title: "Healthcare Access Request",
-          body: `${organization.organizationInfo.name} has requested access to your medical records`,
-          data: {
-            grantId: authGrant._id.toString(),
-            organizationId: organizationId,
-            organizationName: organization.organizationInfo.name,
-            requestingPractitionerId: requestingPractitionerId,
-            accessScope: scope,
-            timeWindowHours: timeWindowHours,
-          },
-        },
-        maxRetries: 3,
-        expiresAt: new Date(Date.now() + timeWindowHours * 60 * 60 * 1000), // Same as grant expiration
-      });
+      // Convert scope object to array of permissions for the notification
+      const scopeArray = Object.entries(scope)
+        .filter(([_, value]) => value === true)
+        .map(([key, _]) => key);
+
+      await createAuthorizationRequestNotification(
+        patient._id.toString(),
+        authGrant._id.toString(),
+        organization,
+        requestingPractitionerId,
+        scopeArray,
+        timeWindowHours
+      );
     } catch (jobError) {
       console.warn("Failed to create notification job:", jobError);
       // Don't fail the request if job creation fails

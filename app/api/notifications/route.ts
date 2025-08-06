@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import NotificationJob, { NotificationJobStatus } from "@/lib/services/notification-queue";
-import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
+import { NotificationJobStatus } from "@/lib/services/notification-queue";
 import { withAnyAuth } from "@/lib/middleware/auth";
+import { getNotificationsForUser, markNotificationCompleted } from "@/lib/services/notification-service";
 
 /**
  * GET /api/notifications
@@ -21,71 +21,27 @@ async function getNotificationsHandler(request: NextRequest, authContext: any) {
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    // Build query
-    const query: any = {
-      userId: authContext.userId,
-      $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
-    };
-
-    if (status && Object.values(NotificationJobStatus).includes(status as NotificationJobStatus)) {
-      query.status = status;
+    // Validate status parameter
+    if (status && !Object.values(NotificationJobStatus).includes(status as NotificationJobStatus)) {
+      return NextResponse.json({ error: "Invalid status parameter" }, { status: 400 });
     }
 
-    // Fetch notification jobs
-    const notifications = await NotificationJob.find(query).sort({ scheduledAt: -1 }).limit(limit).lean();
+    // Validate limit parameter
+    if (limit < 1 || limit > 100) {
+      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
+    }
 
-    // Transform for frontend
-    const transformedNotifications = await Promise.all(
-      notifications.map(async (notification) => {
-        let additionalData = {};
-
-        // If it's an authorization request, fetch the grant details
-        if (notification.payload.data?.grantId) {
-          try {
-            const grant = await AuthorizationGrant.findById(notification.payload.data.grantId)
-              .populate("organizationId", "organizationInfo.name organizationInfo.type")
-              .populate({
-                path: "requestingPractitionerId",
-                select: "userId professionalInfo.practitionerType",
-                populate: {
-                  path: "userId",
-                  select: "personalInfo.firstName personalInfo.lastName",
-                },
-              })
-              .lean();
-
-            if (grant) {
-              additionalData = {
-                grantStatus: grant.grantDetails.status,
-                expiresAt: grant.grantDetails.expiresAt,
-                accessScope: grant.accessScope,
-                organization: grant.organizationId,
-                practitioner: grant.requestingPractitionerId,
-              };
-            }
-          } catch (error) {
-            console.error("Error fetching grant details:", error);
-          }
-        }
-
-        return {
-          id: notification._id,
-          type: notification.type,
-          status: notification.status,
-          priority: notification.priority,
-          title: notification.payload.title,
-          body: notification.payload.body,
-          data: notification.payload.data,
-          createdAt: notification.scheduledAt,
-          ...additionalData,
-        };
-      })
-    );
+    // Use the optimized service function
+    const notifications = await getNotificationsForUser(authContext.userId, {
+      status: status || undefined,
+      limit,
+      includeGrantDetails: true,
+    });
 
     return NextResponse.json({
       success: true,
-      data: transformedNotifications,
-      total: transformedNotifications.length,
+      data: notifications,
+      total: notifications.length,
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -112,21 +68,37 @@ async function patchNotificationsHandler(request: NextRequest, authContext: any)
       return NextResponse.json({ error: "Missing notificationId or status" }, { status: 400 });
     }
 
-    // Update notification status
-    const notification = await NotificationJob.findOneAndUpdate(
-      {
-        _id: notificationId,
-        userId: authContext.userId,
-      },
-      {
-        status: status,
-        completedAt: status === NotificationJobStatus.COMPLETED ? new Date() : undefined,
-      },
-      { new: true }
-    );
+    // Validate status
+    if (!Object.values(NotificationJobStatus).includes(status)) {
+      return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+    }
 
-    if (!notification) {
-      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    // Use the optimized service function for marking as completed
+    if (status === NotificationJobStatus.COMPLETED) {
+      const success = await markNotificationCompleted(notificationId, authContext.userId);
+
+      if (!success) {
+        return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+      }
+    } else {
+      // For other status updates, use the direct database update
+      const NotificationJob = (await import("@/lib/services/notification-queue")).default;
+
+      const notification = await NotificationJob.findOneAndUpdate(
+        {
+          _id: notificationId,
+          userId: authContext.userId,
+        },
+        {
+          status: status,
+          completedAt: status === NotificationJobStatus.COMPLETED ? new Date() : undefined,
+        },
+        { new: true }
+      );
+
+      if (!notification) {
+        return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+      }
     }
 
     return NextResponse.json({

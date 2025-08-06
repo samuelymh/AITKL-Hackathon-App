@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Clock,
   CheckCircle,
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotificationPolling } from "@/hooks/usePolling";
 
 interface Organization {
   id: string;
@@ -68,125 +69,127 @@ interface AuthorizationRequestsProps {
 }
 
 export function AuthorizationRequests({ userId, className }: AuthorizationRequestsProps) {
-  const [requests, setRequests] = useState<AuthorizationRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { token } = useAuth();
 
-  // Fetch real authorization requests from API
-  useEffect(() => {
-    const fetchRequests = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  // Transform notification data to authorization requests
+  const transformNotificationsToRequests = useCallback((notifications: any[]) => {
+    if (!notifications) return [];
 
-      try {
-        const response = await fetch("/api/notifications?limit=50", {
-          headers: {
-            Authorization: `Bearer ${token}`,
+    return notifications
+      .filter((item: any) => item.type === "AUTHORIZATION_REQUEST")
+      .map((item: any) => ({
+        grantId: item.data?.grantId || item.id,
+        organization: {
+          id: item.organization?._id || item.data?.organizationId || "",
+          name: item.organization?.organizationInfo?.name || item.data?.organizationName || "Unknown Organization",
+          type: (item.organization?.organizationInfo?.type || "UNKNOWN") as any,
+          address: item.organization?.address || "",
+        },
+        practitioner: {
+          id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
+          firstName: item.practitioner?.userId?.personalInfo?.firstName || "Unknown",
+          lastName: item.practitioner?.userId?.personalInfo?.lastName || "Practitioner",
+          role: (item.practitioner?.professionalInfo?.practitionerType || "DOCTOR") as any,
+          specialty: item.practitioner?.professionalInfo?.specialty,
+        },
+        requestedScope: item.accessScope ||
+          item.data?.accessScope || {
+            canViewMedicalHistory: true,
+            canViewPrescriptions: true,
+            canCreateEncounters: false,
+            canViewAuditLogs: false,
           },
-        });
+        timeWindow: {
+          hours: item.data?.timeWindowHours || 24,
+          requestedAt: new Date(item.createdAt),
+          expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+        status: item.grantStatus || (item.status === "COMPLETED" ? "APPROVED" : "PENDING"),
+        urgency: item.priority >= 8 ? "urgent" : "normal",
+        metadata: {
+          title: item.title,
+          body: item.body,
+          notificationId: item.id,
+        },
+      }));
+  }, []);
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // Filter for authorization requests and transform data
-            const authRequests = result.data
-              .filter((item: any) => item.type === "AUTHORIZATION_REQUEST")
-              .map((item: any) => ({
-                grantId: item.data?.grantId || item.id,
-                organization: {
-                  id: item.organization?._id || item.data?.organizationId || "",
-                  name:
-                    item.organization?.organizationInfo?.name || item.data?.organizationName || "Unknown Organization",
-                  type: (item.organization?.organizationInfo?.type || "UNKNOWN") as any,
-                  address: item.organization?.address || "",
-                },
-                practitioner: {
-                  id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-                  firstName: item.practitioner?.userId?.personalInfo?.firstName || "Unknown",
-                  lastName: item.practitioner?.userId?.personalInfo?.lastName || "Practitioner",
-                  role: (item.practitioner?.professionalInfo?.practitionerType || "DOCTOR") as any,
-                  specialty: item.practitioner?.professionalInfo?.specialty,
-                },
-                requestedScope: item.accessScope ||
-                  item.data?.accessScope || {
-                    canViewMedicalHistory: true,
-                    canViewPrescriptions: true,
-                    canCreateEncounters: false,
-                    canViewAuditLogs: false,
-                  },
-                timeWindowHours: item.data?.timeWindowHours || 24,
-                status: (item.grantStatus || "PENDING") as any,
-                createdAt: new Date(item.createdAt),
-                expiresAt: item.expiresAt ? new Date(item.expiresAt) : undefined,
-              }));
+  // Use the custom polling hook
+  const [notifications, loading, error, refresh] = useNotificationPolling(token, {
+    limit: 50,
+    onError: (err) => {
+      console.error("Error fetching notifications:", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch authorization requests",
+        variant: "destructive",
+      });
+    },
+  });
 
-            setRequests(authRequests);
-          }
-        } else {
-          console.error("Failed to fetch notifications:", response.statusText);
-        }
-      } catch (error) {
-        console.error("Error fetching authorization requests:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Transform notifications to requests
+  const requests = transformNotificationsToRequests(notifications || []);
 
-    fetchRequests();
-
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchRequests, 30000);
-    return () => clearInterval(interval);
-  }, [token, userId]);
-
-  // Handle approval
-  const handleApprove = async (grantId: string) => {
+  // Handle approve/deny actions
+  const handleRequestAction = async (grantId: string, action: "approve" | "deny") => {
     setProcessingIds((prev) => new Set(prev).add(grantId));
 
     try {
-      const response = await fetch(`/api/authorization/${grantId}/action`, {
-        method: "POST",
+      const endpoint = action === "approve" ? "/api/v1/authorizations/approve" : "/api/v1/authorizations/deny";
+
+      const response = await fetch(endpoint, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          action: "approve",
-          actionBy: userId,
-          reason: "Approved by patient through dashboard",
-        }),
+        body: JSON.stringify({ grantId }),
       });
 
       if (response.ok) {
-        // Update local state
-        setRequests((prev) =>
-          prev.map((request) =>
-            request.grantId === grantId
-              ? {
-                  ...request,
-                  status: "ACTIVE",
-                  expiresAt: new Date(Date.now() + request.timeWindowHours * 60 * 60 * 1000),
-                }
-              : request
-          )
-        );
-
+        const result = await response.json();
         toast({
-          title: "Access Approved",
-          description: "Healthcare provider now has access to your records.",
+          title: "Success",
+          description: `Authorization request ${action}d successfully`,
         });
+
+        // Refresh the data
+        refresh();
+
+        // Mark notification as read
+        const request = requests.find((r) => r.grantId === grantId);
+        if (request?.metadata?.notificationId) {
+          try {
+            await fetch("/api/notifications", {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                notificationId: request.metadata.notificationId,
+                status: "COMPLETED",
+              }),
+            });
+          } catch (notificationError) {
+            console.warn("Failed to mark notification as read:", notificationError);
+          }
+        }
       } else {
-        throw new Error("Failed to approve authorization");
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.error || `Failed to ${action} authorization request`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error("Failed to approve request:", error);
+      console.error(`Error ${action}ing authorization request:`, error);
       toast({
         title: "Error",
-        description: "Failed to approve access request. Please try again.",
+        description: `Failed to ${action} authorization request`,
         variant: "destructive",
       });
     } finally {
@@ -196,99 +199,20 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         return newSet;
       });
     }
+  };
+
+  // Handle approval
+  const handleApprove = async (grantId: string) => {
+    await handleRequestAction(grantId, "approve");
   };
 
   // Handle denial
   const handleDeny = async (grantId: string) => {
-    setProcessingIds((prev) => new Set(prev).add(grantId));
-
-    try {
-      const response = await fetch(`/api/authorization/${grantId}/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          action: "deny",
-          actionBy: userId,
-          reason: "Denied by patient through dashboard",
-        }),
-      });
-
-      if (response.ok) {
-        // Remove from pending and mark as denied
-        setRequests((prev) =>
-          prev.map((request) => (request.grantId === grantId ? { ...request, status: "REVOKED" } : request))
-        );
-
-        toast({
-          title: "Access Denied",
-          description: "Authorization request has been denied.",
-        });
-      } else {
-        throw new Error("Failed to deny authorization");
-      }
-    } catch (error) {
-      console.error("Failed to deny request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to deny access request. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(grantId);
-        return newSet;
-      });
-    }
+    await handleRequestAction(grantId, "deny");
   };
-
-  // Handle revoke
+  // Handle revoke (for active grants)
   const handleRevoke = async (grantId: string) => {
-    setProcessingIds((prev) => new Set(prev).add(grantId));
-
-    try {
-      const response = await fetch(`/api/authorization/${grantId}/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          action: "revoke",
-          actionBy: userId,
-          reason: "Revoked by patient through dashboard",
-        }),
-      });
-
-      if (response.ok) {
-        setRequests((prev) =>
-          prev.map((request) => (request.grantId === grantId ? { ...request, status: "REVOKED" } : request))
-        );
-
-        toast({
-          title: "Access Revoked",
-          description: "Healthcare provider access has been revoked.",
-        });
-      } else {
-        throw new Error("Failed to revoke authorization");
-      }
-    } catch (error) {
-      console.error("Failed to revoke access:", error);
-      toast({
-        title: "Error",
-        description: "Failed to revoke access. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(grantId);
-        return newSet;
-      });
-    }
+    await handleRequestAction(grantId, "deny"); // Revoke uses deny endpoint
   };
 
   // Get status badge
