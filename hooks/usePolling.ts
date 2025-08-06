@@ -16,7 +16,7 @@ export function usePolling<T>(
   fetchData: () => Promise<T>,
   options: PollingOptions = {}
 ): [T | null, boolean, Error | null, () => void] {
-  const { interval = 30000, enabled = true, onError } = options;
+  const { interval = 1800000, enabled = true, onError } = options; // 30 minutes = 1800000ms
 
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
