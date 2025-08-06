@@ -68,7 +68,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center flex-col justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md rounded-2xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-4">
             <Link href="/">
@@ -76,7 +76,7 @@ function LoginForm() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
               <Lock className="w-5 h-5 text-blue-600" />
             </div>
           </div>
@@ -93,6 +93,7 @@ function LoginForm() {
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 required
                 placeholder="Email"
+                className="rounded-xl"
               />
             </div>
 
@@ -105,6 +106,7 @@ function LoginForm() {
                 onChange={(e) => handleInputChange("password", e.target.value)}
                 required
                 placeholder="Password"
+                className="rounded-xl"
               />
             </div>
 
@@ -116,7 +118,7 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 h-12"
+              className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl"
               disabled={loading}
             >
               {loading ? "Signing in..." : "Login"}

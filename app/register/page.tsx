@@ -4,11 +4,17 @@ import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import RegisterAlternative from "@/components/ui-alternative/register-page";
 import Link from "next/link";
 
 export default function RegisterPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+  const isMinimalist = process.env.NEXT_PUBLIC_UI_MINIMALIST === "true";
+  if (isMinimalist) {
+    return <RegisterAlternative />;
+  }
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
