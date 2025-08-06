@@ -6,6 +6,7 @@ import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { QRCodeService } from "@/lib/services/qr-code-service";
 import { PushNotificationService } from "@/lib/services/push-notification-service";
+import { createAuthorizationRequestNotification } from "@/lib/services/notification-service";
 import { getClientIP } from "@/lib/utils/network";
 
 /**
@@ -141,6 +142,26 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.warn("Failed to send push notification:", notificationError);
       // Don't fail the request if notification fails
+    }
+
+    // Create notification job for polling-based notifications
+    try {
+      // Convert scope object to array of permissions for the notification
+      const scopeArray = Object.entries(scope)
+        .filter(([_, value]) => value === true)
+        .map(([key, _]) => key);
+
+      await createAuthorizationRequestNotification(
+        patient._id.toString(),
+        authGrant._id.toString(),
+        organization,
+        requestingPractitionerId,
+        scopeArray,
+        timeWindowHours
+      );
+    } catch (jobError) {
+      console.warn("Failed to create notification job:", jobError);
+      // Don't fail the request if job creation fails
     }
 
     return NextResponse.json(
