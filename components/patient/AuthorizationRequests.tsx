@@ -93,10 +93,14 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         },
         practitioner: {
           id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-          firstName: item.practitionerName ? item.practitionerName.split(" ")[0] || "Unknown" : "Unknown",
-          lastName: item.practitionerName
-            ? item.practitionerName.split(" ").slice(1).join(" ") || "Practitioner"
-            : "Practitioner",
+          // Simplified name parsing using destructuring and nullish coalescing
+          ...(() => {
+            const [firstName, ...rest] = item.practitionerName?.split(" ") || [];
+            return {
+              firstName: firstName || "Unknown",
+              lastName: rest.join(" ") || "Practitioner",
+            };
+          })(),
           role: item.practitionerType || ((item.practitioner?.professionalInfo?.practitionerType || "doctor") as any),
           specialty: item.practitioner?.professionalInfo?.specialty,
         },

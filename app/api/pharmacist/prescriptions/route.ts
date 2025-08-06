@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
-import Practitioner from "@/lib/models/Practitioner";
+import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
 import { getRecentPrescriptions, getPendingPrescriptionVerifications } from "@/lib/services/pharmacy-service";
 
 /**
@@ -26,8 +26,8 @@ async function getPharmacistPrescriptionsHandler(request: NextRequest, authConte
       return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
     }
 
-    // Find the practitioner record for the authenticated user
-    const practitioner = await Practitioner.findOne({ userId: authContext.userId });
+    // Find the practitioner record for the authenticated user using service
+    const practitioner = await getPractitionerByUserId(authContext.userId);
     if (!practitioner) {
       return NextResponse.json({ error: "Practitioner not found" }, { status: 404 });
     }

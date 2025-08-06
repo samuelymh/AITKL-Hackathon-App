@@ -3,9 +3,7 @@ import mongoose, { Mongoose } from "mongoose";
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local",
-  );
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
 // Augment the global NodeJS scope to cache the connection
@@ -25,7 +23,7 @@ if (!cached) {
 }
 
 async function connectToDatabase(): Promise<Mongoose> {
-  if (cached.conn) {
+  if (cached.conn && cached.conn.connection.readyState === 1) {
     console.log("=> using existing database connection");
     return cached.conn;
   }
@@ -40,6 +38,16 @@ async function connectToDatabase(): Promise<Mongoose> {
 
   try {
     cached.conn = await cached.promise;
+
+    // Ensure the connection is ready
+    if (cached.conn.connection.readyState !== 1) {
+      console.log("=> waiting for database connection to be ready");
+      await new Promise((resolve) => {
+        cached.conn!.connection.once("connected", resolve);
+      });
+    }
+
+    console.log("✅ Successfully connected to MongoDB");
   } catch (e) {
     cached.promise = null; // Reset promise on error
     console.error("Error connecting to MongoDb", e);

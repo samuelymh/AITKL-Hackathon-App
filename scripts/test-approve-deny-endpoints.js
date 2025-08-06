@@ -16,7 +16,12 @@ const TEST_CONFIG = {
 };
 
 async function generateTestJWT(userId, digitalIdentifier, role = "patient") {
-  const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+  // Security: Get JWT secret from environment variable
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) {
+    console.error("❌ JWT_SECRET environment variable is required");
+    process.exit(1);
+  }
   const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
   const payload = {
