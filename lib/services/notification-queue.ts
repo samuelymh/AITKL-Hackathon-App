@@ -96,8 +96,8 @@ const notificationJobSchema = {
   },
   priority: {
     type: Number,
-    enum: Object.values(JobPriority),
-    default: JobPriority.NORMAL,
+    enum: [1, 5, 8, 10], // LOW, NORMAL, HIGH, URGENT - explicit numeric values
+    default: 5, // JobPriority.NORMAL
     required: true,
     index: true,
   },
