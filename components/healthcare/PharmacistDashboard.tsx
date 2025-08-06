@@ -19,6 +19,8 @@ import {
   History,
   Settings,
   User,
+  XCircle,
+  Eye,
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import { useAuth } from "@/contexts/AuthContext";
@@ -95,6 +97,8 @@ export function PharmacistDashboard() {
   });
   const [pharmacyOrg, setPharmacyOrg] = useState<PharmacyOrganization | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(true);
+  const [prescriptionQueue, setPrescriptionQueue] = useState<PrescriptionRequest[]>([]);
+  const [loadingPrescriptions, setLoadingPrescriptions] = useState(true);
 
   // Mock data for development - will be replaced with real API calls
   const mockStats: PharmacistStats = {
@@ -252,6 +256,119 @@ export function PharmacistDashboard() {
 
     fetchPharmacyOrg();
   }, [user, token]);
+
+  // Fetch prescription queue (notification jobs related to this pharmacist)
+  useEffect(() => {
+    const fetchPrescriptionQueue = async () => {
+      if (!token || !pharmacyOrg) {
+        setLoadingPrescriptions(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/practitioner/notifications?organizationId=${pharmacyOrg.id}&limit=20`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // Transform grants into prescription requests format
+            const prescriptions = result.data.grants
+              .filter((grant: any) => grant.status === "PENDING" || grant.status === "ACTIVE")
+              .map((grant: any) => ({
+                prescriptionId: `RX-${grant.grantId.slice(-8)}`,
+                patient: {
+                  name: grant.patient.name,
+                  digitalIdentifier: grant.patient.digitalIdentifier,
+                  age: 30, // Default age since we don't have this data
+                  allergies: [], // Default empty since we don't have this data
+                },
+                medication: {
+                  name: "Prescription Access", // Generic name since this is access request
+                  dosage: "N/A",
+                  quantity: 1,
+                  instructions: `Access granted for ${grant.timeWindowHours} hours`,
+                },
+                prescriber: {
+                  name: "Healthcare Provider",
+                  licenseNumber: "N/A",
+                },
+                status: grant.status === "PENDING" ? "pending" : "verified",
+                priority: grant.timeWindowHours <= 2 ? "urgent" : "normal",
+                submittedAt: grant.createdAt,
+              }));
+
+            setPrescriptionQueue(prescriptions);
+
+            // Update stats based on real data
+            setStats((prev) => ({
+              ...prev,
+              pendingVerifications: prescriptions.filter((p: any) => p.status === "pending").length,
+            }));
+          }
+        } else {
+          console.error("Failed to fetch prescription queue:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching prescription queue:", error);
+      } finally {
+        setLoadingPrescriptions(false);
+      }
+    };
+
+    fetchPrescriptionQueue();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchPrescriptionQueue, 30000);
+    return () => clearInterval(interval);
+  }, [token, pharmacyOrg]);
+
+  const handlePrescriptionAction = async (prescriptionId: string, action: "approve" | "reject") => {
+    if (!token) return;
+
+    // Extract grant ID from prescription ID (format: RX-{grantId})
+    const grantId = prescriptionId.replace("RX-", "");
+
+    try {
+      const endpoint = action === "approve" ? "/api/v1/authorizations/approve" : "/api/v1/authorizations/deny";
+
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ grantId }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Prescription ${action}d successfully:`, result);
+
+        // Update the prescription queue by removing the processed item
+        setPrescriptionQueue((prev) => prev.filter((p) => p.prescriptionId !== prescriptionId));
+
+        // Update stats
+        setStats((prev) => ({
+          ...prev,
+          pendingVerifications: prev.pendingVerifications - 1,
+        }));
+      } else {
+        console.error(`Failed to ${action} prescription:`, response.statusText);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing prescription:`, error);
+    }
+  };
+
+  const handleViewPatientRecord = (digitalIdentifier: string) => {
+    console.log("Viewing patient record for:", digitalIdentifier);
+    // This would typically open a modal or navigate to a patient record view
+    // For now, we'll just log it
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -500,35 +617,77 @@ export function PharmacistDashboard() {
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-64">
-                  <div className="space-y-3">
-                    {mockPrescriptions.map((prescription) => (
-                      <div key={prescription.prescriptionId} className="border rounded-lg p-3">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-medium">{prescription.patient.name}</p>
-                            <p className="text-sm text-gray-600">{prescription.prescriptionId}</p>
+                  {loadingPrescriptions ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-gray-500">Loading prescriptions...</div>
+                    </div>
+                  ) : prescriptionQueue.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-gray-500">No pending prescriptions</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {prescriptionQueue.map((prescription) => (
+                        <div key={prescription.prescriptionId} className="border rounded-lg p-3">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-medium">{prescription.patient.name}</p>
+                              <p className="text-sm text-gray-600">{prescription.prescriptionId}</p>
+                              <p className="text-xs text-gray-500">ID: {prescription.patient.digitalIdentifier}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              {getPriorityBadge(prescription.priority)}
+                              {getStatusBadge(prescription.status)}
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            {getPriorityBadge(prescription.priority)}
-                            {getStatusBadge(prescription.status)}
+                          <div className="text-sm space-y-1">
+                            <p>
+                              <strong>{prescription.medication.name}</strong> {prescription.medication.dosage}
+                            </p>
+                            <p>Qty: {prescription.medication.quantity}</p>
+                            <p>Instructions: {prescription.medication.instructions}</p>
+                            <p>Prescriber: {prescription.prescriber.name}</p>
+                            {prescription.interactions && (
+                              <div className="flex items-center gap-1 text-orange-600">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>Drug interaction alert</span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <div className="text-sm space-y-1">
-                          <p>
-                            <strong>{prescription.medication.name}</strong> {prescription.medication.dosage}
-                          </p>
-                          <p>Qty: {prescription.medication.quantity}</p>
-                          <p>Prescriber: {prescription.prescriber.name}</p>
-                          {prescription.interactions && (
-                            <div className="flex items-center gap-1 text-orange-600">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span>Drug interaction alert</span>
+                          {prescription.status === "pending" && (
+                            <div className="flex gap-2 mt-3">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handlePrescriptionAction(prescription.prescriptionId, "approve")}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePrescriptionAction(prescription.prescriptionId, "reject")}
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleViewPatientRecord(prescription.patient.digitalIdentifier)}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View Record
+                              </Button>
                             </div>
                           )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </ScrollArea>
               </CardContent>
             </Card>

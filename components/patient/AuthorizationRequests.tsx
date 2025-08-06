@@ -13,6 +13,7 @@ import {
   FileText,
   Pill,
   Activity,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Organization {
   id: string;
@@ -70,95 +72,116 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
   const [loading, setLoading] = useState(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const { token } = useAuth();
 
-  // Mock data for demo purposes
+  // Fetch real authorization requests from API
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setRequests([
-        {
-          grantId: "grant_001",
-          organization: {
-            id: "org_001",
-            name: "City General Hospital",
-            type: "HOSPITAL",
-            address: "123 Medical Center Dr",
+    const fetchRequests = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/notifications?limit=50", {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-          practitioner: {
-            id: "prac_001",
-            firstName: "Dr. Sarah",
-            lastName: "Johnson",
-            role: "DOCTOR",
-            specialty: "Emergency Medicine",
-          },
-          requestedScope: {
-            canViewMedicalHistory: true,
-            canViewPrescriptions: true,
-            canCreateEncounters: false,
-            canViewAuditLogs: false,
-          },
-          timeWindowHours: 24,
-          status: "PENDING",
-          createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-          ipAddress: "192.168.1.100",
-        },
-        {
-          grantId: "grant_002",
-          organization: {
-            id: "org_002",
-            name: "Downtown Pharmacy",
-            type: "PHARMACY",
-            address: "456 Main Street",
-          },
-          practitioner: {
-            id: "prac_002",
-            firstName: "PharmD Mike",
-            lastName: "Chen",
-            role: "PHARMACIST",
-          },
-          requestedScope: {
-            canViewMedicalHistory: false,
-            canViewPrescriptions: true,
-            canCreateEncounters: false,
-            canViewAuditLogs: false,
-          },
-          timeWindowHours: 2,
-          status: "ACTIVE",
-          createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-          expiresAt: new Date(Date.now() + 90 * 60 * 1000), // 90 minutes from now
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, [userId]);
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // Filter for authorization requests and transform data
+            const authRequests = result.data
+              .filter((item: any) => item.type === "AUTHORIZATION_REQUEST")
+              .map((item: any) => ({
+                grantId: item.data?.grantId || item.id,
+                organization: {
+                  id: item.organization?._id || item.data?.organizationId || "",
+                  name:
+                    item.organization?.organizationInfo?.name || item.data?.organizationName || "Unknown Organization",
+                  type: (item.organization?.organizationInfo?.type || "UNKNOWN") as any,
+                  address: item.organization?.address || "",
+                },
+                practitioner: {
+                  id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
+                  firstName: item.practitioner?.userId?.personalInfo?.firstName || "Unknown",
+                  lastName: item.practitioner?.userId?.personalInfo?.lastName || "Practitioner",
+                  role: (item.practitioner?.professionalInfo?.practitionerType || "DOCTOR") as any,
+                  specialty: item.practitioner?.professionalInfo?.specialty,
+                },
+                requestedScope: item.accessScope ||
+                  item.data?.accessScope || {
+                    canViewMedicalHistory: true,
+                    canViewPrescriptions: true,
+                    canCreateEncounters: false,
+                    canViewAuditLogs: false,
+                  },
+                timeWindowHours: item.data?.timeWindowHours || 24,
+                status: (item.grantStatus || "PENDING") as any,
+                createdAt: new Date(item.createdAt),
+                expiresAt: item.expiresAt ? new Date(item.expiresAt) : undefined,
+              }));
+
+            setRequests(authRequests);
+          }
+        } else {
+          console.error("Failed to fetch notifications:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching authorization requests:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchRequests, 30000);
+    return () => clearInterval(interval);
+  }, [token, userId]);
 
   // Handle approval
   const handleApprove = async (grantId: string) => {
     setProcessingIds((prev) => new Set(prev).add(grantId));
 
     try {
-      // In a real implementation, this would call the API
-      // await approveAuthorizationRequest(grantId);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setRequests((prev) =>
-        prev.map((request) =>
-          request.grantId === grantId
-            ? {
-                ...request,
-                status: "ACTIVE" as const,
-                expiresAt: new Date(Date.now() + request.timeWindowHours * 60 * 60 * 1000),
-              }
-            : request
-        )
-      );
-
-      toast({
-        title: "Access Approved",
-        description: "Healthcare provider now has access to your records.",
+      const response = await fetch(`/api/authorization/${grantId}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: "approve",
+          actionBy: userId,
+          reason: "Approved by patient through dashboard",
+        }),
       });
+
+      if (response.ok) {
+        // Update local state
+        setRequests((prev) =>
+          prev.map((request) =>
+            request.grantId === grantId
+              ? {
+                  ...request,
+                  status: "ACTIVE",
+                  expiresAt: new Date(Date.now() + request.timeWindowHours * 60 * 60 * 1000),
+                }
+              : request
+          )
+        );
+
+        toast({
+          title: "Access Approved",
+          description: "Healthcare provider now has access to your records.",
+        });
+      } else {
+        throw new Error("Failed to approve authorization");
+      }
     } catch (error) {
       console.error("Failed to approve request:", error);
       toast({
@@ -180,18 +203,32 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
     setProcessingIds((prev) => new Set(prev).add(grantId));
 
     try {
-      // In a real implementation, this would call the API
-      // await denyAuthorizationRequest(grantId);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setRequests((prev) => prev.filter((request) => request.grantId !== grantId));
-
-      toast({
-        title: "Access Denied",
-        description: "Authorization request has been denied.",
+      const response = await fetch(`/api/authorization/${grantId}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: "deny",
+          actionBy: userId,
+          reason: "Denied by patient through dashboard",
+        }),
       });
+
+      if (response.ok) {
+        // Remove from pending and mark as denied
+        setRequests((prev) =>
+          prev.map((request) => (request.grantId === grantId ? { ...request, status: "REVOKED" } : request))
+        );
+
+        toast({
+          title: "Access Denied",
+          description: "Authorization request has been denied.",
+        });
+      } else {
+        throw new Error("Failed to deny authorization");
+      }
     } catch (error) {
       console.error("Failed to deny request:", error);
       toast({
@@ -213,20 +250,31 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
     setProcessingIds((prev) => new Set(prev).add(grantId));
 
     try {
-      // In a real implementation, this would call the API
-      // await revokeAuthorizationGrant(grantId);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setRequests((prev) =>
-        prev.map((request) => (request.grantId === grantId ? { ...request, status: "REVOKED" as const } : request))
-      );
-
-      toast({
-        title: "Access Revoked",
-        description: "Healthcare provider access has been revoked.",
+      const response = await fetch(`/api/authorization/${grantId}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: "revoke",
+          actionBy: userId,
+          reason: "Revoked by patient through dashboard",
+        }),
       });
+
+      if (response.ok) {
+        setRequests((prev) =>
+          prev.map((request) => (request.grantId === grantId ? { ...request, status: "REVOKED" } : request))
+        );
+
+        toast({
+          title: "Access Revoked",
+          description: "Healthcare provider access has been revoked.",
+        });
+      } else {
+        throw new Error("Failed to revoke authorization");
+      }
     } catch (error) {
       console.error("Failed to revoke access:", error);
       toast({
