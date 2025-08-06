@@ -110,6 +110,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
           requestedAt: new Date(item.createdAt),
           expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
+        timeWindowHours: item.data?.timeWindowHours || 24,
+        createdAt: new Date(item.createdAt),
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
         status: item.grantStatus || (item.status === "COMPLETED" ? "APPROVED" : "PENDING"),
         urgency: item.priority >= 8 ? "urgent" : "normal",
         metadata: {
