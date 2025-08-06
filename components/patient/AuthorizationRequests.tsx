@@ -93,8 +93,8 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         },
         practitioner: {
           id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-          firstName: item.practitioner?.userId?.personalInfo?.firstName || "Unknown",
-          lastName: item.practitioner?.userId?.personalInfo?.lastName || "Practitioner",
+          firstName: item.practitionerName ? item.practitionerName.split(' ')[0] || "Unknown" : "Unknown",
+          lastName: item.practitionerName ? item.practitionerName.split(' ').slice(1).join(' ') || "Practitioner" : "Practitioner",
           role: (item.practitioner?.professionalInfo?.practitionerType || "DOCTOR") as any,
           specialty: item.practitioner?.professionalInfo?.specialty,
         },
