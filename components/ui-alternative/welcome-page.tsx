@@ -53,7 +53,7 @@ export default function WelcomePage() {
           </Link>
           <Link href="/register">
             <Button variant="outline" className="w-full h-12 border-gray-300">
-              <Link href="/register">Register</Link>
+              Register
             </Button>
           </Link>
         </CardContent>
