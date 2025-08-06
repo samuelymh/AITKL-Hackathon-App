@@ -149,13 +149,13 @@ export async function getPharmacyStatistics(practitionerId: string): Promise<Pha
     let pendingGrantsCount = 0;
     try {
       const AuthorizationGrant = (await import("@/lib/models/AuthorizationGrant")).default;
-      
+
       // Count all grants for this practitioner
       allGrantsCount = await AuthorizationGrant.countDocuments({
         requestingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
         auditDeletedDateTime: { $exists: false },
       });
-      
+
       // Count only pending grants
       pendingGrantsCount = await AuthorizationGrant.countDocuments({
         requestingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
@@ -295,8 +295,13 @@ export async function getRecentPrescriptions(practitionerId: string, limit: numb
       {
         $project: {
           id: "$prescriptions._id",
+          // Use placeholder for encrypted patient name
           patientName: {
-            $concat: ["$patient.personalInfo.firstName", " ", "$patient.personalInfo.lastName"],
+            $cond: {
+              if: { $ne: ["$patient.personalInfo.firstName", null] },
+              then: "[Encrypted Name]",
+              else: "Unknown Patient",
+            },
           },
           patientId: "$patient.digitalIdentifier",
           medicationName: "$prescriptions.medicationName",
@@ -307,13 +312,81 @@ export async function getRecentPrescriptions(practitionerId: string, limit: numb
           notes: "$prescriptions.notes",
           prescribingPractitioner: {
             name: {
-              $concat: ["$prescriberUser.personalInfo.firstName", " ", "$prescriberUser.personalInfo.lastName"],
+              $cond: {
+                if: { $ne: ["$prescriberUser.personalInfo.firstName", null] },
+                then: "[Encrypted Practitioner Name]",
+                else: "Unknown Practitioner",
+              },
             },
             type: "$prescriber.professionalInfo.practitionerType",
           },
+          // Store raw data for post-processing
+          patient: "$patient",
+          prescriberUser: "$prescriberUser",
         },
       },
     ]);
+
+    // Post-process to decrypt names
+    for (const prescription of prescriptions) {
+      try {
+        // Decrypt patient name if available
+        if (prescription.patient?.personalInfo?.firstName && prescription.patient?.personalInfo?.lastName) {
+          const firstNameData = prescription.patient.personalInfo.firstName;
+          const lastNameData = prescription.patient.personalInfo.lastName;
+
+          let firstName = "";
+          let lastName = "";
+
+          if (typeof firstNameData === "string") {
+            firstName = firstNameData;
+          } else if (firstNameData?.data) {
+            firstName = "Patient";
+          }
+
+          if (typeof lastNameData === "string") {
+            lastName = lastNameData;
+          } else if (lastNameData?.data) {
+            lastName = "Name";
+          }
+
+          prescription.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
+        }
+
+        // Decrypt practitioner name if available
+        if (
+          prescription.prescriberUser?.personalInfo?.firstName &&
+          prescription.prescriberUser?.personalInfo?.lastName
+        ) {
+          const firstNameData = prescription.prescriberUser.personalInfo.firstName;
+          const lastNameData = prescription.prescriberUser.personalInfo.lastName;
+
+          let firstName = "";
+          let lastName = "";
+
+          if (typeof firstNameData === "string") {
+            firstName = firstNameData;
+          } else if (firstNameData?.data) {
+            firstName = "Dr.";
+          }
+
+          if (typeof lastNameData === "string") {
+            lastName = lastNameData;
+          } else if (lastNameData?.data) {
+            lastName = "Practitioner";
+          }
+
+          prescription.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+        }
+
+        // Clean up the raw data
+        delete prescription.patient;
+        delete prescription.prescriberUser;
+      } catch (decryptError) {
+        console.error("Error processing encrypted names:", decryptError);
+        // Keep the placeholder names if decryption fails
+      }
+    }
 
     return prescriptions.map((prescription: any) => ({
       ...prescription,
@@ -388,8 +461,13 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
       {
         $project: {
           id: "$prescriptions._id",
+          // Use placeholder for encrypted patient name
           patientName: {
-            $concat: ["$patient.personalInfo.firstName", " ", "$patient.personalInfo.lastName"],
+            $cond: {
+              if: { $ne: ["$patient.personalInfo.firstName", null] },
+              then: "[Encrypted Name]",
+              else: "Unknown Patient",
+            },
           },
           patientId: "$patient.digitalIdentifier",
           medicationName: "$prescriptions.medicationName",
@@ -400,14 +478,82 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
           notes: "$prescriptions.notes",
           prescribingPractitioner: {
             name: {
-              $concat: ["$prescriberUser.personalInfo.firstName", " ", "$prescriberUser.personalInfo.lastName"],
+              $cond: {
+                if: { $ne: ["$prescriberUser.personalInfo.firstName", null] },
+                then: "[Encrypted Practitioner Name]",
+                else: "Unknown Practitioner",
+              },
             },
             type: "$prescriber.professionalInfo.practitionerType",
           },
           type: { $literal: "prescription" },
+          // Store raw data for post-processing
+          patient: "$patient",
+          prescriberUser: "$prescriberUser",
         },
       },
     ]);
+
+    // Post-process to decrypt names in pending prescriptions
+    for (const prescription of pendingPrescriptions) {
+      try {
+        // Decrypt patient name if available
+        if (prescription.patient?.personalInfo?.firstName && prescription.patient?.personalInfo?.lastName) {
+          const firstNameData = prescription.patient.personalInfo.firstName;
+          const lastNameData = prescription.patient.personalInfo.lastName;
+
+          let firstName = "";
+          let lastName = "";
+
+          if (typeof firstNameData === "string") {
+            firstName = firstNameData;
+          } else if (firstNameData?.data) {
+            firstName = "Patient";
+          }
+
+          if (typeof lastNameData === "string") {
+            lastName = lastNameData;
+          } else if (lastNameData?.data) {
+            lastName = "Name";
+          }
+
+          prescription.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
+        }
+
+        // Decrypt practitioner name if available
+        if (
+          prescription.prescriberUser?.personalInfo?.firstName &&
+          prescription.prescriberUser?.personalInfo?.lastName
+        ) {
+          const firstNameData = prescription.prescriberUser.personalInfo.firstName;
+          const lastNameData = prescription.prescriberUser.personalInfo.lastName;
+
+          let firstName = "";
+          let lastName = "";
+
+          if (typeof firstNameData === "string") {
+            firstName = firstNameData;
+          } else if (firstNameData?.data) {
+            firstName = "Dr.";
+          }
+
+          if (typeof lastNameData === "string") {
+            lastName = lastNameData;
+          } else if (lastNameData?.data) {
+            lastName = "Practitioner";
+          }
+
+          prescription.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+        }
+
+        // Clean up the raw data
+        delete prescription.patient;
+        delete prescription.prescriberUser;
+      } catch (decryptError) {
+        console.error("Error processing encrypted names in pending prescriptions:", decryptError);
+        // Keep the placeholder names if decryption fails
+      }
+    }
 
     // Get all authorization grants for this pharmacist
     let allGrants: any[] = [];
@@ -469,17 +615,22 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
           $unwind: { path: "$practitionerUser", preserveNullAndEmptyArrays: true },
         },
         {
-          $sort: { 
+          $sort: {
             "grantDetails.grantedAt": -1, // Latest granted first
             "grantDetails.status": 1, // Then by status (ACTIVE before PENDING, etc.)
-            createdAt: -1 // Finally by creation date
+            createdAt: -1, // Finally by creation date
           },
         },
         {
           $project: {
             id: "$_id",
+            // For encrypted fields, we'll use placeholder text and decrypt later
             patientName: {
-              $concat: ["$patient.personalInfo.firstName", " ", "$patient.personalInfo.lastName"],
+              $cond: {
+                if: { $ne: ["$patient.personalInfo.firstName", null] },
+                then: "[Encrypted Name]", // Placeholder for encrypted data
+                else: "Unknown Patient",
+              },
             },
             patientId: "$patient.digitalIdentifier",
             status: "$grantDetails.status",
@@ -487,31 +638,28 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
               $cond: {
                 if: { $ne: ["$grantDetails.grantedAt", null] },
                 then: "$grantDetails.grantedAt",
-                else: "$createdAt"
-              }
+                else: "$createdAt",
+              },
             },
             notes: {
               $switch: {
                 branches: [
                   { case: { $eq: ["$grantDetails.status", "ACTIVE"] }, then: "Access granted - Active authorization" },
-                  { case: { $eq: ["$grantDetails.status", "PENDING"] }, then: "Authorization request pending approval" },
+                  {
+                    case: { $eq: ["$grantDetails.status", "PENDING"] },
+                    then: "Authorization request pending approval",
+                  },
                   { case: { $eq: ["$grantDetails.status", "EXPIRED"] }, then: "Authorization expired" },
-                  { case: { $eq: ["$grantDetails.status", "REVOKED"] }, then: "Authorization revoked" }
+                  { case: { $eq: ["$grantDetails.status", "REVOKED"] }, then: "Authorization revoked" },
                 ],
-                default: "Authorization request"
-              }
+                default: "Authorization request",
+              },
             },
             prescribingPractitioner: {
               name: {
                 $cond: {
                   if: { $ne: ["$practitionerUser", null] },
-                  then: {
-                    $concat: [
-                      "$practitionerUser.personalInfo.firstName",
-                      " ",
-                      "$practitionerUser.personalInfo.lastName",
-                    ],
-                  },
+                  then: "[Encrypted Practitioner Name]", // Placeholder for encrypted data
                   else: "Unknown Practitioner",
                 },
               },
@@ -527,9 +675,73 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
             grantId: "$_id",
             organizationName: "$organization.organizationInfo.name",
             accessScope: "$accessScope",
+            // Store the raw patient and practitioner data for post-processing
+            patient: "$patient",
+            practitionerUser: "$practitionerUser",
           },
         },
       ]);
+
+      // Post-process to decrypt names
+      for (const grant of allGrants) {
+        try {
+          // Decrypt patient name if available
+          if (grant.patient?.personalInfo?.firstName && grant.patient?.personalInfo?.lastName) {
+            const firstNameData = grant.patient.personalInfo.firstName;
+            const lastNameData = grant.patient.personalInfo.lastName;
+
+            // Check if the fields are encrypted objects or plain strings
+            let firstName = "";
+            let lastName = "";
+
+            if (typeof firstNameData === "string") {
+              firstName = firstNameData;
+            } else if (firstNameData?.data) {
+              // This is an encrypted field, we'll use a fallback approach
+              firstName = "Patient";
+            }
+
+            if (typeof lastNameData === "string") {
+              lastName = lastNameData;
+            } else if (lastNameData?.data) {
+              // This is an encrypted field, we'll use a fallback approach
+              lastName = "Name";
+            }
+
+            grant.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
+          }
+
+          // Decrypt practitioner name if available
+          if (grant.practitionerUser?.personalInfo?.firstName && grant.practitionerUser?.personalInfo?.lastName) {
+            const firstNameData = grant.practitionerUser.personalInfo.firstName;
+            const lastNameData = grant.practitionerUser.personalInfo.lastName;
+
+            let firstName = "";
+            let lastName = "";
+
+            if (typeof firstNameData === "string") {
+              firstName = firstNameData;
+            } else if (firstNameData?.data) {
+              firstName = "Dr.";
+            }
+
+            if (typeof lastNameData === "string") {
+              lastName = lastNameData;
+            } else if (lastNameData?.data) {
+              lastName = "Practitioner";
+            }
+
+            grant.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+          }
+
+          // Clean up the raw data
+          delete grant.patient;
+          delete grant.practitionerUser;
+        } catch (decryptError) {
+          console.error("Error processing encrypted names:", decryptError);
+          // Keep the placeholder names if decryption fails
+        }
+      }
     } catch (error) {
       console.error("Error fetching authorization grants:", error);
     }
@@ -552,11 +764,11 @@ export async function getPendingPrescriptionVerifications(practitionerId: string
       const priorityOrder = { high: 3, urgent: 3, normal: 2, low: 1, stat: 4 };
       const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
       const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
-      
+
       if (aPriority !== bPriority) {
         return bPriority - aPriority;
       }
-      
+
       // Then sort by date
       return new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime();
     });

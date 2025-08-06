@@ -245,6 +245,6 @@ export async function getAuthorizationGrantsForPatient(
 
   return {
     grants: grantData,
-    total
+    total,
   };
 }

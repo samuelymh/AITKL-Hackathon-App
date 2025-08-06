@@ -26,7 +26,7 @@ async function getAuthorizationHistoryHandler(request: NextRequest, authContext:
     if (limit < 1 || limit > 100) {
       return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
     }
-    
+
     if (page < 1) {
       return NextResponse.json({ error: "Page must be greater than 0" }, { status: 400 });
     }
