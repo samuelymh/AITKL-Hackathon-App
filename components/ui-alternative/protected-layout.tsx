@@ -15,7 +15,7 @@ interface ProtectedLayoutProps {
 
 function LoadingLayout() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       {/* Header Skeleton */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,7 +78,7 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-full bg-gray-50 relative">
       <main className="pb-20">{children}</main>
     </div>
   );
