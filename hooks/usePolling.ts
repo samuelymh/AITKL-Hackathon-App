@@ -7,16 +7,19 @@ export interface PollingOptions {
 }
 
 /**
- * Custom hook for polling data with automatic cleanup and error handling
- * @param fetchData - Function that returns a promise with the data to poll
- * @param options - Polling configuration options
+ * Custom hook for fetching data on component mount and manual refresh only
+ * No automatic polling - data is fetched only on:
+ * 1. Component mount/page refresh
+ * 2. Manual refresh via the returned refresh function
+ * @param fetchData - Function that returns a promise with the data to fetch
+ * @param options - Configuration options
  * @returns Tuple containing [data, loading, error, refresh function]
  */
 export function usePolling<T>(
   fetchData: () => Promise<T>,
   options: PollingOptions = {}
 ): [T | null, boolean, Error | null, () => void] {
-  const { interval = 1800000, enabled = true, onError } = options; // 30 minutes = 1800000ms
+  const { enabled = true, onError } = options; // Removed interval as it's no longer used
 
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -64,11 +67,10 @@ export function usePolling<T>(
       return;
     }
 
-    // Execute immediately
+    // Execute immediately on mount/refresh only
     execute();
 
-    // Set up polling interval
-    intervalRef.current = setInterval(execute, interval);
+    // No automatic polling - only manual refresh
 
     // Cleanup function
     return () => {
@@ -78,7 +80,7 @@ export function usePolling<T>(
         intervalRef.current = null;
       }
     };
-  }, [execute, interval, enabled]);
+  }, [execute, enabled]); // Removed interval from dependencies
 
   useEffect(() => {
     return () => {
@@ -90,13 +92,13 @@ export function usePolling<T>(
 }
 
 /**
- * Hook for polling notifications specifically
+ * Hook for fetching notifications on mount/refresh only (no automatic polling)
  * @param token - Authentication token
- * @param options - Polling options
+ * @param options - Configuration options
  */
 export function useNotificationPolling(
   token: string | null,
-  options: Omit<PollingOptions, "enabled"> & { limit?: number } = {}
+  options: Omit<PollingOptions, "enabled" | "interval"> & { limit?: number } = {}
 ) {
   const { limit = 20, ...pollingOptions } = options;
 
@@ -104,6 +106,8 @@ export function useNotificationPolling(
     if (!token) {
       throw new Error("No authentication token available");
     }
+
+    console.log("🔍 Fetching notifications - this should only happen on mount/manual refresh");
 
     const response = await fetch(`/api/notifications?limit=${limit}`, {
       headers: {
@@ -130,15 +134,15 @@ export function useNotificationPolling(
 }
 
 /**
- * Hook for polling practitioner notifications
+ * Hook for fetching practitioner notifications on mount/refresh only (no automatic polling)
  * @param token - Authentication token
  * @param organizationId - Organization ID to filter by
- * @param options - Polling options
+ * @param options - Configuration options
  */
 export function usePractitionerNotificationPolling(
   token: string | null,
   organizationId: string | null,
-  options: Omit<PollingOptions, "enabled"> & { limit?: number } = {}
+  options: Omit<PollingOptions, "enabled" | "interval"> & { limit?: number } = {}
 ) {
   const { limit = 20, ...pollingOptions } = options;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   Clock,
   CheckCircle,
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotificationPolling } from "@/hooks/usePolling";
+// import { useNotificationPolling } from "@/hooks/usePolling";
 
 interface Organization {
   id: string;
@@ -73,6 +73,10 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
   const { toast } = useToast();
   const { token } = useAuth();
 
+  // Debug: Add component instance ID
+  const componentId = useRef(Math.random().toString(36).substring(2, 9));
+  console.log(`🧩 AuthorizationRequests component mounted with ID: ${componentId.current}`);
+
   // Transform notification data to authorization requests
   const transformNotificationsToRequests = useCallback((notifications: any[]) => {
     if (!notifications) return [];
@@ -116,18 +120,76 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
       }));
   }, []);
 
-  // Use the custom polling hook
-  const [notifications, loading, error, refresh] = useNotificationPolling(token, {
-    limit: 50,
-    onError: (err) => {
-      console.error("Error fetching notifications:", err);
-      toast({
-        title: "Error",
-        description: "Failed to fetch authorization requests",
-        variant: "destructive",
+  // Simple single-fetch implementation (no polling)
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log(`🔄 [${componentId.current}] Manual fetch triggered`);
+
+      const response = await fetch(`/api/notifications?limit=50`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-    },
-  });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setNotifications(result.data || []);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Unknown error occurred");
+      setError(error);
+      console.error(`❌ [${componentId.current}] Error fetching notifications:`, error);
+
+      // Check if it's a JWT expiration error
+      if (
+        error.message.includes("401") ||
+        error.message.includes("jwt expired") ||
+        error.message.includes("unauthorized")
+      ) {
+        toast({
+          title: "Session Expired",
+          description: "Please log in again to view authorization requests.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch authorization requests",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token, toast]);
+
+  // Fetch once on mount
+  React.useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const refresh = useCallback(() => {
+    console.log(`🔄 [${componentId.current}] Manual refresh triggered`);
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  console.log(
+    `📊 [${componentId.current}] Notifications state - loading: ${loading}, count: ${notifications?.length || 0}`
+  );
 
   // Transform notifications to requests
   const requests = transformNotificationsToRequests(notifications || []);
