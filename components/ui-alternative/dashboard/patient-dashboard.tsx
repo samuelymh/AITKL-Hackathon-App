@@ -12,7 +12,6 @@ export default function PatientDashboard() {
           Your records are secure and only shared with your explicit consent.
         </p>
       </div>
-
       {/* Main Actions */}
       <div className="space-y-4">
         <Button
@@ -77,8 +76,52 @@ export default function PatientDashboard() {
           </div>
         </Button>
       </div>
-
       {/* Quick Stats */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Quick Stats
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-1">3</div>
+            <div className="text-sm text-gray-600">Active Prescriptions</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600 mb-1">12</div>
+            <div className="text-sm text-gray-600">Documents Uploaded</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Quick Stats
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-1">3</div>
+            <div className="text-sm text-gray-600">Active Prescriptions</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600 mb-1">12</div>
+            <div className="text-sm text-gray-600">Documents Uploaded</div>
+          </div>
+        </div>
+      </div>{" "}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Quick Stats
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-1">3</div>
+            <div className="text-sm text-gray-600">Active Prescriptions</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600 mb-1">12</div>
+            <div className="text-sm text-gray-600">Documents Uploaded</div>
+          </div>
+        </div>
+      </div>{" "}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Quick Stats
