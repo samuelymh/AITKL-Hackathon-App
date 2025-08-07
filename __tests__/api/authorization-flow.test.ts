@@ -3,7 +3,14 @@
  * Tests the complete end-to-end authorization flow as specified in the knowledge base
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import connectToDatabase from "@/lib/mongodb";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
@@ -55,7 +62,9 @@ describe("Authorization Grant Flow", () => {
           zipCode: "12345",
         },
       },
-      getFullAddress: jest.fn().mockReturnValue("123 Health Ave, Medical City, MC 12345"),
+      getFullAddress: jest
+        .fn()
+        .mockReturnValue("123 Health Ave, Medical City, MC 12345"),
     };
 
     // Create mock practitioner
@@ -82,8 +91,12 @@ describe("Authorization Grant Flow", () => {
     jest.spyOn(User, "findOne").mockResolvedValue(mockPatient);
     jest.spyOn(Organization, "findById").mockResolvedValue(mockOrganization);
     jest.spyOn(Practitioner, "findById").mockResolvedValue(mockPractitioner);
-    jest.spyOn(QRCodeService, "validateAndExtractData").mockResolvedValue(mockQRData);
-    jest.spyOn(PushNotificationService, "sendAuthorizationRequest").mockResolvedValue(true);
+    jest
+      .spyOn(QRCodeService, "validateAndExtractData")
+      .mockResolvedValue(mockQRData);
+    jest
+      .spyOn(PushNotificationService, "sendAuthorizationRequest")
+      .mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -112,7 +125,9 @@ describe("Authorization Grant Flow", () => {
         save: jest.fn().mockResolvedValue(true),
       };
 
-      jest.spyOn(AuthorizationGrant.prototype, "save").mockResolvedValue(mockGrant);
+      jest
+        .spyOn(AuthorizationGrant.prototype, "save")
+        .mockResolvedValue(mockGrant);
 
       const requestBody = {
         qrCodeData: "encrypted_qr_data",
@@ -133,32 +148,48 @@ describe("Authorization Grant Flow", () => {
       expect(PushNotificationService.sendAuthorizationRequest).toBeDefined();
 
       // Verify QR validation
-      const qrResult = await QRCodeService.validateAndExtractData(requestBody.qrCodeData);
+      const qrResult = await QRCodeService.validateAndExtractData(
+        requestBody.qrCodeData,
+      );
       expect(qrResult).toEqual(mockQRData);
 
       // Verify patient lookup
-      const patient = await User.findOne({ "healthInfo.digitalIdentifier": mockQRData.digitalIdentifier });
+      const patient = await User.findOne({
+        "healthInfo.digitalIdentifier": mockQRData.digitalIdentifier,
+      });
       expect(patient).toEqual(mockPatient);
 
       // Verify organization lookup
-      const organization = await Organization.findById(requestBody.organizationId);
+      const organization = await Organization.findById(
+        requestBody.organizationId,
+      );
       expect(organization).toEqual(mockOrganization);
 
       // Verify notification would be sent
-      const notificationResult = await PushNotificationService.sendAuthorizationRequest(mockPatient._id, "grant123");
+      const notificationResult =
+        await PushNotificationService.sendAuthorizationRequest(
+          mockPatient._id,
+          "grant123",
+        );
       expect(notificationResult).toBe(true);
     });
 
     test("should reject invalid QR code data", async () => {
-      jest.spyOn(QRCodeService, "validateAndExtractData").mockRejectedValue(new Error("Invalid QR code"));
+      jest
+        .spyOn(QRCodeService, "validateAndExtractData")
+        .mockRejectedValue(new Error("Invalid QR code"));
 
-      await expect(QRCodeService.validateAndExtractData("invalid_qr")).rejects.toThrow("Invalid QR code");
+      await expect(
+        QRCodeService.validateAndExtractData("invalid_qr"),
+      ).rejects.toThrow("Invalid QR code");
     });
 
     test("should reject request for non-existent patient", async () => {
       jest.spyOn(User, "findOne").mockResolvedValue(null);
 
-      const patient = await User.findOne({ "healthInfo.digitalIdentifier": "nonexistent" });
+      const patient = await User.findOne({
+        "healthInfo.digitalIdentifier": "nonexistent",
+      });
       expect(patient).toBeNull();
     });
 
@@ -274,9 +305,13 @@ describe("Authorization Grant Flow", () => {
         },
       ];
 
-      jest.spyOn(AuthorizationGrant, "findActiveGrants").mockResolvedValue(mockActiveGrants);
+      jest
+        .spyOn(AuthorizationGrant, "findActiveGrants")
+        .mockResolvedValue(mockActiveGrants);
 
-      const activeGrants = await AuthorizationGrant.findActiveGrants(mockPatient._id);
+      const activeGrants = await AuthorizationGrant.findActiveGrants(
+        mockPatient._id,
+      );
       expect(activeGrants).toHaveLength(1);
       expect(activeGrants[0].grantDetails.status).toBe("ACTIVE");
     });
@@ -295,7 +330,9 @@ describe("Authorization Grant Flow", () => {
         hasPermission: jest.fn().mockReturnValue(true),
       };
 
-      jest.spyOn(AuthorizationGrant, "findOne").mockResolvedValue(mockActiveGrant);
+      jest
+        .spyOn(AuthorizationGrant, "findOne")
+        .mockResolvedValue(mockActiveGrant);
 
       const grant = await AuthorizationGrant.findOne({
         userId: mockPatient._id,
@@ -335,7 +372,9 @@ describe("Authorization Grant Flow", () => {
         isExpired: jest.fn().mockReturnValue(true),
       };
 
-      jest.spyOn(AuthorizationGrant, "findOne").mockResolvedValue(mockExpiredGrant);
+      jest
+        .spyOn(AuthorizationGrant, "findOne")
+        .mockResolvedValue(mockExpiredGrant);
 
       const grant = await AuthorizationGrant.findOne({
         userId: mockPatient._id,
@@ -366,15 +405,22 @@ describe("Authorization Grant Flow", () => {
       };
 
       // Mock the notification service to return the expected payload structure
-      jest.spyOn(PushNotificationService, "sendAuthorizationRequest").mockImplementation(async () => {
-        // Simulate notification creation logic
-        return true;
-      });
+      jest
+        .spyOn(PushNotificationService, "sendAuthorizationRequest")
+        .mockImplementation(async () => {
+          // Simulate notification creation logic
+          return true;
+        });
 
-      const result = await PushNotificationService.sendAuthorizationRequest(mockPatient._id, "grant123");
+      const result = await PushNotificationService.sendAuthorizationRequest(
+        mockPatient._id,
+        "grant123",
+      );
 
       expect(result).toBe(true);
-      expect(PushNotificationService.sendAuthorizationRequest).toHaveBeenCalledWith(mockPatient._id, "grant123");
+      expect(
+        PushNotificationService.sendAuthorizationRequest,
+      ).toHaveBeenCalledWith(mockPatient._id, "grant123");
     });
 
     test("should handle notification failure gracefully", async () => {
@@ -382,20 +428,26 @@ describe("Authorization Grant Flow", () => {
         .spyOn(PushNotificationService, "sendAuthorizationRequest")
         .mockRejectedValue(new Error("Notification service unavailable"));
 
-      await expect(PushNotificationService.sendAuthorizationRequest(mockPatient._id, "grant123")).rejects.toThrow(
-        "Notification service unavailable"
-      );
+      await expect(
+        PushNotificationService.sendAuthorizationRequest(
+          mockPatient._id,
+          "grant123",
+        ),
+      ).rejects.toThrow("Notification service unavailable");
     });
   });
 
   describe("Step 6: End-to-End Integration", () => {
     test("should complete full authorization flow successfully", async () => {
       // Step 1: QR scan and request creation
-      const qrData = await QRCodeService.validateAndExtractData("valid_qr_code");
+      const qrData =
+        await QRCodeService.validateAndExtractData("valid_qr_code");
       expect(qrData).toEqual(mockQRData);
 
       // Step 2: Patient lookup
-      const patient = await User.findOne({ "healthInfo.digitalIdentifier": qrData.digitalIdentifier });
+      const patient = await User.findOne({
+        "healthInfo.digitalIdentifier": qrData.digitalIdentifier,
+      });
       expect(patient).toEqual(mockPatient);
 
       // Step 3: Grant creation (mocked)
@@ -406,7 +458,11 @@ describe("Authorization Grant Flow", () => {
       };
 
       // Step 4: Notification sent
-      const notificationSent = await PushNotificationService.sendAuthorizationRequest(patient!._id, mockGrant._id);
+      const notificationSent =
+        await PushNotificationService.sendAuthorizationRequest(
+          patient!._id,
+          mockGrant._id,
+        );
       expect(notificationSent).toBe(true);
 
       // Step 5: Patient approval (simulated)
@@ -446,9 +502,13 @@ describe("Authorization Grant Flow", () => {
     });
 
     test("should handle database connection errors", async () => {
-      (connectToDatabase as jest.Mock).mockRejectedValue(new Error("Database connection failed"));
+      (connectToDatabase as jest.Mock).mockRejectedValue(
+        new Error("Database connection failed"),
+      );
 
-      await expect(connectToDatabase()).rejects.toThrow("Database connection failed");
+      await expect(connectToDatabase()).rejects.toThrow(
+        "Database connection failed",
+      );
     });
 
     test("should sanitize IP addresses correctly", () => {

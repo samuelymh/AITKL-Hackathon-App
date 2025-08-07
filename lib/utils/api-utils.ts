@@ -16,7 +16,9 @@ export function extractAndValidateAuthParams(searchParams: URLSearchParams): {
   const organizationId = searchParams.get("organizationId");
 
   if (!practitionerId || !userId || !organizationId) {
-    throw new Error("practitionerId, userId, and organizationId are required query parameters");
+    throw new Error(
+      "practitionerId, userId, and organizationId are required query parameters",
+    );
   }
 
   return { practitionerId, userId, organizationId };
@@ -33,7 +35,9 @@ export function extractAuthParamsFromBody(body: any): {
   const { practitionerId, userId, organizationId } = body;
 
   if (!practitionerId || !userId || !organizationId) {
-    throw new Error("practitionerId, userId, and organizationId are required in request body");
+    throw new Error(
+      "practitionerId, userId, and organizationId are required in request body",
+    );
   }
 
   return { practitionerId, userId, organizationId };

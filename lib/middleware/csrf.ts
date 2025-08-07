@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 
 // CSRF token configuration
-const CSRF_SECRET = process.env.CSRF_SECRET || "default-csrf-secret-change-in-production";
+const CSRF_SECRET =
+  process.env.CSRF_SECRET || "default-csrf-secret-change-in-production";
 const CSRF_TOKEN_LENGTH = 32;
 
 /**
@@ -44,7 +45,7 @@ export function withCSRFProtection(
   handler: (request: NextRequest) => Promise<NextResponse>,
   options: {
     methods?: string[];
-  } = {}
+  } = {},
 ) {
   const { methods = ["POST", "PUT", "PATCH", "DELETE"] } = options;
 
@@ -58,7 +59,10 @@ export function withCSRFProtection(
     const csrfToken = request.headers.get("x-csrf-token");
 
     if (!csrfToken || !verifyCSRFToken(csrfToken)) {
-      return NextResponse.json({ error: "Invalid or missing CSRF token" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Invalid or missing CSRF token" },
+        { status: 403 },
+      );
     }
 
     return await handler(request);

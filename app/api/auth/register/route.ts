@@ -6,7 +6,13 @@ import User from "@/lib/models/User";
 import Practitioner from "@/lib/models/Practitioner";
 import OrganizationMember from "@/lib/models/OrganizationMember";
 import Organization from "@/lib/models/Organization";
-import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors } from "@/lib/auth";
+import {
+  generateToken,
+  generateRefreshToken,
+  hashPassword,
+  UserRole,
+  AuthErrors,
+} from "@/lib/auth";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
 import { InputSanitizer } from "@/lib/utils/input-sanitizer";
@@ -21,11 +27,15 @@ const RegisterSchema = z
       dateOfBirth: z.string().transform((str) => new Date(str)),
       contact: z.object({
         email: z.string().email(),
-        phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+        phone: z
+          .string()
+          .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
       }),
     }),
     password: z.string().min(8).max(128),
-    role: z.enum(["patient", "doctor", "pharmacist", "admin"]).default("patient"),
+    role: z
+      .enum(["patient", "doctor", "pharmacist", "admin"])
+      .default("patient"),
     organizationId: z
       .string()
       .optional()
@@ -43,7 +53,9 @@ const RegisterSchema = z
       .optional(),
     medicalInfo: z
       .object({
-        bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+        bloodType: z
+          .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+          .optional(),
         knownAllergies: z.array(z.string()).optional(),
         smokingStatus: z.enum(["never", "current", "former"]).optional(),
         additionalNotes: z.string().max(1000).optional(),
@@ -74,9 +86,10 @@ const RegisterSchema = z
       return true;
     },
     {
-      message: "Professional information and organization are required for healthcare professionals",
+      message:
+        "Professional information and organization are required for healthcare professionals",
       path: ["professionalInfo"],
-    }
+    },
   );
 
 type RegisterData = z.infer<typeof RegisterSchema>;
@@ -110,7 +123,8 @@ async function registerHandler(request: NextRequest) {
     const result = await executeDatabaseOperation(async () => {
       // Check if user already exists using searchableEmail for uniqueness
       const existingUser = await User.findOne({
-        "personalInfo.contact.searchableEmail": validatedData.personalInfo.contact.email.toLowerCase().trim(),
+        "personalInfo.contact.searchableEmail":
+          validatedData.personalInfo.contact.email.toLowerCase().trim(),
       });
 
       if (existingUser) {
@@ -118,8 +132,14 @@ async function registerHandler(request: NextRequest) {
       }
 
       // If this is a healthcare professional, validate organization exists
-      if ((validatedData.role === "doctor" || validatedData.role === "pharmacist") && validatedData.organizationId) {
-        const organization = await Organization.findById(validatedData.organizationId);
+      if (
+        (validatedData.role === "doctor" ||
+          validatedData.role === "pharmacist") &&
+        validatedData.organizationId
+      ) {
+        const organization = await Organization.findById(
+          validatedData.organizationId,
+        );
         if (!organization) {
           throw new Error("Organization not found");
         }
@@ -159,7 +179,8 @@ async function registerHandler(request: NextRequest) {
       let practitionerId: mongoose.Types.ObjectId | null = null;
 
       if (
-        (validatedData.role === "doctor" || validatedData.role === "pharmacist") &&
+        (validatedData.role === "doctor" ||
+          validatedData.role === "pharmacist") &&
         validatedData.professionalInfo &&
         validatedData.organizationId
       ) {
@@ -170,7 +191,8 @@ async function registerHandler(request: NextRequest) {
             licenseNumber: validatedData.professionalInfo.licenseNumber!,
             specialty: validatedData.professionalInfo.specialty!,
             practitionerType: validatedData.role,
-            yearsOfExperience: validatedData.professionalInfo.yearsOfExperience!,
+            yearsOfExperience:
+              validatedData.professionalInfo.yearsOfExperience!,
             currentPosition: validatedData.professionalInfo.currentPosition,
             department: validatedData.professionalInfo.department,
           },
@@ -190,7 +212,9 @@ async function registerHandler(request: NextRequest) {
         // Note: During registration, users are creating membership for themselves
         // This is validated by the business logic and organization verification status
         const membershipData = {
-          organizationId: new mongoose.Types.ObjectId(validatedData.organizationId),
+          organizationId: new mongoose.Types.ObjectId(
+            validatedData.organizationId,
+          ),
           practitionerId: savedPractitioner._id,
           membershipDetails: {
             role: validatedData.role,
@@ -220,7 +244,11 @@ async function registerHandler(request: NextRequest) {
         };
 
         const organizationMember = new OrganizationMember(membershipData);
-        AuditHelper.applyAudit(organizationMember, "create", "system-registration");
+        AuditHelper.applyAudit(
+          organizationMember,
+          "create",
+          "system-registration",
+        );
         await organizationMember.save();
       }
 
@@ -264,7 +292,7 @@ async function registerHandler(request: NextRequest) {
           error: result.error || "Registration failed",
           timestamp: result.timestamp,
         },
-        { status }
+        { status },
       );
     }
 
@@ -274,7 +302,7 @@ async function registerHandler(request: NextRequest) {
         data: result.data,
         timestamp: result.timestamp,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     logger.error("Registration error:", error);
@@ -287,7 +315,7 @@ async function registerHandler(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -297,7 +325,7 @@ async function registerHandler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Registration failed",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

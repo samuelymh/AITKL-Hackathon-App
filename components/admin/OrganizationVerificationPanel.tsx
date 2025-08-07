@@ -5,7 +5,13 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -43,8 +49,12 @@ export function OrganizationVerificationPanel() {
   const [success, setSuccess] = useState("");
   const [status, setStatus] = useState("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [verificationNotes, setVerificationNotes] = useState<Record<string, string>>({});
-  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [verificationNotes, setVerificationNotes] = useState<
+    Record<string, string>
+  >({});
+  const [rejectionReasons, setRejectionReasons] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     fetchOrganizations();
@@ -61,12 +71,15 @@ export function OrganizationVerificationPanel() {
         return;
       }
 
-      const response = await fetch(`/api/admin/organizations/verification?status=${status}&page=${page}&limit=10`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `/api/admin/organizations/verification?status=${status}&page=${page}&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       const data = await response.json();
 
@@ -89,7 +102,10 @@ export function OrganizationVerificationPanel() {
     }
   };
 
-  const handleVerificationDecision = async (organizationId: string, action: "verify" | "reject") => {
+  const handleVerificationDecision = async (
+    organizationId: string,
+    action: "verify" | "reject",
+  ) => {
     setProcessingId(organizationId);
     setError("");
     setSuccess("");
@@ -130,7 +146,9 @@ export function OrganizationVerificationPanel() {
       }
 
       if (data.success) {
-        setSuccess(`Organization ${action === "verify" ? "verified" : "rejected"} successfully`);
+        setSuccess(
+          `Organization ${action === "verify" ? "verified" : "rejected"} successfully`,
+        );
         // Refresh the list
         await fetchOrganizations();
         // Clear the notes
@@ -152,7 +170,11 @@ export function OrganizationVerificationPanel() {
   };
 
   const getStatusBadge = (isVerified: boolean) => {
-    return <Badge variant={isVerified ? "default" : "secondary"}>{isVerified ? "Verified" : "Pending"}</Badge>;
+    return (
+      <Badge variant={isVerified ? "default" : "secondary"}>
+        {isVerified ? "Verified" : "Pending"}
+      </Badge>
+    );
   };
 
   const formatAddress = (address: any) => {
@@ -241,11 +263,15 @@ export function OrganizationVerificationPanel() {
         </Alert>
       )}
 
-      {loading && <div className="text-center py-8">Loading organizations...</div>}
+      {loading && (
+        <div className="text-center py-8">Loading organizations...</div>
+      )}
 
       {!loading && organizations.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500">No organizations found for status: {status}</p>
+          <p className="text-gray-500">
+            No organizations found for status: {status}
+          </p>
         </div>
       )}
 
@@ -256,41 +282,57 @@ export function OrganizationVerificationPanel() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{formatSimpleField(org.name, "Organization name")}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {formatSimpleField(org.name, "Organization name")}
+                    </CardTitle>
                     <div className="flex gap-2 mt-2">
                       {getStatusBadge(org.verification.isVerified)}
-                      <Badge className={getTypeColor(org.type)}>{formatSimpleField(org.type, "Type")}</Badge>
+                      <Badge className={getTypeColor(org.type)}>
+                        {formatSimpleField(org.type, "Type")}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">Submitted: {formatDate(org.submittedAt)}</div>
+                  <div className="text-sm text-gray-500">
+                    Submitted: {formatDate(org.submittedAt)}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-sm text-gray-700 mb-2">Organization Details</h4>
+                    <h4 className="font-medium text-sm text-gray-700 mb-2">
+                      Organization Details
+                    </h4>
                     <div className="space-y-1 text-sm">
                       {org.registrationNumber && (
                         <p>
                           <span className="font-medium">Registration:</span>{" "}
-                          {formatSimpleField(org.registrationNumber, "Registration number")}
+                          {formatSimpleField(
+                            org.registrationNumber,
+                            "Registration number",
+                          )}
                         </p>
                       )}
                       <p>
-                        <span className="font-medium">Address:</span> {formatAddress(org.address)}
+                        <span className="font-medium">Address:</span>{" "}
+                        {formatAddress(org.address)}
                       </p>
                       <p>
-                        <span className="font-medium">Email:</span> {formatContact(org.contact, "email")}
+                        <span className="font-medium">Email:</span>{" "}
+                        {formatContact(org.contact, "email")}
                       </p>
                       <p>
-                        <span className="font-medium">Phone:</span> {formatContact(org.contact, "phone")}
+                        <span className="font-medium">Phone:</span>{" "}
+                        {formatContact(org.contact, "phone")}
                       </p>
                     </div>
                   </div>
 
                   {status === "pending" && (
                     <div>
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Verification Actions</h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">
+                        Verification Actions
+                      </h4>
                       <div className="space-y-3">
                         <Textarea
                           placeholder="Add verification notes (optional)"
@@ -320,20 +362,31 @@ export function OrganizationVerificationPanel() {
 
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => handleVerificationDecision(org.id, "verify")}
+                            onClick={() =>
+                              handleVerificationDecision(org.id, "verify")
+                            }
                             disabled={processingId === org.id}
                             size="sm"
                             className="bg-green-600 hover:bg-green-700"
                           >
-                            {processingId === org.id ? "Processing..." : "Verify"}
+                            {processingId === org.id
+                              ? "Processing..."
+                              : "Verify"}
                           </Button>
                           <Button
-                            onClick={() => handleVerificationDecision(org.id, "reject")}
-                            disabled={processingId === org.id || !rejectionReasons[org.id]}
+                            onClick={() =>
+                              handleVerificationDecision(org.id, "reject")
+                            }
+                            disabled={
+                              processingId === org.id ||
+                              !rejectionReasons[org.id]
+                            }
                             variant="destructive"
                             size="sm"
                           >
-                            {processingId === org.id ? "Processing..." : "Reject"}
+                            {processingId === org.id
+                              ? "Processing..."
+                              : "Reject"}
                           </Button>
                         </div>
                       </div>
@@ -342,9 +395,14 @@ export function OrganizationVerificationPanel() {
 
                   {org.verification.verificationNotes && (
                     <div className="md:col-span-2">
-                      <h4 className="font-medium text-sm text-gray-700 mb-2">Verification Notes</h4>
+                      <h4 className="font-medium text-sm text-gray-700 mb-2">
+                        Verification Notes
+                      </h4>
                       <p className="text-sm bg-gray-50 p-2 rounded">
-                        {formatSimpleField(org.verification.verificationNotes, "Verification notes")}
+                        {formatSimpleField(
+                          org.verification.verificationNotes,
+                          "Verification notes",
+                        )}
                       </p>
                       {org.verification.verifiedAt && (
                         <p className="text-xs text-gray-500 mt-1">
@@ -362,16 +420,18 @@ export function OrganizationVerificationPanel() {
 
       {pagination && pagination.total > 1 && (
         <div className="flex justify-center space-x-2">
-          {Array.from({ length: pagination.total }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              variant={page === pagination.current ? "default" : "outline"}
-              size="sm"
-              onClick={() => fetchOrganizations(page)}
-            >
-              {page}
-            </Button>
-          ))}
+          {Array.from({ length: pagination.total }, (_, i) => i + 1).map(
+            (page) => (
+              <Button
+                key={page}
+                variant={page === pagination.current ? "default" : "outline"}
+                size="sm"
+                onClick={() => fetchOrganizations(page)}
+              >
+                {page}
+              </Button>
+            ),
+          )}
         </div>
       )}
 

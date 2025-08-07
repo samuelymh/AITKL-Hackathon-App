@@ -30,11 +30,16 @@ export async function GET(request: NextRequest) {
         grantedAt: grant.grantDetails?.grantedAt,
         accessScope: grant.accessScope,
         isExpired: new Date() > new Date(grant.grantDetails?.expiresAt || 0),
-        isActive: grant.grantDetails?.status === "ACTIVE" && new Date() <= new Date(grant.grantDetails?.expiresAt || 0),
+        isActive:
+          grant.grantDetails?.status === "ACTIVE" &&
+          new Date() <= new Date(grant.grantDetails?.expiresAt || 0),
       })),
     });
   } catch (error) {
     console.error("Error checking practitioner grants:", error);
-    return NextResponse.json({ success: false, error: "Failed to check grants" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check grants" },
+      { status: 500 },
+    );
   }
 }

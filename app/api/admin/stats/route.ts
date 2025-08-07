@@ -86,7 +86,7 @@ async function getSystemStatsHandler(request: NextRequest, authContext: any) {
         error: "Failed to retrieve system statistics",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

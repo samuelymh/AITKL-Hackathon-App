@@ -1,10 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QrCode, Camera, CheckCircle, Users, Shield, Clock, Eye } from "lucide-react";
+import {
+  QrCode,
+  Camera,
+  CheckCircle,
+  Users,
+  Shield,
+  Clock,
+  Eye,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import QRScanner from "@/components/qr-scanner";
 
@@ -52,8 +66,11 @@ export function QRScannerWidget({
   showRecentScans = true,
   compact = false,
 }: QRScannerWidgetProps) {
-  const [recentScans, setRecentScans] = useState<AuthorizationRequestData[]>([]);
-  const [lastScanResult, setLastScanResult] = useState<AuthorizationRequestData | null>(null);
+  const [recentScans, setRecentScans] = useState<AuthorizationRequestData[]>(
+    [],
+  );
+  const [lastScanResult, setLastScanResult] =
+    useState<AuthorizationRequestData | null>(null);
   const [scannerActive, setScannerActive] = useState(false);
 
   const handleAuthorizationCreated = (data: AuthorizationRequestData) => {
@@ -78,14 +95,20 @@ export function QRScannerWidget({
     switch (status) {
       case "PENDING":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
             <Clock className="h-3 w-3 mr-1" />
             Pending
           </Badge>
         );
       case "ACTIVE":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
             <CheckCircle className="h-3 w-3 mr-1" />
             Active
           </Badge>
@@ -95,7 +118,9 @@ export function QRScannerWidget({
     }
   };
 
-  const formatPermissions = (accessScope: AuthorizationRequestData["accessScope"]) => {
+  const formatPermissions = (
+    accessScope: AuthorizationRequestData["accessScope"],
+  ) => {
     const permissions = [];
     if (accessScope.canViewMedicalHistory) permissions.push("Medical History");
     if (accessScope.canViewPrescriptions) permissions.push("Prescriptions");
@@ -116,7 +141,11 @@ export function QRScannerWidget({
         <CardContent className="space-y-4">
           {!scannerActive ? (
             <div className="text-center">
-              <Button onClick={() => setScannerActive(true)} className="w-full" size="lg">
+              <Button
+                onClick={() => setScannerActive(true)}
+                className="w-full"
+                size="lg"
+              >
                 <Camera className="h-4 w-4 mr-2" />
                 Start QR Scanner
               </Button>
@@ -125,9 +154,13 @@ export function QRScannerWidget({
                 <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-2 text-green-700">
                     <CheckCircle className="h-4 w-4" />
-                    <span className="font-medium">Last Scan: {lastScanResult.patient.name}</span>
+                    <span className="font-medium">
+                      Last Scan: {lastScanResult.patient.name}
+                    </span>
                   </div>
-                  <p className="text-sm text-green-600 mt-1">Status: {lastScanResult.status}</p>
+                  <p className="text-sm text-green-600 mt-1">
+                    Status: {lastScanResult.status}
+                  </p>
                 </div>
               )}
             </div>
@@ -139,7 +172,11 @@ export function QRScannerWidget({
                 onAuthorizationCreated={handleAuthorizationCreated}
                 onError={handleScanError}
               />
-              <Button variant="outline" onClick={() => setScannerActive(false)} className="w-full">
+              <Button
+                variant="outline"
+                onClick={() => setScannerActive(false)}
+                className="w-full"
+              >
                 Close Scanner
               </Button>
             </div>
@@ -160,9 +197,15 @@ export function QRScannerWidget({
                 <QrCode className="h-6 w-6" />
                 Patient QR Code Scanner
               </CardTitle>
-              <CardDescription>Scan patient QR codes to request access to their medical records</CardDescription>
+              <CardDescription>
+                Scan patient QR codes to request access to their medical records
+              </CardDescription>
             </div>
-            {recentScans.length > 0 && <Badge variant="secondary">{recentScans.length} recent scans</Badge>}
+            {recentScans.length > 0 && (
+              <Badge variant="secondary">
+                {recentScans.length} recent scans
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -175,11 +218,16 @@ export function QRScannerWidget({
               <div>
                 <h3 className="text-lg font-semibold mb-2">Ready to Scan</h3>
                 <p className="text-muted-foreground mb-4">
-                  Ask the patient to show their health QR code, then click below to start scanning
+                  Ask the patient to show their health QR code, then click below
+                  to start scanning
                 </p>
               </div>
 
-              <Button onClick={() => setScannerActive(true)} size="lg" className="px-8">
+              <Button
+                onClick={() => setScannerActive(true)}
+                size="lg"
+                className="px-8"
+              >
                 <Camera className="h-5 w-5 mr-2" />
                 Start Camera
               </Button>
@@ -191,14 +239,20 @@ export function QRScannerWidget({
                   <span className="font-medium">Authorized Organization</span>
                 </div>
                 <p className="text-sm text-blue-600">{organizationName}</p>
-                <p className="text-xs text-blue-500 mt-1">Organization ID: {organizationId}</p>
+                <p className="text-xs text-blue-500 mt-1">
+                  Organization ID: {organizationId}
+                </p>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Camera Active</h3>
-                <Button variant="outline" onClick={() => setScannerActive(false)} size="sm">
+                <Button
+                  variant="outline"
+                  onClick={() => setScannerActive(false)}
+                  size="sm"
+                >
                   Close Scanner
                 </Button>
               </div>
@@ -219,9 +273,13 @@ export function QRScannerWidget({
               <AlertDescription className="text-green-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-medium">Latest scan: {lastScanResult.patient.name}</span>
+                    <span className="font-medium">
+                      Latest scan: {lastScanResult.patient.name}
+                    </span>
                     <br />
-                    <span className="text-sm">Grant ID: {lastScanResult.grantId}</span>
+                    <span className="text-sm">
+                      Grant ID: {lastScanResult.grantId}
+                    </span>
                   </div>
                   {getStatusBadge(lastScanResult.status)}
                 </div>
@@ -285,7 +343,8 @@ export function QRScannerWidget({
                 <div>
                   <p className="font-medium">Access Patient Records</p>
                   <p className="text-sm text-muted-foreground">
-                    Once approved, access patient data according to granted permissions
+                    Once approved, access patient data according to granted
+                    permissions
                   </p>
                 </div>
               </div>
@@ -295,9 +354,12 @@ export function QRScannerWidget({
               <div className="flex items-start gap-2">
                 <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
                 <div>
-                  <p className="text-sm text-blue-700 font-medium">Security Note</p>
+                  <p className="text-sm text-blue-700 font-medium">
+                    Security Note
+                  </p>
                   <p className="text-xs text-blue-600 mt-1">
-                    All access requests are encrypted and logged. Patient approval is required for each session.
+                    All access requests are encrypted and logged. Patient
+                    approval is required for each session.
                   </p>
                 </div>
               </div>
@@ -318,11 +380,16 @@ export function QRScannerWidget({
           <CardContent>
             <div className="space-y-3">
               {recentScans.map((scan, index) => (
-                <div key={scan.grantId} className="border rounded-lg p-3 space-y-2">
+                <div
+                  key={scan.grantId}
+                  className="border rounded-lg p-3 space-y-2"
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">{scan.patient.name}</h4>
-                      <p className="text-xs text-muted-foreground">ID: {scan.patient.digitalIdentifier}</p>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {scan.patient.digitalIdentifier}
+                      </p>
                     </div>
                     {getStatusBadge(scan.status)}
                   </div>
@@ -334,15 +401,23 @@ export function QRScannerWidget({
                     </div>
                     <div>
                       <p className="text-muted-foreground">Expires</p>
-                      <p className="text-xs">{new Date(scan.expiresAt).toLocaleString()}</p>
+                      <p className="text-xs">
+                        {new Date(scan.expiresAt).toLocaleString()}
+                      </p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Requested Permissions</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Requested Permissions
+                    </p>
                     <div className="flex flex-wrap gap-1">
                       {formatPermissions(scan.accessScope).map((permission) => (
-                        <Badge key={permission} variant="outline" className="text-xs">
+                        <Badge
+                          key={permission}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {permission}
                         </Badge>
                       ))}

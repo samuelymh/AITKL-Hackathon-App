@@ -9,8 +9,14 @@ import { UserRole } from "@/lib/types/enums";
 
 // Validation schema for pharmacist professional information
 const PharmacistProfessionalInfoSchema = z.object({
-  licenseNumber: z.string().min(3, "License number must be at least 3 characters").max(50),
-  specialty: z.string().min(2, "Specialty must be at least 2 characters").max(100),
+  licenseNumber: z
+    .string()
+    .min(3, "License number must be at least 3 characters")
+    .max(50),
+  specialty: z
+    .string()
+    .min(2, "Specialty must be at least 2 characters")
+    .max(100),
   practitionerType: z
     .enum([
       "pharmacist",
@@ -25,7 +31,10 @@ const PharmacistProfessionalInfoSchema = z.object({
     .number()
     .min(0, "Years of experience cannot be negative")
     .max(70, "Years of experience seems too high"),
-  currentPosition: z.string().min(2, "Position must be at least 2 characters").max(100),
+  currentPosition: z
+    .string()
+    .min(2, "Position must be at least 2 characters")
+    .max(100),
   department: z.string().optional(),
   organizationId: z.string().optional(),
 
@@ -40,14 +49,20 @@ const PharmacistProfessionalInfoSchema = z.object({
           .string()
           .transform((str) => new Date(str))
           .optional(),
-        verificationStatus: z.enum(["pending", "verified", "expired"]).default("pending"),
-      })
+        verificationStatus: z
+          .enum(["pending", "verified", "expired"])
+          .default("pending"),
+      }),
     )
     .default([]),
 
-  specializations: z.array(z.string().min(2, "Specialization must be at least 2 characters")).default([]),
+  specializations: z
+    .array(z.string().min(2, "Specialization must be at least 2 characters"))
+    .default([]),
 
-  languages: z.array(z.string().min(2, "Language must be at least 2 characters")).default([]),
+  languages: z
+    .array(z.string().min(2, "Language must be at least 2 characters"))
+    .default([]),
 
   // Professional development
   continuingEducation: z
@@ -66,7 +81,9 @@ const PharmacistProfessionalInfoSchema = z.object({
     .object({
       name: z.string().min(2, "Emergency contact name required"),
       relationship: z.string().min(2, "Relationship required"),
-      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
       email: z.string().email("Invalid email format").optional(),
     })
     .optional(),
@@ -85,7 +102,10 @@ const PharmacistProfessionalInfoSchema = z.object({
  * GET /api/pharmacist/professional-info
  * Retrieve pharmacist's professional information
  */
-async function getPharmacistProfessionalInfo(request: NextRequest, authContext: any) {
+async function getPharmacistProfessionalInfo(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     const userId = authContext.userId;
     logger.info(`Pharmacist ${userId} requesting professional information`);
@@ -105,18 +125,26 @@ async function getPharmacistProfessionalInfo(request: NextRequest, authContext: 
           "consultant_pharmacist",
         ],
       },
-    }).populate("organizationId", "organizationInfo.name organizationInfo.type address");
+    }).populate(
+      "organizationId",
+      "organizationInfo.name organizationInfo.type address",
+    );
 
     if (!practitioner) {
-      logger.info(`No pharmacist professional information found for user ${userId}`);
+      logger.info(
+        `No pharmacist professional information found for user ${userId}`,
+      );
       return NextResponse.json({
         success: true,
         data: null,
-        message: "No professional information found. Please complete your profile.",
+        message:
+          "No professional information found. Please complete your profile.",
       });
     }
 
-    logger.info(`Retrieved pharmacist professional information for user ${userId}`);
+    logger.info(
+      `Retrieved pharmacist professional information for user ${userId}`,
+    );
 
     return NextResponse.json({
       success: true,
@@ -149,7 +177,7 @@ async function getPharmacistProfessionalInfo(request: NextRequest, authContext: 
         error: "Failed to retrieve professional information",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -158,7 +186,10 @@ async function getPharmacistProfessionalInfo(request: NextRequest, authContext: 
  * POST /api/pharmacist/professional-info
  * Create or update pharmacist's professional information
  */
-async function savePharmacistProfessionalInfo(request: NextRequest, authContext: any) {
+async function savePharmacistProfessionalInfo(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     const userId = authContext.userId;
     logger.info(`Pharmacist ${userId} updating professional information`);
@@ -172,7 +203,9 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
 
     // Validate organization if provided
     if (validatedData.organizationId) {
-      const organization = await Organization.findById(validatedData.organizationId);
+      const organization = await Organization.findById(
+        validatedData.organizationId,
+      );
       if (!organization) {
         return NextResponse.json(
           {
@@ -180,7 +213,7 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
             error: "Invalid organization ID",
             message: "The specified organization does not exist",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -225,7 +258,9 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
       practitioner.auditUpdatedBy = userId;
 
       await practitioner.save();
-      logger.info(`Updated pharmacist professional information for user ${userId}`);
+      logger.info(
+        `Updated pharmacist professional information for user ${userId}`,
+      );
     } else {
       // Create new record
       practitioner = new Practitioner({
@@ -241,7 +276,9 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
       });
 
       await practitioner.save();
-      logger.info(`Created new pharmacist professional information for user ${userId}`);
+      logger.info(
+        `Created new pharmacist professional information for user ${userId}`,
+      );
     }
 
     // Return the updated information
@@ -269,14 +306,17 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.warn(`Validation error for pharmacist ${authContext.userId}:`, error.errors);
+      logger.warn(
+        `Validation error for pharmacist ${authContext.userId}:`,
+        error.errors,
+      );
       return NextResponse.json(
         {
           success: false,
           error: "Validation failed",
           details: error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -287,7 +327,7 @@ async function savePharmacistProfessionalInfo(request: NextRequest, authContext:
         error: "Failed to save professional information",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

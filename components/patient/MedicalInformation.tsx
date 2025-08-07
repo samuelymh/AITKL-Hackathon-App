@@ -14,7 +14,13 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +28,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -117,7 +129,7 @@ const makeApiCallHelper = async (
   token: string,
   refreshAuthToken: () => Promise<void>,
   logout: () => void,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ) => {
   if (!token) {
     throw new Error("No authentication token available");
@@ -170,11 +182,16 @@ const makeApiCallHelper = async (
     if (error instanceof Error && error.message.includes("Session expired")) {
       throw error;
     }
-    throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 };
 
-export function MedicalInformation({ userId, className }: MedicalInformationProps) {
+export function MedicalInformation({
+  userId,
+  className,
+}: MedicalInformationProps) {
   const [medicalInfo, setMedicalInfo] = useState<MedicalInformation>({
     bloodType: "",
     foodAllergies: [],
@@ -207,26 +224,43 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       }
 
       try {
-        const response = await makeApiCallHelper("/api/patient/medical-info", token, refreshAuthToken, logout);
+        const response = await makeApiCallHelper(
+          "/api/patient/medical-info",
+          token,
+          refreshAuthToken,
+          logout,
+        );
         const result: MedicalInfoApiResponse = await response.json();
 
         if (result.success && result.data) {
           // Ensure all array fields are arrays and not objects - defensive programming
           const processedData: MedicalInformation = {
             ...result.data,
-            foodAllergies: Array.isArray(result.data.foodAllergies) ? result.data.foodAllergies : [],
-            drugAllergies: Array.isArray(result.data.drugAllergies) ? result.data.drugAllergies : [],
-            knownMedicalConditions: Array.isArray(result.data.knownMedicalConditions)
+            foodAllergies: Array.isArray(result.data.foodAllergies)
+              ? result.data.foodAllergies
+              : [],
+            drugAllergies: Array.isArray(result.data.drugAllergies)
+              ? result.data.drugAllergies
+              : [],
+            knownMedicalConditions: Array.isArray(
+              result.data.knownMedicalConditions,
+            )
               ? result.data.knownMedicalConditions
               : [],
-            currentMedications: Array.isArray(result.data.currentMedications) ? result.data.currentMedications : [],
-            pastSurgicalHistory: Array.isArray(result.data.pastSurgicalHistory) ? result.data.pastSurgicalHistory : [],
+            currentMedications: Array.isArray(result.data.currentMedications)
+              ? result.data.currentMedications
+              : [],
+            pastSurgicalHistory: Array.isArray(result.data.pastSurgicalHistory)
+              ? result.data.pastSurgicalHistory
+              : [],
             emergencyContact: result.data.emergencyContact || {
               name: "",
               phone: "",
               relationship: "",
             },
-            lastUpdated: result.data.lastUpdated ? new Date(result.data.lastUpdated) : undefined,
+            lastUpdated: result.data.lastUpdated
+              ? new Date(result.data.lastUpdated)
+              : undefined,
           };
 
           setMedicalInfo(processedData);
@@ -239,7 +273,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
         toast({
           title: "Error",
           description:
-            error instanceof Error ? error.message : "Failed to load medical information. Please refresh the page.",
+            error instanceof Error
+              ? error.message
+              : "Failed to load medical information. Please refresh the page.",
           variant: "destructive",
         });
       } finally {
@@ -266,7 +302,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       info.currentMedications.length > 0,
     ];
 
-    const filledFields = fields.filter((field) => field && field.trim() !== "").length;
+    const filledFields = fields.filter(
+      (field) => field && field.trim() !== "",
+    ).length;
     const filledArrays = arrayFields.filter((hasItems) => hasItems).length;
     const smokingProvided = info.smokingStatus !== "never" ? 1 : 0;
 
@@ -286,7 +324,10 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   };
 
   // Add item to array field
-  const addToArrayField = (fieldName: keyof MedicalInformation, value: string) => {
+  const addToArrayField = (
+    fieldName: keyof MedicalInformation,
+    value: string,
+  ) => {
     if (!value.trim()) return;
 
     const currentArray = medicalInfo[fieldName] as string[];
@@ -298,7 +339,10 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
   };
 
   // Remove item from array field
-  const removeFromArrayField = (fieldName: keyof MedicalInformation, value: string) => {
+  const removeFromArrayField = (
+    fieldName: keyof MedicalInformation,
+    value: string,
+  ) => {
     const currentArray = medicalInfo[fieldName] as string[];
     updateMedicalInfo({
       [fieldName]: currentArray.filter((item) => item !== value),
@@ -318,22 +362,31 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
 
     setIsSaving(true);
     try {
-      const response = await makeApiCallHelper("/api/patient/medical-info", token, refreshAuthToken, logout, {
-        method: "PUT",
-        body: JSON.stringify(medicalInfo),
-      });
+      const response = await makeApiCallHelper(
+        "/api/patient/medical-info",
+        token,
+        refreshAuthToken,
+        logout,
+        {
+          method: "PUT",
+          body: JSON.stringify(medicalInfo),
+        },
+      );
       const result: SaveMedicalInfoResponse = await response.json();
 
       if (result.success) {
         setHasChanges(false);
         setMedicalInfo((prev) => ({
           ...prev,
-          lastUpdated: result.data?.lastUpdated ? new Date(result.data.lastUpdated) : new Date(),
+          lastUpdated: result.data?.lastUpdated
+            ? new Date(result.data.lastUpdated)
+            : new Date(),
         }));
 
         toast({
           title: "Medical Information Saved",
-          description: "Your medical information has been updated successfully.",
+          description:
+            "Your medical information has been updated successfully.",
         });
       } else {
         throw new Error(result.error || "Failed to save medical information");
@@ -342,7 +395,10 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
       console.error("Failed to save medical information:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save medical information. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save medical information. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -356,7 +412,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
         <CardContent className="flex items-center justify-center p-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading medical information...</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Loading medical information...
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -373,25 +431,35 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           </div>
           <div className="flex items-center gap-2">
             {completionPercentage < 100 ? (
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+              <Badge
+                variant="outline"
+                className="bg-orange-50 text-orange-700 border-orange-200"
+              >
                 <AlertCircle className="h-3 w-3 mr-1" />
                 {completionPercentage}% Complete
               </Badge>
             ) : (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge
+                variant="outline"
+                className="bg-green-50 text-green-700 border-green-200"
+              >
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Complete
               </Badge>
             )}
             {hasChanges && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <Badge
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200"
+              >
                 Unsaved Changes
               </Badge>
             )}
           </div>
         </div>
         <CardDescription>
-          Complete your medical profile to help healthcare providers give you the best care.
+          Complete your medical profile to help healthcare providers give you
+          the best care.
           {completionPercentage < 100 && (
             <span className="block mt-1 text-orange-600 font-medium">
               Please complete all sections for optimal healthcare delivery.
@@ -411,7 +479,12 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="bloodType">Blood Type *</Label>
-              <Select value={medicalInfo.bloodType} onValueChange={(value) => updateMedicalInfo({ bloodType: value })}>
+              <Select
+                value={medicalInfo.bloodType}
+                onValueChange={(value) =>
+                  updateMedicalInfo({ bloodType: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select blood type" />
                 </SelectTrigger>
@@ -429,7 +502,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
               <Label htmlFor="smokingStatus">Smoking Status</Label>
               <Select
                 value={medicalInfo.smokingStatus}
-                onValueChange={(value: "never" | "current" | "former") => updateMedicalInfo({ smokingStatus: value })}
+                onValueChange={(value: "never" | "current" | "former") =>
+                  updateMedicalInfo({ smokingStatus: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -459,10 +534,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.isArray(medicalInfo.foodAllergies) &&
                 medicalInfo.foodAllergies.map((allergy) => (
-                  <Badge key={`food-${allergy}`} variant="outline" className="bg-red-50">
-                    {typeof allergy === "string" ? allergy : JSON.stringify(allergy)}
+                  <Badge
+                    key={`food-${allergy}`}
+                    variant="outline"
+                    className="bg-red-50"
+                  >
+                    {typeof allergy === "string"
+                      ? allergy
+                      : JSON.stringify(allergy)}
                     <button
-                      onClick={() => removeFromArrayField("foodAllergies", allergy)}
+                      onClick={() =>
+                        removeFromArrayField("foodAllergies", allergy)
+                      }
                       className="ml-1 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -471,12 +554,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                 ))}
             </div>
             <div className="flex gap-2 mt-2">
-              <Select onValueChange={(value) => addToArrayField("foodAllergies", value)}>
+              <Select
+                onValueChange={(value) =>
+                  addToArrayField("foodAllergies", value)
+                }
+              >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Add food allergy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_ALLERGIES.filter((a) => !medicalInfo.foodAllergies.includes(a)).map((allergy) => (
+                  {COMMON_ALLERGIES.filter(
+                    (a) => !medicalInfo.foodAllergies.includes(a),
+                  ).map((allergy) => (
                     <SelectItem key={allergy} value={allergy}>
                       {allergy}
                     </SelectItem>
@@ -492,10 +581,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.isArray(medicalInfo.drugAllergies) &&
                 medicalInfo.drugAllergies.map((allergy) => (
-                  <Badge key={`drug-${allergy}`} variant="outline" className="bg-red-50">
-                    {typeof allergy === "string" ? allergy : JSON.stringify(allergy)}
+                  <Badge
+                    key={`drug-${allergy}`}
+                    variant="outline"
+                    className="bg-red-50"
+                  >
+                    {typeof allergy === "string"
+                      ? allergy
+                      : JSON.stringify(allergy)}
                     <button
-                      onClick={() => removeFromArrayField("drugAllergies", allergy)}
+                      onClick={() =>
+                        removeFromArrayField("drugAllergies", allergy)
+                      }
                       className="ml-1 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -504,12 +601,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                 ))}
             </div>
             <div className="flex gap-2 mt-2">
-              <Select onValueChange={(value) => addToArrayField("drugAllergies", value)}>
+              <Select
+                onValueChange={(value) =>
+                  addToArrayField("drugAllergies", value)
+                }
+              >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Add drug allergy" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_DRUG_ALLERGIES.filter((a) => !medicalInfo.drugAllergies.includes(a)).map((allergy) => (
+                  {COMMON_DRUG_ALLERGIES.filter(
+                    (a) => !medicalInfo.drugAllergies.includes(a),
+                  ).map((allergy) => (
                     <SelectItem key={allergy} value={allergy}>
                       {allergy}
                     </SelectItem>
@@ -534,10 +637,21 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.isArray(medicalInfo.knownMedicalConditions) &&
                 medicalInfo.knownMedicalConditions.map((condition) => (
-                  <Badge key={`condition-${condition}`} variant="outline" className="bg-blue-50">
-                    {typeof condition === "string" ? condition : JSON.stringify(condition)}
+                  <Badge
+                    key={`condition-${condition}`}
+                    variant="outline"
+                    className="bg-blue-50"
+                  >
+                    {typeof condition === "string"
+                      ? condition
+                      : JSON.stringify(condition)}
                     <button
-                      onClick={() => removeFromArrayField("knownMedicalConditions", condition)}
+                      onClick={() =>
+                        removeFromArrayField(
+                          "knownMedicalConditions",
+                          condition,
+                        )
+                      }
                       className="ml-1 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -546,12 +660,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
                 ))}
             </div>
             <div className="flex gap-2 mt-2">
-              <Select onValueChange={(value) => addToArrayField("knownMedicalConditions", value)}>
+              <Select
+                onValueChange={(value) =>
+                  addToArrayField("knownMedicalConditions", value)
+                }
+              >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Add medical condition" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COMMON_CONDITIONS.filter((c) => !medicalInfo.knownMedicalConditions.includes(c)).map((condition) => (
+                  {COMMON_CONDITIONS.filter(
+                    (c) => !medicalInfo.knownMedicalConditions.includes(c),
+                  ).map((condition) => (
                     <SelectItem key={condition} value={condition}>
                       {condition}
                     </SelectItem>
@@ -575,10 +695,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.isArray(medicalInfo.currentMedications) &&
                 medicalInfo.currentMedications.map((medication) => (
-                  <Badge key={`medication-${medication}`} variant="outline" className="bg-green-50">
-                    {typeof medication === "string" ? medication : JSON.stringify(medication)}
+                  <Badge
+                    key={`medication-${medication}`}
+                    variant="outline"
+                    className="bg-green-50"
+                  >
+                    {typeof medication === "string"
+                      ? medication
+                      : JSON.stringify(medication)}
                     <button
-                      onClick={() => removeFromArrayField("currentMedications", medication)}
+                      onClick={() =>
+                        removeFromArrayField("currentMedications", medication)
+                      }
                       className="ml-1 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -614,10 +742,18 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.isArray(medicalInfo.pastSurgicalHistory) &&
                 medicalInfo.pastSurgicalHistory.map((surgery) => (
-                  <Badge key={`surgery-${surgery}`} variant="outline" className="bg-purple-50">
-                    {typeof surgery === "string" ? surgery : JSON.stringify(surgery)}
+                  <Badge
+                    key={`surgery-${surgery}`}
+                    variant="outline"
+                    className="bg-purple-50"
+                  >
+                    {typeof surgery === "string"
+                      ? surgery
+                      : JSON.stringify(surgery)}
                     <button
-                      onClick={() => removeFromArrayField("pastSurgicalHistory", surgery)}
+                      onClick={() =>
+                        removeFromArrayField("pastSurgicalHistory", surgery)
+                      }
                       className="ml-1 hover:text-red-600"
                     >
                       <X className="h-3 w-3" />
@@ -711,7 +847,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <Textarea
             id="additionalNotes"
             value={medicalInfo.additionalNotes}
-            onChange={(e) => updateMedicalInfo({ additionalNotes: e.target.value })}
+            onChange={(e) =>
+              updateMedicalInfo({ additionalNotes: e.target.value })
+            }
             placeholder="Any additional medical information you'd like healthcare providers to know..."
             rows={3}
           />
@@ -722,7 +860,11 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
           <>
             <Separator />
             <div className="flex gap-3">
-              <Button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2"
+              >
                 <Save className="h-4 w-4" />
                 {isSaving ? "Saving..." : "Save Medical Information"}
               </Button>
@@ -737,8 +879,9 @@ export function MedicalInformation({ userId, className }: MedicalInformationProp
             <div className="text-sm">
               <p className="font-medium text-blue-800">Privacy & Security</p>
               <p className="text-blue-700">
-                Your medical information is encrypted and only accessible to healthcare providers you explicitly
-                authorize through QR code access or direct permission.
+                Your medical information is encrypted and only accessible to
+                healthcare providers you explicitly authorize through QR code
+                access or direct permission.
               </p>
             </div>
           </div>

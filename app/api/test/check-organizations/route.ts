@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const organizations = await Organization.find({}).select("_id name type verificationStatus").lean();
+    const organizations = await Organization.find({})
+      .select("_id name type verificationStatus")
+      .lean();
 
     return NextResponse.json({
       success: true,
@@ -15,6 +17,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking organizations:", error);
-    return NextResponse.json({ success: false, error: "Failed to check organizations" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check organizations" },
+      { status: 500 },
+    );
   }
 }

@@ -33,14 +33,19 @@ async function main() {
         process.exit(1);
     }
   } catch (error) {
-    console.error("❌ Error:", error instanceof Error ? error.message : "Unknown error");
+    console.error(
+      "❌ Error:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     process.exit(1);
   }
 }
 
 async function handleCreateAdmin(args: string[]) {
   if (args.length < 4) {
-    console.log("Usage: npm run admin:create <email> <password> <firstName> <lastName> [phone]");
+    console.log(
+      "Usage: npm run admin:create <email> <password> <firstName> <lastName> [phone]",
+    );
     process.exit(1);
   }
 
@@ -88,7 +93,9 @@ async function handleListAdmins() {
     console.log(`   📧 Email: ${admin.email}`);
     console.log(`   🆔 ID: ${admin.id}`);
     console.log(`   ✅ Verified: ${admin.emailVerified ? "Yes" : "No"}`);
-    console.log(`   🕐 Last Login: ${admin.lastLogin ? new Date(admin.lastLogin).toLocaleString() : "Never"}`);
+    console.log(
+      `   🕐 Last Login: ${admin.lastLogin ? new Date(admin.lastLogin).toLocaleString() : "Never"}`,
+    );
     console.log(`   📅 Created: ${new Date(admin.createdAt).toLocaleString()}`);
     console.log("");
   });
@@ -105,7 +112,10 @@ async function handleDeactivateAdmin(args: string[]) {
 
   console.log("⚠️  Deactivating admin user...");
 
-  const result = await AdminCreationService.deactivateAdmin(adminId, "system-cli");
+  const result = await AdminCreationService.deactivateAdmin(
+    adminId,
+    "system-cli",
+  );
 
   if (result.success) {
     console.log("✅ Admin user deactivated successfully");
@@ -116,12 +126,20 @@ async function handleDeactivateAdmin(args: string[]) {
 function showUsage() {
   console.log("Admin Management CLI\n");
   console.log("Available commands:");
-  console.log("  create <email> <password> <firstName> <lastName> [phone]  - Create new admin user");
-  console.log("  list                                                      - List all admin users");
-  console.log("  deactivate <adminId>                                      - Deactivate admin user");
+  console.log(
+    "  create <email> <password> <firstName> <lastName> [phone]  - Create new admin user",
+  );
+  console.log(
+    "  list                                                      - List all admin users",
+  );
+  console.log(
+    "  deactivate <adminId>                                      - Deactivate admin user",
+  );
   console.log("");
   console.log("Examples:");
-  console.log("  npm run admin:create admin@hospital.com SecurePass123 John Doe");
+  console.log(
+    "  npm run admin:create admin@hospital.com SecurePass123 John Doe",
+  );
   console.log("  npm run admin:list");
   console.log("  npm run admin:deactivate 64a1b2c3d4e5f6789012345a");
 }

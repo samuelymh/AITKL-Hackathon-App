@@ -164,12 +164,19 @@ export const DEFAULT_ROLE_PERMISSIONS = {
 } as const;
 
 // Type exports for better type safety
-export type OrganizationMemberAction = (typeof ORGANIZATION_MEMBER_ACTIONS)[keyof typeof ORGANIZATION_MEMBER_ACTIONS];
-export type OrganizationMemberRole = (typeof ORGANIZATION_MEMBER_ROLES)[keyof typeof ORGANIZATION_MEMBER_ROLES];
-export type OrganizationMemberStatus = (typeof ORGANIZATION_MEMBER_STATUS)[keyof typeof ORGANIZATION_MEMBER_STATUS];
+export type OrganizationMemberAction =
+  (typeof ORGANIZATION_MEMBER_ACTIONS)[keyof typeof ORGANIZATION_MEMBER_ACTIONS];
+export type OrganizationMemberRole =
+  (typeof ORGANIZATION_MEMBER_ROLES)[keyof typeof ORGANIZATION_MEMBER_ROLES];
+export type OrganizationMemberStatus =
+  (typeof ORGANIZATION_MEMBER_STATUS)[keyof typeof ORGANIZATION_MEMBER_STATUS];
 export type AccessLevel = (typeof ACCESS_LEVELS)[keyof typeof ACCESS_LEVELS];
-export type PractitionerType = (typeof PRACTITIONER_TYPES)[keyof typeof PRACTITIONER_TYPES];
-export type PractitionerStatus = (typeof PRACTITIONER_STATUS)[keyof typeof PRACTITIONER_STATUS];
-export type AvailabilityStatus = (typeof AVAILABILITY_STATUS)[keyof typeof AVAILABILITY_STATUS];
-export type VerificationStatus = (typeof VERIFICATION_STATUS)[keyof typeof VERIFICATION_STATUS];
+export type PractitionerType =
+  (typeof PRACTITIONER_TYPES)[keyof typeof PRACTITIONER_TYPES];
+export type PractitionerStatus =
+  (typeof PRACTITIONER_STATUS)[keyof typeof PRACTITIONER_STATUS];
+export type AvailabilityStatus =
+  (typeof AVAILABILITY_STATUS)[keyof typeof AVAILABILITY_STATUS];
+export type VerificationStatus =
+  (typeof VERIFICATION_STATUS)[keyof typeof VERIFICATION_STATUS];
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

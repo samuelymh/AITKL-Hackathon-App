@@ -3,9 +3,23 @@ import { auditFields } from "./BaseSchema";
 import { z } from "zod";
 
 // Type aliases
-export type PractitionerType = "doctor" | "nurse" | "pharmacist" | "technician" | "admin" | "other";
-export type PractitionerStatus = "active" | "inactive" | "suspended" | "pending_verification";
-export type AvailabilityStatus = "available" | "busy" | "unavailable" | "on-call";
+export type PractitionerType =
+  | "doctor"
+  | "nurse"
+  | "pharmacist"
+  | "technician"
+  | "admin"
+  | "other";
+export type PractitionerStatus =
+  | "active"
+  | "inactive"
+  | "suspended"
+  | "pending_verification";
+export type AvailabilityStatus =
+  | "available"
+  | "busy"
+  | "unavailable"
+  | "on-call";
 export type VerificationStatus = "verified" | "pending" | "expired" | "revoked";
 
 // Zod schema for validation
@@ -16,9 +30,18 @@ export const PractitionerZodSchema = z.object({
 
   // Professional Information
   professionalInfo: z.object({
-    licenseNumber: z.string().min(3, "License number must be at least 3 characters"),
+    licenseNumber: z
+      .string()
+      .min(3, "License number must be at least 3 characters"),
     specialty: z.string().min(2, "Specialty must be at least 2 characters"),
-    practitionerType: z.enum(["doctor", "nurse", "pharmacist", "technician", "admin", "other"] as const),
+    practitionerType: z.enum([
+      "doctor",
+      "nurse",
+      "pharmacist",
+      "technician",
+      "admin",
+      "other",
+    ] as const),
     yearsOfExperience: z.number().min(0).max(70),
     currentPosition: z.string().optional(),
     department: z.string().optional(),
@@ -40,7 +63,9 @@ export const PractitionerZodSchema = z.object({
   // schedule field removed - now handled per organization membership
 
   // Status and Activity
-  status: z.enum(["active", "inactive", "suspended", "pending_verification"] as const).default("pending_verification"),
+  status: z
+    .enum(["active", "inactive", "suspended", "pending_verification"] as const)
+    .default("pending_verification"),
   lastActiveDate: z.date().optional(),
 
   // Additional metadata
@@ -55,8 +80,10 @@ export const PractitionerZodSchema = z.object({
             issuingBody: z.string(),
             issueDate: z.date(),
             expiryDate: z.date().optional(),
-            verificationStatus: z.enum(["verified", "pending", "expired", "revoked"] as const).default("pending"),
-          })
+            verificationStatus: z
+              .enum(["verified", "pending", "expired", "revoked"] as const)
+              .default("pending"),
+          }),
         )
         .default([]),
       emergencyContact: z
@@ -231,11 +258,14 @@ const PractitionerSchema = new Schema<IPractitioner>(
   {
     timestamps: true,
     collection: "practitioners",
-  }
+  },
 );
 
 // Instance Methods
-PractitionerSchema.methods.verifyLicense = async function (method: string, notes?: string): Promise<void> {
+PractitionerSchema.methods.verifyLicense = async function (
+  method: string,
+  notes?: string,
+): Promise<void> {
   this.verification.isLicenseVerified = true;
   this.verification.licenseVerificationDate = new Date();
   this.verification.licenseVerificationMethod = method;
@@ -267,17 +297,25 @@ PractitionerSchema.methods.getFullProfile = async function (): Promise<any> {
   return this;
 };
 
-PractitionerSchema.methods.getOrganizationMemberships = async function (): Promise<any[]> {
-  const OrganizationMember = require("./OrganizationMember").default;
-  return await OrganizationMember.find({ practitionerId: this._id }).populate(["organizationId"]);
-};
+PractitionerSchema.methods.getOrganizationMemberships =
+  async function (): Promise<any[]> {
+    const OrganizationMember = require("./OrganizationMember").default;
+    return await OrganizationMember.find({ practitionerId: this._id }).populate(
+      ["organizationId"],
+    );
+  };
 
 // Static Methods
-PractitionerSchema.statics.findByLicenseNumber = function (licenseNumber: string) {
+PractitionerSchema.statics.findByLicenseNumber = function (
+  licenseNumber: string,
+) {
   return this.findOne({ "professionalInfo.licenseNumber": licenseNumber });
 };
 
-PractitionerSchema.statics.findBySpecialty = function (specialty: string, options: any = {}) {
+PractitionerSchema.statics.findBySpecialty = function (
+  specialty: string,
+  options: any = {},
+) {
   const query = this.find({ "professionalInfo.specialty": specialty });
 
   if (options.status) {
@@ -316,7 +354,10 @@ PractitionerSchema.index({ userId: 1 }, { unique: true });
 PractitionerSchema.index({ status: 1 });
 PractitionerSchema.index({ "professionalInfo.practitionerType": 1, status: 1 });
 PractitionerSchema.index({ "verification.isLicenseVerified": 1, status: 1 });
-PractitionerSchema.index({ "professionalInfo.licenseNumber": 1 }, { unique: true });
+PractitionerSchema.index(
+  { "professionalInfo.licenseNumber": 1 },
+  { unique: true },
+);
 
 // Text search index
 PractitionerSchema.index({
@@ -326,5 +367,6 @@ PractitionerSchema.index({
 });
 
 export const Practitioner =
-  mongoose.models.Practitioner || mongoose.model<IPractitioner>("Practitioner", PractitionerSchema);
+  mongoose.models.Practitioner ||
+  mongoose.model<IPractitioner>("Practitioner", PractitionerSchema);
 export default Practitioner;

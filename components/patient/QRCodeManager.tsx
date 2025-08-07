@@ -1,8 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { QrCode, Download, RefreshCw, Shield, Clock, Share2, Copy, Check } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  QrCode,
+  Download,
+  RefreshCw,
+  Shield,
+  Clock,
+  Share2,
+  Copy,
+  Check,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -164,13 +179,17 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
             <QrCode className="h-5 w-5 text-primary" />
             <CardTitle>Your Health QR Code</CardTitle>
           </div>
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
             <Shield className="h-3 w-3 mr-1" />
             Secure
           </Badge>
         </div>
         <CardDescription>
-          Share this QR code with healthcare providers to grant temporary access to your medical records
+          Share this QR code with healthcare providers to grant temporary access
+          to your medical records
         </CardDescription>
       </CardHeader>
 
@@ -180,16 +199,30 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
           {qrCodeURL ? (
             <div className="space-y-4">
               <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm inline-block">
-                <img src={qrCodeURL} alt="Your Health QR Code" className="w-48 h-48 mx-auto" />
+                <img
+                  src={qrCodeURL}
+                  alt="Your Health QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
               </div>
 
               {/* Quick Action Buttons */}
               <div className="flex flex-wrap gap-2 justify-center">
-                <Button onClick={handleDownload} variant="outline" size="sm" className="flex items-center gap-1">
+                <Button
+                  onClick={handleDownload}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button onClick={handleShare} variant="outline" size="sm" className="flex items-center gap-1">
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
                   <Share2 className="h-4 w-4" />
                   Share
                 </Button>
@@ -200,7 +233,9 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
                   disabled={isRegenerating}
                   className="flex items-center gap-1"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${isRegenerating ? "animate-spin" : ""}`}
+                  />
                   Regenerate
                 </Button>
               </div>
@@ -244,8 +279,17 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
                 <code className="text-sm bg-background px-3 py-1 rounded border flex-1 font-mono">
                   {user.digitalIdentifier}
                 </code>
-                <Button onClick={handleCopyId} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                <Button
+                  onClick={handleCopyId}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -261,11 +305,15 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
 
         {/* Instructions */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <h4 className="font-medium text-blue-800 mb-2">How to Use Your QR Code</h4>
+          <h4 className="font-medium text-blue-800 mb-2">
+            How to Use Your QR Code
+          </h4>
           <ol className="text-sm text-blue-700 space-y-1">
             <li>1. Show this QR code to your healthcare provider</li>
             <li>2. They will scan it to request access to your records</li>
-            <li>3. You'll receive a notification to approve or deny the request</li>
+            <li>
+              3. You'll receive a notification to approve or deny the request
+            </li>
             <li>4. Access is time-limited and can be revoked anytime</li>
           </ol>
         </div>
@@ -277,8 +325,8 @@ export function QRCodeManager({ user, className }: QRCodeManagerProps) {
             <div className="text-sm">
               <p className="font-medium text-amber-800">Security Notice</p>
               <p className="text-amber-700">
-                Your QR code contains only your digital identifier. No sensitive medical data is stored in the QR code
-                itself.
+                Your QR code contains only your digital identifier. No sensitive
+                medical data is stored in the QR code itself.
               </p>
             </div>
           </div>

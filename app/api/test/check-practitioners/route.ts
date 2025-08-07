@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const practitioners = await Practitioner.find({}).select("_id userId firstName lastName professionalInfo").lean();
+    const practitioners = await Practitioner.find({})
+      .select("_id userId firstName lastName professionalInfo")
+      .lean();
 
     return NextResponse.json({
       success: true,
@@ -15,6 +17,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking practitioners:", error);
-    return NextResponse.json({ success: false, error: "Failed to check practitioners" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check practitioners" },
+      { status: 500 },
+    );
   }
 }

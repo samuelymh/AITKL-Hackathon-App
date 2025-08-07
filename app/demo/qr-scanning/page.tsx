@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Zap, Users, Building2, QrCode, TestTube } from "lucide-react";
@@ -30,8 +36,11 @@ interface AuthorizationRequestData {
 }
 
 export default function QRScanningDemoPage() {
-  const [lastScanResult, setLastScanResult] = useState<AuthorizationRequestData | null>(null);
-  const [scanHistory, setScanHistory] = useState<AuthorizationRequestData[]>([]);
+  const [lastScanResult, setLastScanResult] =
+    useState<AuthorizationRequestData | null>(null);
+  const [scanHistory, setScanHistory] = useState<AuthorizationRequestData[]>(
+    [],
+  );
   const [activeTab, setActiveTab] = useState("generator");
 
   const handleAuthorizationCreated = (data: AuthorizationRequestData) => {
@@ -58,14 +67,23 @@ export default function QRScanningDemoPage() {
             <Building2 className="h-10 w-10 text-primary" />
             <h1 className="text-4xl font-bold">QR Scanning Demo</h1>
           </div>
-          <p className="text-xl text-muted-foreground mb-2">Healthcare Provider QR Code Authorization System</p>
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <p className="text-xl text-muted-foreground mb-2">
+            Healthcare Provider QR Code Authorization System
+          </p>
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
             Live Demo Environment
           </Badge>
         </div>
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
             <TabsTrigger value="generator" className="flex items-center gap-2">
               <QrCode className="h-4 w-4" />
@@ -93,7 +111,9 @@ export default function QRScanningDemoPage() {
                 {/* Instructions */}
                 <Card className="border-blue-200 bg-blue-50">
                   <CardHeader>
-                    <CardTitle className="text-blue-700">Testing Instructions</CardTitle>
+                    <CardTitle className="text-blue-700">
+                      Testing Instructions
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-blue-600 space-y-3">
                     <div>
@@ -123,15 +143,21 @@ export default function QRScanningDemoPage() {
                     <div className="text-sm space-y-2">
                       <div>
                         <p className="font-medium">Organization</p>
-                        <p className="text-muted-foreground">Demo Medical Clinic</p>
+                        <p className="text-muted-foreground">
+                          Demo Medical Clinic
+                        </p>
                       </div>
                       <div>
                         <p className="font-medium">Organization ID</p>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">{demoOrgId}</code>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {demoOrgId}
+                        </code>
                       </div>
                       <div>
                         <p className="font-medium">Practitioner ID</p>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">{demoPractitionerId}</code>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {demoPractitionerId}
+                        </code>
                       </div>
                     </div>
                   </CardContent>
@@ -167,18 +193,24 @@ export default function QRScanningDemoPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
-                        <p className="font-medium text-green-800">{lastScanResult.patient.name}</p>
-                        <p className="text-sm text-green-600">Status: {lastScanResult.status}</p>
+                        <p className="font-medium text-green-800">
+                          {lastScanResult.patient.name}
+                        </p>
+                        <p className="text-sm text-green-600">
+                          Status: {lastScanResult.status}
+                        </p>
                       </div>
                       <div className="text-xs space-y-1">
                         <p>
                           <strong>Grant ID:</strong> {lastScanResult.grantId}
                         </p>
                         <p>
-                          <strong>Duration:</strong> {lastScanResult.timeWindowHours}h
+                          <strong>Duration:</strong>{" "}
+                          {lastScanResult.timeWindowHours}h
                         </p>
                         <p>
-                          <strong>Patient ID:</strong> {lastScanResult.patient.digitalIdentifier}
+                          <strong>Patient ID:</strong>{" "}
+                          {lastScanResult.patient.digitalIdentifier}
                         </p>
                       </div>
                     </CardContent>
@@ -193,16 +225,28 @@ export default function QRScanningDemoPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 gap-2">
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-green-50 text-green-700 border-green-200"
+                      >
                         ✓ Medical History
                       </Badge>
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-green-50 text-green-700 border-green-200"
+                      >
                         ✓ Prescriptions
                       </Badge>
-                      <Badge variant="outline" className="text-xs bg-gray-50 text-gray-500 border-gray-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-gray-50 text-gray-500 border-gray-200"
+                      >
                         ✗ Create Encounters
                       </Badge>
-                      <Badge variant="outline" className="text-xs bg-gray-50 text-gray-500 border-gray-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-gray-50 text-gray-500 border-gray-200"
+                      >
                         ✗ Audit Logs
                       </Badge>
                     </div>
@@ -221,11 +265,18 @@ export default function QRScanningDemoPage() {
                     <CardContent>
                       <div className="space-y-2">
                         {scanHistory.map((scan, index) => (
-                          <div key={scan.grantId} className="p-3 bg-muted rounded-lg">
+                          <div
+                            key={scan.grantId}
+                            className="p-3 bg-muted rounded-lg"
+                          >
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-medium text-sm">{scan.patient.name}</p>
-                                <p className="text-xs text-muted-foreground">{scan.patient.digitalIdentifier}</p>
+                                <p className="font-medium text-sm">
+                                  {scan.patient.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {scan.patient.digitalIdentifier}
+                                </p>
                               </div>
                               <Badge variant="outline" className="text-xs">
                                 {scan.status}
@@ -245,7 +296,10 @@ export default function QRScanningDemoPage() {
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-muted-foreground">
           <p>Healthcare Authorization QR Code System - Demo Environment</p>
-          <p>All scans are logged and audited according to HIPAA compliance requirements</p>
+          <p>
+            All scans are logged and audited according to HIPAA compliance
+            requirements
+          </p>
         </div>
       </div>
     </main>

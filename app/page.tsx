@@ -33,10 +33,12 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">Health Records System</h1>
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Health Records System
+          </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Secure, comprehensive digital health records management for patients, healthcare professionals, and
-            administrators.
+            Secure, comprehensive digital health records management for
+            patients, healthcare professionals, and administrators.
           </p>
           <div className="flex gap-4 justify-center">
             <Link href="/login">
@@ -53,20 +55,34 @@ export default function HomePage() {
 
           {/* Demo Links */}
           <div className="mt-8 p-4 bg-blue-100 rounded-lg max-w-md mx-auto">
-            <p className="text-sm text-blue-800 font-medium mb-3">Demo Features:</p>
+            <p className="text-sm text-blue-800 font-medium mb-3">
+              Demo Features:
+            </p>
             <div className="flex flex-col gap-2">
               <Link href="/demo/qr-scanning">
-                <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-blue-700 border-blue-300 hover:bg-blue-50"
+                >
                   QR Code Scanner Demo
                 </Button>
               </Link>
               <Link href="/demo/organization-management">
-                <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-blue-700 border-blue-300 hover:bg-blue-50"
+                >
                   Create Organization Demo
                 </Button>
               </Link>
               <Link href="/provider">
-                <Button variant="outline" size="sm" className="w-full text-blue-700 border-blue-300 hover:bg-blue-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-blue-700 border-blue-300 hover:bg-blue-50"
+                >
                   Provider Dashboard
                 </Button>
               </Link>
@@ -77,7 +93,9 @@ export default function HomePage() {
         <div className="grid md:grid-cols-4 gap-8 max-w-7xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-center text-blue-600">For Patients</CardTitle>
+              <CardTitle className="text-center text-blue-600">
+                For Patients
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-gray-600">
@@ -92,7 +110,9 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-center text-green-600">For Doctors</CardTitle>
+              <CardTitle className="text-center text-green-600">
+                For Doctors
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-gray-600">
@@ -107,7 +127,9 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-center text-green-600">For Healthcare Organizations</CardTitle>
+              <CardTitle className="text-center text-green-600">
+                For Healthcare Organizations
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-gray-600">
@@ -122,7 +144,9 @@ export default function HomePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-center text-purple-600">For Pharmacists</CardTitle>
+              <CardTitle className="text-center text-purple-600">
+                For Pharmacists
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-gray-600">
@@ -143,8 +167,10 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Our system features enterprise-grade security with JWT authentication, comprehensive audit logging,
-                role-based access control, and secure data encryption to protect your health information.
+                Our system features enterprise-grade security with JWT
+                authentication, comprehensive audit logging, role-based access
+                control, and secure data encryption to protect your health
+                information.
               </p>
             </CardContent>
           </Card>

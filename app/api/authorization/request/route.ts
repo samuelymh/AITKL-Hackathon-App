@@ -7,7 +7,12 @@ import { QRCodeService } from "@/lib/services/qr-code-service";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { logger } from "@/lib/logger";
 import { AuthorizationPermissions } from "@/lib/utils/authorization-permissions";
-import { AuthorizationError, NotFoundError, ConflictError, ErrorHandler } from "@/lib/errors/custom-errors";
+import {
+  AuthorizationError,
+  NotFoundError,
+  ConflictError,
+  ErrorHandler,
+} from "@/lib/errors/custom-errors";
 import { z } from "zod";
 
 // Validation schemas
@@ -15,13 +20,22 @@ const CreateGrantRequestSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   organizationId: z.string().min(1, "Organization ID is required"),
   requestingPractitionerId: z.string().optional(),
-  accessScope: z.array(z.string()).min(1, "At least one access scope is required"),
-  timeWindowHours: z.number().min(1).max(168, "Time window must be between 1 and 168 hours"), // Max 1 week
-  justification: z.string().min(10, "Justification must be at least 10 characters"),
+  accessScope: z
+    .array(z.string())
+    .min(1, "At least one access scope is required"),
+  timeWindowHours: z
+    .number()
+    .min(1)
+    .max(168, "Time window must be between 1 and 168 hours"), // Max 1 week
+  justification: z
+    .string()
+    .min(10, "Justification must be at least 10 characters"),
   metadata: z
     .object({
       requestSource: z.string().optional(),
-      urgencyLevel: z.enum(["low", "normal", "high", "critical"]).default("normal"),
+      urgencyLevel: z
+        .enum(["low", "normal", "high", "critical"])
+        .default("normal"),
       autoApprove: z.boolean().default(false),
     })
     .optional(),
@@ -51,21 +65,29 @@ export async function POST(request: NextRequest) {
     await logAuthorizationRequest(request, authGrant, validatedData);
 
     // Prepare response
-    await authGrant.populate(["userId", "organizationId", "requestingPractitionerId"]);
+    await authGrant.populate([
+      "userId",
+      "organizationId",
+      "requestingPractitionerId",
+    ]);
 
     return NextResponse.json(
       {
         success: true,
         data: {
           grant: authGrant,
-          qrDisplayUrl: QRCodeService.createQRDisplayURL(authGrant._id.toString()),
+          qrDisplayUrl: QRCodeService.createQRDisplayURL(
+            authGrant._id.toString(),
+          ),
           scanUrl: QRCodeService.createScanURL(authGrant._id.toString()),
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    logger.error("Error creating authorization grant:", { error: error instanceof Error ? error.message : error });
+    logger.error("Error creating authorization grant:", {
+      error: error instanceof Error ? error.message : error,
+    });
 
     const errorResponse = ErrorHandler.handleError(error);
     return NextResponse.json(errorResponse, {
@@ -77,7 +99,9 @@ export async function POST(request: NextRequest) {
 /**
  * Validate that entities exist and check permissions
  */
-async function validateEntitiesAndPermissions(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+async function validateEntitiesAndPermissions(
+  validatedData: z.infer<typeof CreateGrantRequestSchema>,
+) {
   // Verify that user exists
   const user = await User.findById(validatedData.userId);
   if (!user) {
@@ -85,7 +109,9 @@ async function validateEntitiesAndPermissions(validatedData: z.infer<typeof Crea
   }
 
   // Verify that organization exists
-  const organization = await Organization.findById(validatedData.organizationId);
+  const organization = await Organization.findById(
+    validatedData.organizationId,
+  );
   if (!organization) {
     throw new NotFoundError("Organization");
   }
@@ -95,11 +121,13 @@ async function validateEntitiesAndPermissions(validatedData: z.infer<typeof Crea
     const permissionCheck = await AuthorizationPermissions.canRequestGrant(
       validatedData.requestingPractitionerId,
       validatedData.organizationId,
-      validatedData.accessScope
+      validatedData.accessScope,
     );
 
     if (!permissionCheck.allowed) {
-      throw new AuthorizationError(permissionCheck.error || "Insufficient permissions");
+      throw new AuthorizationError(
+        permissionCheck.error || "Insufficient permissions",
+      );
     }
   }
 }
@@ -107,7 +135,9 @@ async function validateEntitiesAndPermissions(validatedData: z.infer<typeof Crea
 /**
  * Check for existing active grants
  */
-async function checkExistingGrants(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+async function checkExistingGrants(
+  validatedData: z.infer<typeof CreateGrantRequestSchema>,
+) {
   const existingGrant = await AuthorizationGrant.findOne({
     userId: validatedData.userId,
     organizationId: validatedData.organizationId,
@@ -116,7 +146,7 @@ async function checkExistingGrants(validatedData: z.infer<typeof CreateGrantRequ
 
   if (existingGrant) {
     throw new ConflictError(
-      `An active authorization grant already exists between this user and organization. Grant ID: ${existingGrant._id}`
+      `An active authorization grant already exists between this user and organization. Grant ID: ${existingGrant._id}`,
     );
   }
 }
@@ -124,7 +154,9 @@ async function checkExistingGrants(validatedData: z.infer<typeof CreateGrantRequ
 /**
  * Create the authorization grant
  */
-async function createAuthorizationGrant(validatedData: z.infer<typeof CreateGrantRequestSchema>) {
+async function createAuthorizationGrant(
+  validatedData: z.infer<typeof CreateGrantRequestSchema>,
+) {
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + validatedData.timeWindowHours);
 
@@ -157,16 +189,21 @@ async function createAuthorizationGrant(validatedData: z.infer<typeof CreateGran
 async function logAuthorizationRequest(
   request: NextRequest,
   authGrant: any,
-  validatedData: z.infer<typeof CreateGrantRequestSchema>
+  validatedData: z.infer<typeof CreateGrantRequestSchema>,
 ) {
-  await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, validatedData.userId, {
-    action: "AUTHORIZATION_REQUESTED",
-    grantId: authGrant._id.toString(),
-    organizationId: validatedData.organizationId,
-    practitionerId: validatedData.requestingPractitionerId,
-    accessScope: validatedData.accessScope,
-    autoApproved: validatedData.metadata?.autoApprove || false,
-  });
+  await auditLogger.logSecurityEvent(
+    SecurityEventType.DATA_ACCESS,
+    request,
+    validatedData.userId,
+    {
+      action: "AUTHORIZATION_REQUESTED",
+      grantId: authGrant._id.toString(),
+      organizationId: validatedData.organizationId,
+      practitionerId: validatedData.requestingPractitionerId,
+      accessScope: validatedData.accessScope,
+      autoApproved: validatedData.metadata?.autoApprove || false,
+    },
+  );
 }
 
 /**
@@ -185,7 +222,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     if (!userId && !organizationId) {
-      return NextResponse.json({ error: "Either userId or organizationId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Either userId or organizationId is required" },
+        { status: 400 },
+      );
     }
 
     // Build query
@@ -196,7 +236,9 @@ export async function GET(request: NextRequest) {
 
     // Execute query with pagination and projection for efficiency
     const grants = await AuthorizationGrant.find(query)
-      .select("userId organizationId requestingPractitionerId grantDetails accessScope createdAt updatedAt")
+      .select(
+        "userId organizationId requestingPractitionerId grantDetails accessScope createdAt updatedAt",
+      )
       .populate([
         { path: "userId", select: "name email digitalIdentifier" },
         { path: "organizationId", select: "name organizationInfo.type" },
@@ -223,7 +265,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error("Error fetching authorization grants:", { error: error instanceof Error ? error.message : error });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    logger.error("Error fetching authorization grants:", {
+      error: error instanceof Error ? error.message : error,
+    });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

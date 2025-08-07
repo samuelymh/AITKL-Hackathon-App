@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import mongoose from "mongoose";
 import { EncounterService } from "@/lib/services/encounter-service";
 import Counter from "@/lib/models/Counter";
@@ -33,10 +40,13 @@ describe("EncounterService", () => {
       const mockIncrement = jest.fn().mockResolvedValue(1);
       Counter.increment = mockIncrement;
 
-      const encounterNumber = await EncounterService.generateEncounterNumber(testOrganizationId);
+      const encounterNumber =
+        await EncounterService.generateEncounterNumber(testOrganizationId);
 
       expect(encounterNumber).toMatch(/^ENC-\d{8}-\d{4}$/);
-      expect(mockIncrement).toHaveBeenCalledWith(expect.stringContaining(testOrganizationId));
+      expect(mockIncrement).toHaveBeenCalledWith(
+        expect.stringContaining(testOrganizationId),
+      );
     });
 
     it("should handle concurrent calls correctly", async () => {
@@ -47,7 +57,9 @@ describe("EncounterService", () => {
       });
       Counter.increment = mockIncrement;
 
-      const promises = Array.from({ length: 5 }, () => EncounterService.generateEncounterNumber(testOrganizationId));
+      const promises = Array.from({ length: 5 }, () =>
+        EncounterService.generateEncounterNumber(testOrganizationId),
+      );
 
       const results = await Promise.all(promises);
       const uniqueResults = new Set(results);
@@ -60,8 +72,12 @@ describe("EncounterService", () => {
   describe("validateReferencedEntities", () => {
     it("should validate all entities exist", async () => {
       // Mock the dynamic imports and model findById methods
-      const mockUser = { findById: jest.fn().mockResolvedValue({ _id: testUserId }) };
-      const mockOrganization = { findById: jest.fn().mockResolvedValue({ _id: testOrganizationId }) };
+      const mockUser = {
+        findById: jest.fn().mockResolvedValue({ _id: testUserId }),
+      };
+      const mockOrganization = {
+        findById: jest.fn().mockResolvedValue({ _id: testOrganizationId }),
+      };
       const mockPractitioner = {
         findById: jest.fn().mockResolvedValue({
           _id: testPractitionerId,
@@ -70,34 +86,58 @@ describe("EncounterService", () => {
       };
 
       // Mock dynamic imports
-      jest.doMock("@/lib/models/User", () => ({ default: mockUser }), { virtual: true });
-      jest.doMock("@/lib/models/Organization", () => ({ default: mockOrganization }), { virtual: true });
-      jest.doMock("@/lib/models/Practitioner", () => ({ default: mockPractitioner }), { virtual: true });
+      jest.doMock("@/lib/models/User", () => ({ default: mockUser }), {
+        virtual: true,
+      });
+      jest.doMock(
+        "@/lib/models/Organization",
+        () => ({ default: mockOrganization }),
+        { virtual: true },
+      );
+      jest.doMock(
+        "@/lib/models/Practitioner",
+        () => ({ default: mockPractitioner }),
+        { virtual: true },
+      );
 
       await expect(
         EncounterService.validateReferencedEntities({
           userId: testUserId,
           organizationId: testOrganizationId,
           practitionerId: testPractitionerId,
-        })
+        }),
       ).resolves.not.toThrow();
     });
 
     it("should throw NotFoundError when user does not exist", async () => {
       const mockUser = { findById: jest.fn().mockResolvedValue(null) };
-      const mockOrganization = { findById: jest.fn().mockResolvedValue({ _id: testOrganizationId }) };
-      const mockPractitioner = { findById: jest.fn().mockResolvedValue({ _id: testPractitionerId }) };
+      const mockOrganization = {
+        findById: jest.fn().mockResolvedValue({ _id: testOrganizationId }),
+      };
+      const mockPractitioner = {
+        findById: jest.fn().mockResolvedValue({ _id: testPractitionerId }),
+      };
 
-      jest.doMock("@/lib/models/User", () => ({ default: mockUser }), { virtual: true });
-      jest.doMock("@/lib/models/Organization", () => ({ default: mockOrganization }), { virtual: true });
-      jest.doMock("@/lib/models/Practitioner", () => ({ default: mockPractitioner }), { virtual: true });
+      jest.doMock("@/lib/models/User", () => ({ default: mockUser }), {
+        virtual: true,
+      });
+      jest.doMock(
+        "@/lib/models/Organization",
+        () => ({ default: mockOrganization }),
+        { virtual: true },
+      );
+      jest.doMock(
+        "@/lib/models/Practitioner",
+        () => ({ default: mockPractitioner }),
+        { virtual: true },
+      );
 
       await expect(
         EncounterService.validateReferencedEntities({
           userId: testUserId,
           organizationId: testOrganizationId,
           practitionerId: testPractitionerId,
-        })
+        }),
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -116,8 +156,14 @@ describe("EncounterService", () => {
       };
 
       // Mock the Encounter constructor
-      const EncounterConstructor = jest.fn().mockImplementation(() => mockEncounter);
-      jest.doMock("@/lib/models/Encounter", () => ({ default: EncounterConstructor }), { virtual: true });
+      const EncounterConstructor = jest
+        .fn()
+        .mockImplementation(() => mockEncounter);
+      jest.doMock(
+        "@/lib/models/Encounter",
+        () => ({ default: EncounterConstructor }),
+        { virtual: true },
+      );
 
       const encounterData = {
         userId: testUserId,
@@ -135,7 +181,7 @@ describe("EncounterService", () => {
       const result = await EncounterService.createEncounter(
         encounterData,
         testPractitionerId,
-        new mongoose.Types.ObjectId().toString()
+        new mongoose.Types.ObjectId().toString(),
       );
 
       expect(EncounterConstructor).toHaveBeenCalledWith(
@@ -151,7 +197,7 @@ describe("EncounterService", () => {
               value: "Test notes",
             },
           }),
-        })
+        }),
       );
 
       expect(mockEncounter.save).toHaveBeenCalled();
@@ -166,24 +212,34 @@ describe("EncounterService", () => {
       };
 
       const mockPopulate = jest.fn().mockResolvedValue(mockEncounter);
-      const mockFindById = jest.fn().mockReturnValue({ populate: mockPopulate });
+      const mockFindById = jest
+        .fn()
+        .mockReturnValue({ populate: mockPopulate });
 
       Encounter.findById = mockFindById;
 
       const result = await EncounterService.getEncounterById(testEncounterId);
 
       expect(mockFindById).toHaveBeenCalledWith(testEncounterId);
-      expect(mockPopulate).toHaveBeenCalledWith(["userId", "organizationId", "attendingPractitionerId"]);
+      expect(mockPopulate).toHaveBeenCalledWith([
+        "userId",
+        "organizationId",
+        "attendingPractitionerId",
+      ]);
       expect(result).toEqual(mockEncounter);
     });
 
     it("should throw NotFoundError when encounter not found", async () => {
       const mockPopulate = jest.fn().mockResolvedValue(null);
-      const mockFindById = jest.fn().mockReturnValue({ populate: mockPopulate });
+      const mockFindById = jest
+        .fn()
+        .mockReturnValue({ populate: mockPopulate });
 
       Encounter.findById = mockFindById;
 
-      await expect(EncounterService.getEncounterById(testEncounterId)).rejects.toThrow(NotFoundError);
+      await expect(
+        EncounterService.getEncounterById(testEncounterId),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -199,7 +255,9 @@ describe("EncounterService", () => {
       };
 
       const mockPopulate = jest.fn().mockResolvedValue(mockUpdatedEncounter);
-      const mockFindByIdAndUpdate = jest.fn().mockReturnValue({ populate: mockPopulate });
+      const mockFindByIdAndUpdate = jest
+        .fn()
+        .mockReturnValue({ populate: mockPopulate });
 
       Encounter.findByIdAndUpdate = mockFindByIdAndUpdate;
 
@@ -208,7 +266,11 @@ describe("EncounterService", () => {
         vitals: { bloodPressure: "130/85" },
       };
 
-      const result = await EncounterService.updateEncounter(testEncounterId, updateData, testPractitionerId);
+      const result = await EncounterService.updateEncounter(
+        testEncounterId,
+        updateData,
+        testPractitionerId,
+      );
 
       expect(mockFindByIdAndUpdate).toHaveBeenCalledWith(
         testEncounterId,
@@ -222,7 +284,7 @@ describe("EncounterService", () => {
           auditUpdatedDateTime: expect.any(Date),
           $inc: { auditVersion: 1 },
         }),
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
 
       expect(result).toEqual(mockUpdatedEncounter);
@@ -230,12 +292,18 @@ describe("EncounterService", () => {
 
     it("should throw NotFoundError when encounter not found", async () => {
       const mockPopulate = jest.fn().mockResolvedValue(null);
-      const mockFindByIdAndUpdate = jest.fn().mockReturnValue({ populate: mockPopulate });
+      const mockFindByIdAndUpdate = jest
+        .fn()
+        .mockReturnValue({ populate: mockPopulate });
 
       Encounter.findByIdAndUpdate = mockFindByIdAndUpdate;
 
       await expect(
-        EncounterService.updateEncounter(testEncounterId, { notes: "Updated notes" }, testPractitionerId)
+        EncounterService.updateEncounter(
+          testEncounterId,
+          { notes: "Updated notes" },
+          testPractitionerId,
+        ),
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -261,7 +329,7 @@ describe("EncounterService", () => {
         testUserId,
         testOrganizationId,
         { type: "ROUTINE" },
-        { page: 1, limit: 10 }
+        { page: 1, limit: 10 },
       );
 
       expect(result.encounters).toEqual(mockEncounters);
@@ -271,7 +339,7 @@ describe("EncounterService", () => {
           userId: expect.any(mongoose.Types.ObjectId),
           organizationId: expect.any(mongoose.Types.ObjectId),
           "encounter.encounterType": "ROUTINE",
-        })
+        }),
       );
     });
 
@@ -293,7 +361,7 @@ describe("EncounterService", () => {
         testUserId,
         testOrganizationId,
         { startDate, endDate },
-        { page: 1, limit: 10 }
+        { page: 1, limit: 10 },
       );
 
       expect(Encounter.find).toHaveBeenCalledWith(
@@ -302,7 +370,7 @@ describe("EncounterService", () => {
             $gte: new Date(startDate),
             $lte: new Date(endDate),
           },
-        })
+        }),
       );
     });
   });

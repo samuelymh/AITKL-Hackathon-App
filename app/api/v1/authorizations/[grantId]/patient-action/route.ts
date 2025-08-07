@@ -24,17 +24,26 @@ function extractGrantId(request: NextRequest): string | null {
 /**
  * Validate grant ownership and status
  */
-function validateGrantForAction(grant: any, userId: string): { isValid: boolean; error?: string } {
+function validateGrantForAction(
+  grant: any,
+  userId: string,
+): { isValid: boolean; error?: string } {
   if (!grant) {
     return { isValid: false, error: "Authorization grant not found" };
   }
 
   if (grant.userId.toString() !== userId) {
-    return { isValid: false, error: "Unauthorized: This grant does not belong to you" };
+    return {
+      isValid: false,
+      error: "Unauthorized: This grant does not belong to you",
+    };
   }
 
   if (grant.grantDetails.status !== "PENDING") {
-    return { isValid: false, error: `Cannot modify grant with status: ${grant.grantDetails.status}` };
+    return {
+      isValid: false,
+      error: `Cannot modify grant with status: ${grant.grantDetails.status}`,
+    };
   }
 
   if (grant.isExpired()) {
@@ -54,7 +63,9 @@ async function updateGrantStatus(grant: any, action: string): Promise<void> {
 
     // Calculate expiration based on time window
     const expirationTime = new Date();
-    expirationTime.setHours(expirationTime.getHours() + grant.grantDetails.timeWindowHours);
+    expirationTime.setHours(
+      expirationTime.getHours() + grant.grantDetails.timeWindowHours,
+    );
     grant.grantDetails.expiresAt = expirationTime;
   } else if (action === "deny") {
     grant.grantDetails.status = "DENIED";
@@ -75,7 +86,10 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     // Extract grantId from URL
@@ -84,7 +98,10 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
     const grantId = pathSegments[pathSegments.indexOf("authorizations") + 1];
 
     if (!grantId) {
-      return NextResponse.json({ error: "Grant ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Grant ID is required" },
+        { status: 400 },
+      );
     }
 
     const body = await request.json();
@@ -115,16 +132,22 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
     }
 
     // Log the patient action
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authContext.userId, {
-      action: `PATIENT_${validatedData.action.toUpperCase()}D_ACCESS`,
-      grantId: validGrant._id.toString(),
-      organizationId: validGrant.organizationId._id.toString(),
-      requestingPractitionerId: validGrant.requestingPractitionerId?._id.toString(),
-      reason: validatedData.reason,
-      previousStatus: currentStatus,
-      newStatus: updatedGrant.grantDetails.status,
-      patientDecision: validatedData.action,
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.DATA_MODIFICATION,
+      request,
+      authContext.userId,
+      {
+        action: `PATIENT_${validatedData.action.toUpperCase()}D_ACCESS`,
+        grantId: validGrant._id.toString(),
+        organizationId: validGrant.organizationId._id.toString(),
+        requestingPractitionerId:
+          validGrant.requestingPractitionerId?._id.toString(),
+        reason: validatedData.reason,
+        previousStatus: currentStatus,
+        newStatus: updatedGrant.grantDetails.status,
+        patientDecision: validatedData.action,
+      },
+    );
 
     // Format response
     const organization = validGrant.organizationId as any;
@@ -164,7 +187,8 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
     try {
       const url = new URL(request.url);
       const pathSegments = url.pathname.split("/");
-      grantIdForLog = pathSegments[pathSegments.indexOf("authorizations") + 1] || "unknown";
+      grantIdForLog =
+        pathSegments[pathSegments.indexOf("authorizations") + 1] || "unknown";
     } catch (urlError) {
       console.warn("Failed to extract grantId for logging:", urlError);
     }
@@ -178,12 +202,14 @@ async function patientActionHandler(request: NextRequest, authContext: any) {
         action: "PATIENT_ACTION_ERROR",
         grantId: grantIdForLog,
         error: error instanceof Error ? error.message : "Unknown error",
-      }
+      },
     );
 
     return NextResponse.json(
-      { error: `Failed to process authorization action: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
+      {
+        error: `Failed to process authorization action: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
+      { status: 500 },
     );
   }
 }

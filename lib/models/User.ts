@@ -2,7 +2,10 @@ import mongoose, { Model } from "mongoose";
 import { randomUUID } from "crypto";
 import { createExtendedSchema } from "./SchemaUtils";
 import { IBaseDocument } from "./BaseSchema";
-import { encryptionPlugin, EncryptedFieldType } from "../services/encryption-plugin";
+import {
+  encryptionPlugin,
+  EncryptedFieldType,
+} from "../services/encryption-plugin";
 
 // Interface definitions matching the knowledge base with encryption support
 export interface IUser extends IBaseDocument {
@@ -225,13 +228,21 @@ const UserSchema = createExtendedSchema(userSchemaFields, {
 // Pre-save middleware for data validation and transformation (BEFORE encryption)
 UserSchema.pre("save", function (next) {
   // Generate digital identifier if not provided or empty
-  if (!this.digitalIdentifier || (typeof this.digitalIdentifier === "string" && this.digitalIdentifier.trim() === "")) {
+  if (
+    !this.digitalIdentifier ||
+    (typeof this.digitalIdentifier === "string" &&
+      this.digitalIdentifier.trim() === "")
+  ) {
     this.digitalIdentifier = `HID_${randomUUID()}`;
   }
 
   // Ensure digital identifier is unique format
   const digitalId = this.digitalIdentifier;
-  if (digitalId && typeof digitalId === "string" && !digitalId.startsWith("HID_")) {
+  if (
+    digitalId &&
+    typeof digitalId === "string" &&
+    !digitalId.startsWith("HID_")
+  ) {
     this.digitalIdentifier = `HID_${digitalId}`;
   }
 
@@ -240,7 +251,9 @@ UserSchema.pre("save", function (next) {
     const email = (this.personalInfo as any).contact.email;
     // If it's a string (not yet encrypted), use it for searchableEmail
     if (typeof email === "string") {
-      (this.personalInfo as any).contact.searchableEmail = email.toLowerCase().trim();
+      (this.personalInfo as any).contact.searchableEmail = email
+        .toLowerCase()
+        .trim();
     }
   }
 
@@ -290,8 +303,10 @@ UserSchema.methods = {
       // The encryption plugin should automatically decrypt fields during query
       // But we'll add a safety check for the decryptField method
       if (typeof this.decryptField === "function") {
-        const firstName = (await this.decryptField("personalInfo.firstName")) || "Unknown";
-        const lastName = (await this.decryptField("personalInfo.lastName")) || "Unknown";
+        const firstName =
+          (await this.decryptField("personalInfo.firstName")) || "Unknown";
+        const lastName =
+          (await this.decryptField("personalInfo.lastName")) || "Unknown";
         return `${firstName} ${lastName}`;
       } else {
         // Fallback: fields should already be decrypted by post-query middleware
@@ -307,7 +322,10 @@ UserSchema.methods = {
 
   // Check if contact info is verified
   isContactVerified: function () {
-    return this.personalInfo.contact.verified.email && this.personalInfo.contact.verified.phone;
+    return (
+      this.personalInfo.contact.verified.email &&
+      this.personalInfo.contact.verified.phone
+    );
   },
 
   // Get age
@@ -317,7 +335,10 @@ UserSchema.methods = {
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
 
@@ -329,10 +350,15 @@ UserSchema.methods = {
     const role = this.auth?.role || "patient";
 
     // Import encryption service for direct decryption
-    const { encryptionService, encryptionUtils } = await import("../services/encryption-service");
+    const { encryptionService, encryptionUtils } = await import(
+      "../services/encryption-service"
+    );
 
     // Helper function to decrypt a field safely
-    const safeDecrypt = async (fieldPath: string, field: any): Promise<string | null> => {
+    const safeDecrypt = async (
+      fieldPath: string,
+      field: any,
+    ): Promise<string | null> => {
       try {
         // Always try direct decryption first if field is encrypted
         if (encryptionUtils.isEncrypted(field)) {
@@ -350,11 +376,17 @@ UserSchema.methods = {
         // Try plugin method as fallback
         if (typeof this.decryptField === "function") {
           const decrypted = await this.decryptField(fieldPath);
-          console.log(`Plugin decryption for ${fieldPath}:`, decrypted ? "success" : "null");
+          console.log(
+            `Plugin decryption for ${fieldPath}:`,
+            decrypted ? "success" : "null",
+          );
           return decrypted;
         }
 
-        console.log(`Field ${fieldPath} could not be decrypted, type:`, typeof field);
+        console.log(
+          `Field ${fieldPath} could not be decrypted, type:`,
+          typeof field,
+        );
       } catch (error) {
         console.warn(`Failed to decrypt ${fieldPath}:`, error);
       }
@@ -362,16 +394,31 @@ UserSchema.methods = {
     };
 
     // Try to get decrypted values
-    const firstName = (await safeDecrypt("personalInfo.firstName", this.personalInfo.firstName)) || "User";
+    const firstName =
+      (await safeDecrypt(
+        "personalInfo.firstName",
+        this.personalInfo.firstName,
+      )) || "User";
 
-    const lastName = (await safeDecrypt("personalInfo.lastName", this.personalInfo.lastName)) || "Name";
+    const lastName =
+      (await safeDecrypt(
+        "personalInfo.lastName",
+        this.personalInfo.lastName,
+      )) || "Name";
 
     const email =
-      (await safeDecrypt("personalInfo.contact.email", this.personalInfo.contact.email)) ||
+      (await safeDecrypt(
+        "personalInfo.contact.email",
+        this.personalInfo.contact.email,
+      )) ||
       this.personalInfo.contact.searchableEmail || // Use searchableEmail as primary fallback
       "user@example.com";
 
-    const phone = (await safeDecrypt("personalInfo.contact.phone", this.personalInfo.contact.phone)) || "+000000000";
+    const phone =
+      (await safeDecrypt(
+        "personalInfo.contact.phone",
+        this.personalInfo.contact.phone,
+      )) || "+000000000";
 
     return {
       id: this._id.toString(),
@@ -402,6 +449,7 @@ UserSchema.methods = {
 
 // Create and export the model
 // Use mongoose.models to prevent re-compilation in serverless environments
-const User: IUserModel = (mongoose.models.User || mongoose.model<IUser, IUserModel>("User", UserSchema)) as IUserModel;
+const User: IUserModel = (mongoose.models.User ||
+  mongoose.model<IUser, IUserModel>("User", UserSchema)) as IUserModel;
 
 export default User;

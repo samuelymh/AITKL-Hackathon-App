@@ -1,19 +1,48 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Stethoscope, Award, Plus, X, Save, AlertCircle, CheckCircle, User, BadgeCheck, Shield } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Stethoscope,
+  Award,
+  Plus,
+  X,
+  Save,
+  AlertCircle,
+  CheckCircle,
+  User,
+  BadgeCheck,
+  Shield,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useProfessionalInfo } from "@/hooks/api/useProfessionalInfo";
 
 interface ProfessionalInformation {
   licenseNumber: string;
   specialty: string;
-  practitionerType: "doctor" | "nurse" | "pharmacist" | "technician" | "admin" | "other";
+  practitionerType:
+    | "doctor"
+    | "nurse"
+    | "pharmacist"
+    | "technician"
+    | "admin"
+    | "other";
   yearsOfExperience: number;
   currentPosition?: string;
   department?: string;
@@ -95,7 +124,9 @@ const PRACTITIONER_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfessionalInformationProps>) {
+export function DoctorProfessionalInformation({
+  userId,
+}: Readonly<DoctorProfessionalInformationProps>) {
   const {
     professionalInfo,
     setProfessionalInfo,
@@ -121,17 +152,29 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
   }, [saveProfessionalInfo]);
 
   const addSpecialization = useCallback(() => {
-    if (newSpecialization.trim() && !professionalInfo.metadata?.specializations?.includes(newSpecialization.trim())) {
+    if (
+      newSpecialization.trim() &&
+      !professionalInfo.metadata?.specializations?.includes(
+        newSpecialization.trim(),
+      )
+    ) {
       setProfessionalInfo((prev) => ({
         ...prev,
         metadata: {
           ...prev.metadata,
-          specializations: [...(prev.metadata?.specializations || []), newSpecialization.trim()],
+          specializations: [
+            ...(prev.metadata?.specializations || []),
+            newSpecialization.trim(),
+          ],
         },
       }));
       setNewSpecialization("");
     }
-  }, [newSpecialization, professionalInfo.metadata?.specializations, setProfessionalInfo]);
+  }, [
+    newSpecialization,
+    professionalInfo.metadata?.specializations,
+    setProfessionalInfo,
+  ]);
 
   const removeSpecialization = useCallback(
     (index: number) => {
@@ -139,15 +182,19 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
         ...prev,
         metadata: {
           ...prev.metadata,
-          specializations: prev.metadata?.specializations?.filter((_, i) => i !== index) || [],
+          specializations:
+            prev.metadata?.specializations?.filter((_, i) => i !== index) || [],
         },
       }));
     },
-    [setProfessionalInfo]
+    [setProfessionalInfo],
   );
 
   const addLanguage = useCallback(() => {
-    if (newLanguage.trim() && !professionalInfo.metadata?.languages?.includes(newLanguage.trim())) {
+    if (
+      newLanguage.trim() &&
+      !professionalInfo.metadata?.languages?.includes(newLanguage.trim())
+    ) {
       setProfessionalInfo((prev) => ({
         ...prev,
         metadata: {
@@ -165,15 +212,20 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
         ...prev,
         metadata: {
           ...prev.metadata,
-          languages: prev.metadata?.languages?.filter((_, i) => i !== index) || [],
+          languages:
+            prev.metadata?.languages?.filter((_, i) => i !== index) || [],
         },
       }));
     },
-    [setProfessionalInfo]
+    [setProfessionalInfo],
   );
 
   const addCertification = useCallback(() => {
-    if (newCertification.name && newCertification.issuingBody && newCertification.issueDate) {
+    if (
+      newCertification.name &&
+      newCertification.issuingBody &&
+      newCertification.issueDate
+    ) {
       const certification = {
         ...newCertification,
         verificationStatus: "pending" as const,
@@ -183,11 +235,19 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
         ...prev,
         metadata: {
           ...prev.metadata,
-          certifications: [...(prev.metadata?.certifications || []), certification],
+          certifications: [
+            ...(prev.metadata?.certifications || []),
+            certification,
+          ],
         },
       }));
 
-      setNewCertification({ name: "", issuingBody: "", issueDate: "", expiryDate: "" });
+      setNewCertification({
+        name: "",
+        issuingBody: "",
+        issueDate: "",
+        expiryDate: "",
+      });
       setShowCertificationForm(false);
     }
   }, [newCertification, setProfessionalInfo]);
@@ -198,11 +258,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
         ...prev,
         metadata: {
           ...prev.metadata,
-          certifications: prev.metadata?.certifications?.filter((_, i) => i !== index) || [],
+          certifications:
+            prev.metadata?.certifications?.filter((_, i) => i !== index) || [],
         },
       }));
     },
-    [setProfessionalInfo]
+    [setProfessionalInfo],
   );
 
   if (loading) {
@@ -224,7 +285,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
       >
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className={`rounded-full p-3 ${isComplete ? "bg-green-100" : "bg-orange-100"}`}>
+            <div
+              className={`rounded-full p-3 ${isComplete ? "bg-green-100" : "bg-orange-100"}`}
+            >
               {isComplete ? (
                 <CheckCircle className="h-6 w-6 text-green-600" />
               ) : (
@@ -233,7 +296,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold">
-                {isComplete ? "Professional Profile Complete" : "Complete Your Professional Profile"}
+                {isComplete
+                  ? "Professional Profile Complete"
+                  : "Complete Your Professional Profile"}
               </h3>
               <p className="text-sm text-gray-600 mt-1">
                 {isComplete
@@ -241,7 +306,10 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   : "Complete your professional information to access all healthcare provider features."}
               </p>
             </div>
-            <Button onClick={handleSave} disabled={saving || !requiredFieldsComplete}>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !requiredFieldsComplete}
+            >
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Saving..." : "Save Profile"}
             </Button>
@@ -256,7 +324,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <Stethoscope className="h-5 w-5" />
             Professional Information
           </CardTitle>
-          <CardDescription>Your professional credentials and practice information</CardDescription>
+          <CardDescription>
+            Your professional credentials and practice information
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -265,7 +335,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               <Input
                 id="licenseNumber"
                 value={professionalInfo.licenseNumber}
-                onChange={(e) => setProfessionalInfo((prev) => ({ ...prev, licenseNumber: e.target.value }))}
+                onChange={(e) =>
+                  setProfessionalInfo((prev) => ({
+                    ...prev,
+                    licenseNumber: e.target.value,
+                  }))
+                }
                 placeholder="Enter your medical license number"
                 required
               />
@@ -275,7 +350,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               <Label htmlFor="specialty">Medical Specialty *</Label>
               <Select
                 value={professionalInfo.specialty}
-                onValueChange={(value) => setProfessionalInfo((prev) => ({ ...prev, specialty: value }))}
+                onValueChange={(value) =>
+                  setProfessionalInfo((prev) => ({ ...prev, specialty: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your specialty" />
@@ -294,7 +371,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               <Label htmlFor="practitionerType">Practitioner Type *</Label>
               <Select
                 value={professionalInfo.practitionerType}
-                onValueChange={(value) => setProfessionalInfo((prev) => ({ ...prev, practitionerType: value as any }))}
+                onValueChange={(value) =>
+                  setProfessionalInfo((prev) => ({
+                    ...prev,
+                    practitionerType: value as any,
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select practitioner type" />
@@ -318,7 +400,10 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                 max="70"
                 value={professionalInfo.yearsOfExperience}
                 onChange={(e) =>
-                  setProfessionalInfo((prev) => ({ ...prev, yearsOfExperience: parseInt(e.target.value) || 0 }))
+                  setProfessionalInfo((prev) => ({
+                    ...prev,
+                    yearsOfExperience: parseInt(e.target.value) || 0,
+                  }))
                 }
                 placeholder="Years of professional experience"
                 required
@@ -330,7 +415,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               <Input
                 id="currentPosition"
                 value={professionalInfo.currentPosition || ""}
-                onChange={(e) => setProfessionalInfo((prev) => ({ ...prev, currentPosition: e.target.value }))}
+                onChange={(e) =>
+                  setProfessionalInfo((prev) => ({
+                    ...prev,
+                    currentPosition: e.target.value,
+                  }))
+                }
                 placeholder="e.g., Senior Consultant, Chief of Medicine"
               />
             </div>
@@ -340,7 +430,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               <Input
                 id="department"
                 value={professionalInfo.department || ""}
-                onChange={(e) => setProfessionalInfo((prev) => ({ ...prev, department: e.target.value }))}
+                onChange={(e) =>
+                  setProfessionalInfo((prev) => ({
+                    ...prev,
+                    department: e.target.value,
+                  }))
+                }
                 placeholder="e.g., Cardiology, Emergency Medicine"
               />
             </div>
@@ -355,14 +450,23 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <Award className="h-5 w-5" />
             Additional Specializations
           </CardTitle>
-          <CardDescription>Any additional areas of expertise or sub-specializations</CardDescription>
+          <CardDescription>
+            Any additional areas of expertise or sub-specializations
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {professionalInfo.metadata?.specializations?.map((spec, index) => (
-              <Badge key={`spec-${spec}-${index}`} variant="secondary" className="flex items-center gap-1">
+              <Badge
+                key={`spec-${spec}-${index}`}
+                variant="secondary"
+                className="flex items-center gap-1"
+              >
                 {spec}
-                <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => removeSpecialization(index)} />
+                <X
+                  className="h-3 w-3 cursor-pointer hover:text-red-500"
+                  onClick={() => removeSpecialization(index)}
+                />
               </Badge>
             ))}
           </div>
@@ -388,14 +492,23 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <User className="h-5 w-5" />
             Languages Spoken
           </CardTitle>
-          <CardDescription>Languages you can communicate with patients in</CardDescription>
+          <CardDescription>
+            Languages you can communicate with patients in
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
             {professionalInfo.metadata?.languages?.map((lang, index) => (
-              <Badge key={`lang-${lang}-${index}`} variant="outline" className="flex items-center gap-1">
+              <Badge
+                key={`lang-${lang}-${index}`}
+                variant="outline"
+                className="flex items-center gap-1"
+              >
                 {lang}
-                <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => removeLanguage(index)} />
+                <X
+                  className="h-3 w-3 cursor-pointer hover:text-red-500"
+                  onClick={() => removeLanguage(index)}
+                />
               </Badge>
             ))}
           </div>
@@ -421,7 +534,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <BadgeCheck className="h-5 w-5" />
             Professional Certifications
           </CardTitle>
-          <CardDescription>Board certifications, additional qualifications, and training</CardDescription>
+          <CardDescription>
+            Board certifications, additional qualifications, and training
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
@@ -432,17 +547,30 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
               >
                 <div className="flex-1">
                   <div className="font-medium">{cert.name}</div>
-                  <div className="text-sm text-gray-600">{cert.issuingBody}</div>
+                  <div className="text-sm text-gray-600">
+                    {cert.issuingBody}
+                  </div>
                   <div className="text-xs text-gray-500">
                     Issued: {new Date(cert.issueDate).toLocaleDateString()}
-                    {cert.expiryDate && ` • Expires: ${new Date(cert.expiryDate).toLocaleDateString()}`}
+                    {cert.expiryDate &&
+                      ` • Expires: ${new Date(cert.expiryDate).toLocaleDateString()}`}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={cert.verificationStatus === "verified" ? "default" : "secondary"}>
+                  <Badge
+                    variant={
+                      cert.verificationStatus === "verified"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
                     {cert.verificationStatus}
                   </Badge>
-                  <Button variant="ghost" size="sm" onClick={() => removeCertification(index)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeCertification(index)}
+                  >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -451,7 +579,11 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
           </div>
 
           {!showCertificationForm ? (
-            <Button variant="outline" onClick={() => setShowCertificationForm(true)} className="w-full">
+            <Button
+              variant="outline"
+              onClick={() => setShowCertificationForm(true)}
+              className="w-full"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Certification
             </Button>
@@ -462,7 +594,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   <Label>Certification Name</Label>
                   <Input
                     value={newCertification.name}
-                    onChange={(e) => setNewCertification((prev) => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setNewCertification((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., Board Certified in Internal Medicine"
                   />
                 </div>
@@ -470,7 +607,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   <Label>Issuing Body</Label>
                   <Input
                     value={newCertification.issuingBody}
-                    onChange={(e) => setNewCertification((prev) => ({ ...prev, issuingBody: e.target.value }))}
+                    onChange={(e) =>
+                      setNewCertification((prev) => ({
+                        ...prev,
+                        issuingBody: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., American Board of Internal Medicine"
                   />
                 </div>
@@ -479,7 +621,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   <Input
                     type="date"
                     value={newCertification.issueDate}
-                    onChange={(e) => setNewCertification((prev) => ({ ...prev, issueDate: e.target.value }))}
+                    onChange={(e) =>
+                      setNewCertification((prev) => ({
+                        ...prev,
+                        issueDate: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div>
@@ -487,7 +634,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   <Input
                     type="date"
                     value={newCertification.expiryDate}
-                    onChange={(e) => setNewCertification((prev) => ({ ...prev, expiryDate: e.target.value }))}
+                    onChange={(e) =>
+                      setNewCertification((prev) => ({
+                        ...prev,
+                        expiryDate: e.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -499,7 +651,12 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                   variant="outline"
                   onClick={() => {
                     setShowCertificationForm(false);
-                    setNewCertification({ name: "", issuingBody: "", issueDate: "", expiryDate: "" });
+                    setNewCertification({
+                      name: "",
+                      issuingBody: "",
+                      issueDate: "",
+                      expiryDate: "",
+                    });
                   }}
                   size="sm"
                 >
@@ -518,7 +675,9 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <Shield className="h-5 w-5" />
             Emergency Contact
           </CardTitle>
-          <CardDescription>Emergency contact information for professional purposes</CardDescription>
+          <CardDescription>
+            Emergency contact information for professional purposes
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -534,7 +693,8 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                       emergencyContact: {
                         ...prev.metadata?.emergencyContact,
                         name: e.target.value,
-                        relationship: prev.metadata?.emergencyContact?.relationship || "",
+                        relationship:
+                          prev.metadata?.emergencyContact?.relationship || "",
                         phone: prev.metadata?.emergencyContact?.phone || "",
                         email: prev.metadata?.emergencyContact?.email || "",
                       },
@@ -547,7 +707,10 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
             <div>
               <Label>Relationship</Label>
               <Input
-                value={professionalInfo.metadata?.emergencyContact?.relationship || ""}
+                value={
+                  professionalInfo.metadata?.emergencyContact?.relationship ||
+                  ""
+                }
                 onChange={(e) =>
                   setProfessionalInfo((prev) => ({
                     ...prev,
@@ -578,7 +741,8 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                       emergencyContact: {
                         ...prev.metadata?.emergencyContact,
                         name: prev.metadata?.emergencyContact?.name || "",
-                        relationship: prev.metadata?.emergencyContact?.relationship || "",
+                        relationship:
+                          prev.metadata?.emergencyContact?.relationship || "",
                         phone: e.target.value,
                         email: prev.metadata?.emergencyContact?.email || "",
                       },
@@ -601,7 +765,8 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
                       emergencyContact: {
                         ...prev.metadata?.emergencyContact,
                         name: prev.metadata?.emergencyContact?.name || "",
-                        relationship: prev.metadata?.emergencyContact?.relationship || "",
+                        relationship:
+                          prev.metadata?.emergencyContact?.relationship || "",
                         phone: prev.metadata?.emergencyContact?.phone || "",
                         email: e.target.value,
                       },
@@ -617,7 +782,11 @@ export function DoctorProfessionalInformation({ userId }: Readonly<DoctorProfess
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving || !requiredFieldsComplete} size="lg">
+        <Button
+          onClick={handleSave}
+          disabled={saving || !requiredFieldsComplete}
+          size="lg"
+        >
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Saving..." : "Save Professional Profile"}
         </Button>

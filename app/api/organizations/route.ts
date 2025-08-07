@@ -67,28 +67,35 @@ async function postHandler(request: NextRequest, authContext?: any) {
           error: "Invalid organization data",
           details: validation.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const organizationData = validation.data;
 
     // Check if organization already exists
-    const existingOrg = await OrganizationService.findExistingOrganization(organizationData);
+    const existingOrg =
+      await OrganizationService.findExistingOrganization(organizationData);
     const validationError = OrganizationService.validateExistingOrganization(
       existingOrg,
-      organizationData.organizationInfo.registrationNumber
+      organizationData.organizationInfo.registrationNumber,
     );
 
     if (validationError) {
-      return NextResponse.json({ error: validationError.error }, { status: validationError.status });
+      return NextResponse.json(
+        { error: validationError.error },
+        { status: validationError.status },
+      );
     }
 
     // Use authenticated user ID if available, otherwise fallback to system
     const createdBy = authContext?.userId || SYSTEM_USER_ID;
 
     // Create new organization
-    const savedOrganization = await OrganizationService.createOrganization(organizationData, createdBy);
+    const savedOrganization = await OrganizationService.createOrganization(
+      organizationData,
+      createdBy,
+    );
 
     return NextResponse.json(
       {
@@ -98,7 +105,7 @@ async function postHandler(request: NextRequest, authContext?: any) {
           organization: savedOrganization.toPublicJSON(),
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Organization registration error:", error);
@@ -111,7 +118,7 @@ async function postHandler(request: NextRequest, authContext?: any) {
           {
             error: "Organization with this information already exists",
           },
-          { status: 409 }
+          { status: 409 },
         );
       }
 
@@ -121,7 +128,7 @@ async function postHandler(request: NextRequest, authContext?: any) {
             error: "Invalid organization data",
             details: error.message,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -131,7 +138,7 @@ async function postHandler(request: NextRequest, authContext?: any) {
         error: "Failed to register organization",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -146,14 +153,21 @@ async function getHandler(request: NextRequest, authContext?: any) {
     const organizationId = searchParams.get("id");
 
     if (!organizationId) {
-      return NextResponse.json({ error: "Organization ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Organization ID is required" },
+        { status: 400 },
+      );
     }
 
     // Find organization using service
-    const organization = await OrganizationService.getOrganizationById(organizationId);
+    const organization =
+      await OrganizationService.getOrganizationById(organizationId);
 
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({
@@ -169,7 +183,7 @@ async function getHandler(request: NextRequest, authContext?: any) {
         error: "Failed to retrieve organization",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

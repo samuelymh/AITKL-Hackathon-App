@@ -5,7 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 interface ProfessionalInformation {
   licenseNumber: string;
   specialty: string;
-  practitionerType: "doctor" | "nurse" | "pharmacist" | "technician" | "admin" | "other";
+  practitionerType:
+    | "doctor"
+    | "nurse"
+    | "pharmacist"
+    | "technician"
+    | "admin"
+    | "other";
   yearsOfExperience: number;
   currentPosition?: string;
   department?: string;
@@ -52,7 +58,9 @@ interface ProfessionalInfoResponse {
 
 interface UseProfessionalInfoReturn {
   professionalInfo: ProfessionalInformation;
-  setProfessionalInfo: React.Dispatch<React.SetStateAction<ProfessionalInformation>>;
+  setProfessionalInfo: React.Dispatch<
+    React.SetStateAction<ProfessionalInformation>
+  >;
   loading: boolean;
   saving: boolean;
   isComplete: boolean;
@@ -66,25 +74,26 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
   const { token, logout, refreshAuthToken } = useAuth();
   const { toast } = useToast();
 
-  const [professionalInfo, setProfessionalInfo] = useState<ProfessionalInformation>({
-    licenseNumber: "",
-    specialty: "",
-    practitionerType: "doctor",
-    yearsOfExperience: 0,
-    currentPosition: "",
-    department: "",
-    metadata: {
-      specializations: [],
-      languages: [],
-      certifications: [],
-      emergencyContact: {
-        name: "",
-        relationship: "",
-        phone: "",
-        email: "",
+  const [professionalInfo, setProfessionalInfo] =
+    useState<ProfessionalInformation>({
+      licenseNumber: "",
+      specialty: "",
+      practitionerType: "doctor",
+      yearsOfExperience: 0,
+      currentPosition: "",
+      department: "",
+      metadata: {
+        specializations: [],
+        languages: [],
+        certifications: [],
+        emergencyContact: {
+          name: "",
+          relationship: "",
+          phone: "",
+          email: "",
+        },
       },
-    },
-  });
+    });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -122,7 +131,9 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
           });
 
           if (!retryResponse.ok) {
-            throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+            throw new Error(
+              `HTTP ${retryResponse.status}: ${retryResponse.statusText}`,
+            );
           }
 
           return retryResponse;
@@ -132,7 +143,7 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
 
       return response;
     },
-    [token, refreshAuthToken]
+    [token, refreshAuthToken],
   );
 
   const fetchProfessionalInfo = useCallback(async () => {
@@ -140,8 +151,11 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
       setLoading(true);
       setError(null);
 
-      const response = await makeAuthenticatedRequest("/api/doctor/professional-info");
-      const result: { success: boolean; data: ProfessionalInfoResponse } = await response.json();
+      const response = await makeAuthenticatedRequest(
+        "/api/doctor/professional-info",
+      );
+      const result: { success: boolean; data: ProfessionalInfoResponse } =
+        await response.json();
 
       if (result.success && result.data.practitioner) {
         setProfessionalInfo(result.data.practitioner.professionalInfo);
@@ -150,10 +164,16 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
         setIsComplete(false);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to load professional information";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to load professional information";
       setError(errorMessage);
 
-      if (error instanceof Error && error.message.includes("No authentication token")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("No authentication token")
+      ) {
         logout();
         return;
       }
@@ -173,10 +193,13 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
       setSaving(true);
       setError(null);
 
-      const response = await makeAuthenticatedRequest("/api/doctor/professional-info", {
-        method: "POST",
-        body: JSON.stringify(professionalInfo),
-      });
+      const response = await makeAuthenticatedRequest(
+        "/api/doctor/professional-info",
+        {
+          method: "POST",
+          body: JSON.stringify(professionalInfo),
+        },
+      );
 
       const result = await response.json();
 
@@ -192,10 +215,16 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
         throw new Error(result.error || "Failed to save");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to save professional information";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to save professional information";
       setError(errorMessage);
 
-      if (error instanceof Error && error.message.includes("No authentication token")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("No authentication token")
+      ) {
         logout();
         return false;
       }
@@ -209,7 +238,13 @@ export function useProfessionalInfo(): UseProfessionalInfoReturn {
     } finally {
       setSaving(false);
     }
-  }, [makeAuthenticatedRequest, professionalInfo, logout, toast, fetchProfessionalInfo]);
+  }, [
+    makeAuthenticatedRequest,
+    professionalInfo,
+    logout,
+    toast,
+    fetchProfessionalInfo,
+  ]);
 
   const requiredFieldsComplete = !!(
     professionalInfo.licenseNumber &&

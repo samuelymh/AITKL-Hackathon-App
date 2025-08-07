@@ -12,7 +12,10 @@
  */
 
 import mongoose from "mongoose";
-import { NotificationQueueProcessor, NotificationHelpers } from "../lib/services/notification-queue-processor";
+import {
+  NotificationQueueProcessor,
+  NotificationHelpers,
+} from "../lib/services/notification-queue-processor";
 import { PushNotificationService } from "../lib/services/push-notification-service";
 import { NotificationJobType } from "../lib/services/notification-queue";
 import connectToDatabase from "../lib/db.connection";
@@ -39,20 +42,28 @@ async function testNotificationQueue() {
       testGrantId,
       "Test Hospital",
       "John Smith",
-      true // urgent
+      true, // urgent
     );
     console.log(`✅ Enqueued authorization request: ${authJobId}`);
 
     // Enqueue status update (normal priority)
-    const statusJobId = await NotificationHelpers.enqueueStatusUpdate(testUserId, testGrantId, "approved");
+    const statusJobId = await NotificationHelpers.enqueueStatusUpdate(
+      testUserId,
+      testGrantId,
+      "approved",
+    );
     console.log(`✅ Enqueued status update: ${statusJobId}`);
 
     // Enqueue some additional test jobs
-    const reminderJobId = await NotificationQueueProcessor.enqueue(NotificationJobType.REMINDER, testUserId, {
-      title: "Medication Reminder",
-      body: "Time to take your medication",
-      data: { type: "medication" },
-    });
+    const reminderJobId = await NotificationQueueProcessor.enqueue(
+      NotificationJobType.REMINDER,
+      testUserId,
+      {
+        title: "Medication Reminder",
+        body: "Time to take your medication",
+        data: { type: "medication" },
+      },
+    );
     console.log(`✅ Enqueued reminder: ${reminderJobId}`);
 
     // Test 2: Check queue statistics before processing
@@ -90,18 +101,24 @@ async function testNotificationQueue() {
     console.log("-".repeat(40));
 
     // Create a job that might fail in simulation (5% chance)
-    const retryJobId = await NotificationQueueProcessor.enqueue(NotificationJobType.SYSTEM_ALERT, testUserId, {
-      title: "System Alert",
-      body: "This is a test alert that might fail",
-      data: { type: "test" },
-    });
+    const retryJobId = await NotificationQueueProcessor.enqueue(
+      NotificationJobType.SYSTEM_ALERT,
+      testUserId,
+      {
+        title: "System Alert",
+        body: "This is a test alert that might fail",
+        data: { type: "test" },
+      },
+    );
     console.log(`✅ Enqueued job for retry testing: ${retryJobId}`);
 
     // Process a few times to potentially trigger retries
     for (let i = 0; i < 3; i++) {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
       const retryResult = await NotificationQueueProcessor.processBatch(1);
-      console.log(`   Retry attempt ${i + 1}: ${retryResult.processed} processed, ${retryResult.failed} failed`);
+      console.log(
+        `   Retry attempt ${i + 1}: ${retryResult.processed} processed, ${retryResult.failed} failed`,
+      );
 
       if (retryResult.processed === 0) {
         console.log("   No more jobs to process");
@@ -148,12 +165,17 @@ async function testNotificationQueue() {
         olderThanHours: 24,
         cleanupAt: new Date().toISOString(),
       },
-      message: deletedCount > 0 ? `Cleaned up ${deletedCount} old notification jobs` : "No old jobs to clean up",
+      message:
+        deletedCount > 0
+          ? `Cleaned up ${deletedCount} old notification jobs`
+          : "No old jobs to clean up",
     });
 
     console.log("\n✅ All tests completed successfully!");
     console.log("=".repeat(60));
-    console.log("The notification queue system is working correctly and is ready for production use on Vercel.");
+    console.log(
+      "The notification queue system is working correctly and is ready for production use on Vercel.",
+    );
   } catch (error) {
     console.error("❌ Test failed:", error);
     process.exit(1);

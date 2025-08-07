@@ -79,22 +79,30 @@ export class Environment {
     const missing = required.filter((key) => !process.env[key]);
 
     if (missing.length > 0) {
-      throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+      throw new Error(
+        `Missing required environment variables: ${missing.join(", ")}`,
+      );
     }
 
     // Production-specific validations
     if (this.isProduction()) {
       const productionRequired = ["ENCRYPTION_MASTER_KEY", "ENCRYPTION_SALT"];
 
-      const missingProduction = productionRequired.filter((key) => !process.env[key]);
+      const missingProduction = productionRequired.filter(
+        (key) => !process.env[key],
+      );
 
       if (missingProduction.length > 0) {
-        throw new Error(`Missing required production environment variables: ${missingProduction.join(", ")}`);
+        throw new Error(
+          `Missing required production environment variables: ${missingProduction.join(", ")}`,
+        );
       }
 
       // Validate encryption keys are not default values
       if (process.env.ENCRYPTION_MASTER_KEY?.includes("default")) {
-        throw new Error("Production encryption keys must not contain default values");
+        throw new Error(
+          "Production encryption keys must not contain default values",
+        );
       }
     }
   }

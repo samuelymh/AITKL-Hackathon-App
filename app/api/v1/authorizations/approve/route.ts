@@ -25,12 +25,18 @@ const ApproveRequestSchema = z.object({
  * PATCH /api/v1/authorizations/approve
  * Approve an authorization request (patient action)
  */
-async function approveAuthorizationHandler(request: NextRequest, authContext: any) {
+async function approveAuthorizationHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     const body = await request.json();
@@ -42,7 +48,10 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
       .populate("requestingPractitionerId");
 
     if (!authGrant) {
-      return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Authorization grant not found" },
+        { status: 404 },
+      );
     }
 
     // Verify ownership - check if this grant belongs to the current user
@@ -50,20 +59,28 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
       authGrant.userId.toString() !== authContext.digitalIdentifier &&
       authGrant.userId.toString() !== authContext.userId
     ) {
-      return NextResponse.json({ error: "Unauthorized: This grant does not belong to you" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Unauthorized: This grant does not belong to you" },
+        { status: 403 },
+      );
     }
 
     // Check if grant is in PENDING status
     if (authGrant.grantDetails?.status !== "PENDING") {
       return NextResponse.json(
-        { error: `Cannot approve grant with status: ${authGrant.grantDetails?.status || "unknown"}` },
-        { status: 400 }
+        {
+          error: `Cannot approve grant with status: ${authGrant.grantDetails?.status || "unknown"}`,
+        },
+        { status: 400 },
       );
     }
 
     // Check if grant has expired
     if (authGrant.isExpired?.()) {
-      return NextResponse.json({ error: "Authorization grant has expired" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Authorization grant has expired" },
+        { status: 400 },
+      );
     }
 
     const currentStatus = authGrant.grantDetails?.status;
@@ -83,7 +100,7 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
             status: "COMPLETED",
             processedAt: new Date(),
           },
-        }
+        },
       );
     } catch (notificationError) {
       console.warn("Failed to update notification status:", notificationError);
@@ -91,16 +108,22 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
     }
 
     // Log the approval action
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authContext.userId, {
-      action: "PATIENT_APPROVED_ACCESS",
-      grantId: authGrant._id.toString(),
-      organizationId: authGrant.organizationId?._id?.toString(),
-      requestingPractitionerId: authGrant.requestingPractitionerId?._id?.toString(),
-      reason: validatedData.reason,
-      previousStatus: currentStatus,
-      newStatus: updatedGrant.grantDetails?.status,
-      patientDecision: "approve",
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.DATA_MODIFICATION,
+      request,
+      authContext.userId,
+      {
+        action: "PATIENT_APPROVED_ACCESS",
+        grantId: authGrant._id.toString(),
+        organizationId: authGrant.organizationId?._id?.toString(),
+        requestingPractitionerId:
+          authGrant.requestingPractitionerId?._id?.toString(),
+        reason: validatedData.reason,
+        previousStatus: currentStatus,
+        newStatus: updatedGrant.grantDetails?.status,
+        patientDecision: "approve",
+      },
+    );
 
     // Format response
     const organization = authGrant.organizationId as any;
@@ -116,14 +139,18 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
         newStatus: updatedGrant.grantDetails?.status,
         organization: organization
           ? {
-              name: organization.organizationInfo?.name || "Unknown Organization",
+              name:
+                organization.organizationInfo?.name || "Unknown Organization",
               type: organization.organizationInfo?.type || "UNKNOWN",
             }
           : null,
         practitioner: practitioner
           ? {
               name: `${practitioner.userId?.personalInfo?.firstName || "Unknown"} ${practitioner.userId?.personalInfo?.lastName || "User"}`,
-              type: practitioner.professionalInfo?.practitionerType || practitioner.auth?.role || "practitioner",
+              type:
+                practitioner.professionalInfo?.practitionerType ||
+                practitioner.auth?.role ||
+                "practitioner",
             }
           : null,
         accessScope: updatedGrant.accessScope || [],
@@ -143,7 +170,7 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
       {
         action: "PATIENT_APPROVE_ERROR",
         error: error instanceof Error ? error.message : "Unknown error",
-      }
+      },
     );
 
     return NextResponse.json(
@@ -151,7 +178,7 @@ async function approveAuthorizationHandler(request: NextRequest, authContext: an
         error: "Failed to approve authorization request",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

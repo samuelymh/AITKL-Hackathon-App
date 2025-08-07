@@ -23,7 +23,7 @@ export async function GET() {
         error: "Failed to retrieve organization types",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const encounters = await Encounter.find({}).select("_id prescriptions").lean();
+    const encounters = await Encounter.find({})
+      .select("_id prescriptions")
+      .lean();
 
     // Extract all prescriptions from encounters
     const allPrescriptions = encounters.reduce((acc: any[], encounter: any) => {
@@ -32,6 +34,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking prescriptions:", error);
-    return NextResponse.json({ success: false, error: "Failed to check prescriptions" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check prescriptions" },
+      { status: 500 },
+    );
   }
 }

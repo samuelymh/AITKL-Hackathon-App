@@ -3,7 +3,10 @@
  * This addresses the PR comment about lack of testing
  */
 
-import { OrganizationService, OrganizationRegistrationData } from "@/lib/services/organizationService";
+import {
+  OrganizationService,
+  OrganizationRegistrationData,
+} from "@/lib/services/organizationService";
 
 // Mock organization data for testing
 const mockOrganizationData: OrganizationRegistrationData = {
@@ -47,12 +50,24 @@ async function testOrganizationValidation() {
         registrationNumber: "TEST123",
       },
     };
-    const result2 = OrganizationService.validateExistingOrganization(mockExistingOrg, "TEST123");
-    console.log("✅ Registration number conflict test passed:", result2?.error.includes("registration number"));
+    const result2 = OrganizationService.validateExistingOrganization(
+      mockExistingOrg,
+      "TEST123",
+    );
+    console.log(
+      "✅ Registration number conflict test passed:",
+      result2?.error.includes("registration number"),
+    );
 
     // Test validateExistingOrganization with existing org (name/location match)
-    const result3 = OrganizationService.validateExistingOrganization(mockExistingOrg, "OTHER123");
-    console.log("✅ Name/location conflict test passed:", result3?.error.includes("name already exists"));
+    const result3 = OrganizationService.validateExistingOrganization(
+      mockExistingOrg,
+      "OTHER123",
+    );
+    console.log(
+      "✅ Name/location conflict test passed:",
+      result3?.error.includes("name already exists"),
+    );
   } catch (error) {
     console.error("❌ Validation test failed:", error);
   }

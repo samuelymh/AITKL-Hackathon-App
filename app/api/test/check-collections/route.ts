@@ -15,11 +15,15 @@ export async function GET(request: NextRequest) {
     let notificationsCount = 0;
 
     if (collectionNames.includes("authorization_grants")) {
-      grantsCount = await db.collection("authorization_grants").countDocuments();
+      grantsCount = await db
+        .collection("authorization_grants")
+        .countDocuments();
     }
 
     if (collectionNames.includes("notificationjobs")) {
-      notificationsCount = await db.collection("notificationjobs").countDocuments();
+      notificationsCount = await db
+        .collection("notificationjobs")
+        .countDocuments();
     }
 
     return NextResponse.json({
@@ -30,6 +34,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking collections:", error);
-    return NextResponse.json({ success: false, error: "Failed to check collections" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check collections" },
+      { status: 500 },
+    );
   }
 }

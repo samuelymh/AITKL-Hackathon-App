@@ -21,7 +21,7 @@ const isValidAction = (action: any): action is OrganizationMemberAction => {
 async function checkMembershipModifyPermission(
   userId: string,
   organizationId: string,
-  practitionerId: string
+  practitionerId: string,
 ): Promise<boolean> {
   // User can modify their own membership
   if (userId === practitionerId) {
@@ -42,7 +42,10 @@ async function checkMembershipModifyPermission(
 /**
  * Handle membership update with validation
  */
-async function handleMembershipUpdate(membership: any, updateData: any): Promise<void> {
+async function handleMembershipUpdate(
+  membership: any,
+  updateData: any,
+): Promise<void> {
   // Validate and update membership details
   if (updateData.membershipDetails) {
     const validFields = ["department", "position", "employeeId", "accessLevel"];
@@ -77,7 +80,10 @@ async function handleMembershipUpdate(membership: any, updateData: any): Promise
   await membership.save();
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     await connectToDatabase();
 
@@ -105,7 +111,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (!isValidAction(action)) {
       return createErrorResponse(
         `Invalid action. Supported actions: ${Object.values(ORGANIZATION_MEMBER_ACTIONS).join(", ")}`,
-        400
+        400,
       );
     }
 
@@ -119,11 +125,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const canModify = await checkMembershipModifyPermission(
       authContext.userId,
       membership.organizationId.toString(),
-      membership.practitionerId.toString()
+      membership.practitionerId.toString(),
     );
 
     if (!canModify) {
-      return createErrorResponse("Insufficient permissions to modify this membership", 403);
+      return createErrorResponse(
+        "Insufficient permissions to modify this membership",
+        403,
+      );
     }
 
     // Handle different actions
@@ -163,7 +172,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
   try {
     await connectToDatabase();
 
@@ -190,17 +202,22 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const canDelete = await checkMembershipModifyPermission(
       authContext.userId,
       membership.organizationId.toString(),
-      membership.practitionerId.toString()
+      membership.practitionerId.toString(),
     );
 
     if (!canDelete) {
-      return createErrorResponse("Insufficient permissions to remove this membership", 403);
+      return createErrorResponse(
+        "Insufficient permissions to remove this membership",
+        403,
+      );
     }
 
     // Remove the membership
     await OrganizationMember.findByIdAndDelete(id);
 
-    return createSuccessResponse({ message: "Organization membership removed successfully" });
+    return createSuccessResponse({
+      message: "Organization membership removed successfully",
+    });
   } catch (error) {
     console.error("Error removing organization membership:", error);
     return createErrorResponse("Failed to remove organization membership", 500);
