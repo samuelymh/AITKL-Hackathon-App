@@ -1,7 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, jest } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  jest,
+} from "@jest/globals";
 import { createMocks } from "node-mocks-http";
-import { GET as getEncounters, POST as createEncounter } from "@/app/api/v1/encounters/route";
-import { GET as getEncounter, PUT as updateEncounter } from "@/app/api/v1/encounters/[encounterId]/route";
+import {
+  GET as getEncounters,
+  POST as createEncounter,
+} from "@/app/api/v1/encounters/route";
+import {
+  GET as getEncounter,
+  PUT as updateEncounter,
+} from "@/app/api/v1/encounters/[encounterId]/route";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import Encounter from "@/lib/models/Encounter";
@@ -135,7 +150,9 @@ describe("Encounter API Endpoints", () => {
       expect(response.status).toBe(201);
       expect(responseData.success).toBe(true);
       expect(responseData.data.encounter).toBeDefined();
-      expect(responseData.data.encounter.encounter.chiefComplaint).toBe("Routine checkup");
+      expect(responseData.data.encounter.encounter.chiefComplaint).toBe(
+        "Routine checkup",
+      );
     });
 
     it("should generate atomic encounter numbers", async () => {
@@ -154,13 +171,15 @@ describe("Encounter API Endpoints", () => {
       }));
 
       // Execute all requests concurrently to test atomic behavior
-      const responses = await Promise.all(requests.map(({ req, res }) => createEncounter(req, res)));
+      const responses = await Promise.all(
+        requests.map(({ req, res }) => createEncounter(req, res)),
+      );
 
       const encounterNumbers = await Promise.all(
         responses.map(async (response) => {
           const data = await response.json();
           return data.data.encounter.encounter.encounterNumber;
-        })
+        }),
       );
 
       // All encounter numbers should be unique
@@ -279,8 +298,12 @@ describe("Encounter API Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(responseData.success).toBe(true);
-      expect(responseData.data.encounter.encounter.notes.value).toBe("Updated notes");
-      expect(responseData.data.encounter.encounter.vitals.bloodPressure).toBe("130/85");
+      expect(responseData.data.encounter.encounter.notes.value).toBe(
+        "Updated notes",
+      );
+      expect(responseData.data.encounter.encounter.vitals.bloodPressure).toBe(
+        "130/85",
+      );
     });
 
     it("should increment audit version on update", async () => {
@@ -300,7 +323,9 @@ describe("Encounter API Endpoints", () => {
       const responseData = await response.json();
 
       expect(response.status).toBe(200);
-      expect(responseData.data.encounter.auditVersion).toBe(originalVersion + 1);
+      expect(responseData.data.encounter.auditVersion).toBe(
+        originalVersion + 1,
+      );
     });
 
     it("should return 404 for non-existent encounter", async () => {
@@ -374,20 +399,24 @@ describe("Encounter API Endpoints", () => {
               chiefComplaint: `Concurrent test ${i}`,
               type: "ROUTINE",
             },
-          }).req
+          }).req,
       );
 
-      const responses = await Promise.all(requests.map((req) => createEncounter(req, createMocks().res)));
+      const responses = await Promise.all(
+        requests.map((req) => createEncounter(req, createMocks().res)),
+      );
 
       const encounters = await Promise.all(
         responses.map(async (res) => {
           const data = await res.json();
           return data.data.encounter;
-        })
+        }),
       );
 
       // Check that all encounter numbers are unique
-      const encounterNumbers = encounters.map((e) => e.encounter.encounterNumber);
+      const encounterNumbers = encounters.map(
+        (e) => e.encounter.encounterNumber,
+      );
       const uniqueNumbers = new Set(encounterNumbers);
 
       expect(uniqueNumbers.size).toBe(concurrentRequests);

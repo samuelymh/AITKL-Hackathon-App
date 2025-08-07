@@ -68,7 +68,7 @@ export interface IEncounter extends IBaseDocument {
   updatePrescriptionStatus(
     prescriptionIndex: number,
     status: PrescriptionStatus,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<IEncounter>;
   toPatientJSON(): Promise<any>;
   toPractitionerJSON(): Promise<any>;
@@ -76,10 +76,23 @@ export interface IEncounter extends IBaseDocument {
 
 // Static methods interface
 export interface IEncounterModel extends Model<IEncounter> {
-  findByPatient(userId: string, options?: { limit?: number; offset?: number }): Promise<IEncounter[]>;
-  findByOrganization(organizationId: string, options?: { limit?: number; offset?: number }): Promise<IEncounter[]>;
-  findByPractitioner(practitionerId: string, options?: { limit?: number; offset?: number }): Promise<IEncounter[]>;
-  findByDateRange(startDate: Date, endDate: Date, userId?: string): Promise<IEncounter[]>;
+  findByPatient(
+    userId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<IEncounter[]>;
+  findByOrganization(
+    organizationId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<IEncounter[]>;
+  findByPractitioner(
+    practitionerId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<IEncounter[]>;
+  findByDateRange(
+    startDate: Date,
+    endDate: Date,
+    userId?: string,
+  ): Promise<IEncounter[]>;
   createEncounter(encounterData: any, createdBy: string): Promise<IEncounter>;
   validateVitals(vitals: any): { valid: boolean; errors: string[] };
 }
@@ -147,7 +160,10 @@ const encounterSchemaFields = {
       },
       bloodPressure: {
         type: String,
-        match: [/^\d{2,3}\/\d{2,3}$/, "Blood pressure must be in format XXX/XX"],
+        match: [
+          /^\d{2,3}\/\d{2,3}$/,
+          "Blood pressure must be in format XXX/XX",
+        ],
       },
       heartRate: {
         type: Number,
@@ -248,16 +264,25 @@ const EncounterSchema = createExtendedSchema(encounterSchemaFields, {
 // Indexes for performance optimization (from knowledge base)
 EncounterSchema.index({ userId: 1, "encounter.encounterDate": -1 });
 EncounterSchema.index({ organizationId: 1, "encounter.encounterDate": -1 });
-EncounterSchema.index({ attendingPractitionerId: 1, "encounter.encounterDate": -1 });
+EncounterSchema.index({
+  attendingPractitionerId: 1,
+  "encounter.encounterDate": -1,
+});
 EncounterSchema.index({ authorizationGrantId: 1 });
-EncounterSchema.index({ "encounter.encounterType": 1, "encounter.encounterDate": -1 });
+EncounterSchema.index({
+  "encounter.encounterType": 1,
+  "encounter.encounterDate": -1,
+});
 
 // Pre-save middleware for validation
 EncounterSchema.pre("save", function (next) {
   const doc = this as any;
 
   // Validate that encounter date is not in the future
-  if (doc.encounter?.encounterDate && doc.encounter.encounterDate > new Date()) {
+  if (
+    doc.encounter?.encounterDate &&
+    doc.encounter.encounterDate > new Date()
+  ) {
     return next(new Error("Encounter date cannot be in the future"));
   }
 
@@ -275,7 +300,11 @@ EncounterSchema.pre("save", function (next) {
 // Instance methods
 EncounterSchema.methods = {
   // Add a new diagnosis to the encounter
-  addDiagnosis: async function (this: IEncounter, diagnosis: any, addedBy: string): Promise<IEncounter> {
+  addDiagnosis: async function (
+    this: IEncounter,
+    diagnosis: any,
+    addedBy: string,
+  ): Promise<IEncounter> {
     this.diagnoses.push({
       code: diagnosis.code,
       description: diagnosis.description,
@@ -289,7 +318,11 @@ EncounterSchema.methods = {
   },
 
   // Add a new prescription to the encounter
-  addPrescription: async function (this: IEncounter, prescription: any, addedBy: string): Promise<IEncounter> {
+  addPrescription: async function (
+    this: IEncounter,
+    prescription: any,
+    addedBy: string,
+  ): Promise<IEncounter> {
     this.prescriptions.push({
       medicationName: prescription.medicationName,
       dosage: prescription.dosage,
@@ -309,9 +342,12 @@ EncounterSchema.methods = {
     this: IEncounter,
     prescriptionIndex: number,
     status: PrescriptionStatus,
-    updatedBy: string
+    updatedBy: string,
   ): Promise<IEncounter> {
-    if (prescriptionIndex < 0 || prescriptionIndex >= this.prescriptions.length) {
+    if (
+      prescriptionIndex < 0 ||
+      prescriptionIndex >= this.prescriptions.length
+    ) {
       throw new Error("Invalid prescription index");
     }
 
@@ -324,7 +360,10 @@ EncounterSchema.methods = {
   toPatientJSON: async function (this: IEncounter) {
     await this.populate([
       { path: "organizationId", select: "organizationInfo.name address" },
-      { path: "attendingPractitionerId", select: "personalInfo professionalInfo.specialty" },
+      {
+        path: "attendingPractitionerId",
+        select: "personalInfo professionalInfo.specialty",
+      },
     ]);
 
     return {
@@ -357,9 +396,16 @@ EncounterSchema.methods = {
   // Convert to practitioner JSON (full information including notes)
   toPractitionerJSON: async function (this: IEncounter) {
     await this.populate([
-      { path: "userId", select: "personalInfo.firstName personalInfo.lastName digitalIdentifier" },
+      {
+        path: "userId",
+        select:
+          "personalInfo.firstName personalInfo.lastName digitalIdentifier",
+      },
       { path: "organizationId", select: "organizationInfo.name" },
-      { path: "attendingPractitionerId", select: "personalInfo professionalInfo" },
+      {
+        path: "attendingPractitionerId",
+        select: "personalInfo professionalInfo",
+      },
     ]);
 
     return {
@@ -380,15 +426,24 @@ EncounterSchema.methods = {
 // Static methods
 EncounterSchema.statics = {
   // Find encounters by patient
-  findByPatient: function (userId: string, options: { limit?: number; offset?: number } = {}) {
+  findByPatient: function (
+    userId: string,
+    options: { limit?: number; offset?: number } = {},
+  ) {
     const { limit = 20, offset = 0 } = options;
     return this.find({
       userId: new mongoose.Types.ObjectId(userId),
       auditDeletedDateTime: { $exists: false },
     })
       .populate([
-        { path: "organizationId", select: "organizationInfo.name organizationInfo.type" },
-        { path: "attendingPractitionerId", select: "personalInfo professionalInfo.specialty" },
+        {
+          path: "organizationId",
+          select: "organizationInfo.name organizationInfo.type",
+        },
+        {
+          path: "attendingPractitionerId",
+          select: "personalInfo professionalInfo.specialty",
+        },
       ])
       .sort({ "encounter.encounterDate": -1 })
       .limit(limit)
@@ -396,15 +451,25 @@ EncounterSchema.statics = {
   },
 
   // Find encounters by organization
-  findByOrganization: function (organizationId: string, options: { limit?: number; offset?: number } = {}) {
+  findByOrganization: function (
+    organizationId: string,
+    options: { limit?: number; offset?: number } = {},
+  ) {
     const { limit = 20, offset = 0 } = options;
     return this.find({
       organizationId: new mongoose.Types.ObjectId(organizationId),
       auditDeletedDateTime: { $exists: false },
     })
       .populate([
-        { path: "userId", select: "personalInfo.firstName personalInfo.lastName digitalIdentifier" },
-        { path: "attendingPractitionerId", select: "personalInfo professionalInfo" },
+        {
+          path: "userId",
+          select:
+            "personalInfo.firstName personalInfo.lastName digitalIdentifier",
+        },
+        {
+          path: "attendingPractitionerId",
+          select: "personalInfo professionalInfo",
+        },
       ])
       .sort({ "encounter.encounterDate": -1 })
       .limit(limit)
@@ -412,14 +477,21 @@ EncounterSchema.statics = {
   },
 
   // Find encounters by practitioner
-  findByPractitioner: function (practitionerId: string, options: { limit?: number; offset?: number } = {}) {
+  findByPractitioner: function (
+    practitionerId: string,
+    options: { limit?: number; offset?: number } = {},
+  ) {
     const { limit = 20, offset = 0 } = options;
     return this.find({
       attendingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
       auditDeletedDateTime: { $exists: false },
     })
       .populate([
-        { path: "userId", select: "personalInfo.firstName personalInfo.lastName digitalIdentifier" },
+        {
+          path: "userId",
+          select:
+            "personalInfo.firstName personalInfo.lastName digitalIdentifier",
+        },
         { path: "organizationId", select: "organizationInfo.name" },
       ])
       .sort({ "encounter.encounterDate": -1 })
@@ -440,15 +512,24 @@ EncounterSchema.statics = {
 
     return this.find(query)
       .populate([
-        { path: "userId", select: "personalInfo.firstName personalInfo.lastName" },
+        {
+          path: "userId",
+          select: "personalInfo.firstName personalInfo.lastName",
+        },
         { path: "organizationId", select: "organizationInfo.name" },
-        { path: "attendingPractitionerId", select: "personalInfo professionalInfo.specialty" },
+        {
+          path: "attendingPractitionerId",
+          select: "personalInfo professionalInfo.specialty",
+        },
       ])
       .sort({ "encounter.encounterDate": -1 });
   },
 
   // Create a new encounter with validation
-  createEncounter: async function (encounterData: any, createdBy: string): Promise<IEncounter> {
+  createEncounter: async function (
+    encounterData: any,
+    createdBy: string,
+  ): Promise<IEncounter> {
     const encounter = new this({
       ...encounterData,
       auditCreatedBy: createdBy,
@@ -499,6 +580,9 @@ EncounterSchema.statics = {
 
 // Create and export the model
 const EncounterModel: IEncounterModel = (mongoose.models.Encounter ||
-  mongoose.model<IEncounter, IEncounterModel>("Encounter", EncounterSchema)) as IEncounterModel;
+  mongoose.model<IEncounter, IEncounterModel>(
+    "Encounter",
+    EncounterSchema,
+  )) as IEncounterModel;
 
 export default EncounterModel;

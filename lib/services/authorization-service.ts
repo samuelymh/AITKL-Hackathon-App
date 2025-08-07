@@ -35,7 +35,9 @@ export interface GrantData extends PendingGrantData {
  * @param organizationId - Organization ID to filter by
  * @returns Array of pending grants
  */
-export async function getPendingAuthorizationGrants(organizationId: string): Promise<PendingGrantData[]> {
+export async function getPendingAuthorizationGrants(
+  organizationId: string,
+): Promise<PendingGrantData[]> {
   await connectToDatabase();
 
   const grants = await AuthorizationGrant.find({
@@ -43,7 +45,10 @@ export async function getPendingAuthorizationGrants(organizationId: string): Pro
     "grantDetails.status": "PENDING",
     "grantDetails.expiresAt": { $gt: new Date() },
   })
-    .populate("userId", "personalInfo.firstName personalInfo.lastName digitalIdentifier")
+    .populate(
+      "userId",
+      "personalInfo.firstName personalInfo.lastName digitalIdentifier",
+    )
     .populate({
       path: "requestingPractitionerId",
       select: "userId professionalInfo.practitionerType",
@@ -64,7 +69,8 @@ export async function getPendingAuthorizationGrants(organizationId: string): Pro
     requester: grant.requestingPractitionerId
       ? {
           name: `${grant.requestingPractitionerId.userId.personalInfo.firstName} ${grant.requestingPractitionerId.userId.personalInfo.lastName}`,
-          type: grant.requestingPractitionerId.professionalInfo.practitionerType,
+          type: grant.requestingPractitionerId.professionalInfo
+            .practitionerType,
         }
       : null,
     accessScope: grant.accessScope,
@@ -79,7 +85,9 @@ export async function getPendingAuthorizationGrants(organizationId: string): Pro
  * @param query - Query parameters for filtering grants
  * @returns Array of grants
  */
-export async function getAuthorizationGrantsForPractitioner(query: AuthorizationGrantQuery): Promise<GrantData[]> {
+export async function getAuthorizationGrantsForPractitioner(
+  query: AuthorizationGrantQuery,
+): Promise<GrantData[]> {
   await connectToDatabase();
 
   const grantQuery: any = {};
@@ -92,7 +100,10 @@ export async function getAuthorizationGrantsForPractitioner(query: Authorization
     grantQuery.organizationId = query.organizationId;
   }
 
-  if (query.status && ["PENDING", "ACTIVE", "EXPIRED", "REVOKED"].includes(query.status)) {
+  if (
+    query.status &&
+    ["PENDING", "ACTIVE", "EXPIRED", "REVOKED"].includes(query.status)
+  ) {
     grantQuery["grantDetails.status"] = query.status;
   }
 
@@ -101,7 +112,10 @@ export async function getAuthorizationGrantsForPractitioner(query: Authorization
   }
 
   const grants = await AuthorizationGrant.find(grantQuery)
-    .populate("userId", "personalInfo.firstName personalInfo.lastName digitalIdentifier")
+    .populate(
+      "userId",
+      "personalInfo.firstName personalInfo.lastName digitalIdentifier",
+    )
     .populate("organizationId", "organizationInfo.name organizationInfo.type")
     .populate({
       path: "requestingPractitionerId",
@@ -123,7 +137,8 @@ export async function getAuthorizationGrantsForPractitioner(query: Authorization
     requester: grant.requestingPractitionerId
       ? {
           name: `${grant.requestingPractitionerId.userId.personalInfo.firstName} ${grant.requestingPractitionerId.userId.personalInfo.lastName}`,
-          type: grant.requestingPractitionerId.professionalInfo.practitionerType,
+          type: grant.requestingPractitionerId.professionalInfo
+            .practitionerType,
         }
       : null,
     organization: grant.organizationId,
@@ -141,7 +156,9 @@ export async function getAuthorizationGrantsForPractitioner(query: Authorization
  * @param grantIds - Array of grant IDs
  * @returns Map of grant ID to grant data
  */
-export async function getAuthorizationGrantsBatch(grantIds: string[]): Promise<Map<string, any>> {
+export async function getAuthorizationGrantsBatch(
+  grantIds: string[],
+): Promise<Map<string, any>> {
   await connectToDatabase();
 
   if (grantIds.length === 0) {
@@ -174,7 +191,7 @@ export async function getAuthorizationGrantsForPatient(
     limit?: number;
     offset?: number;
     includeExpired?: boolean;
-  } = {}
+  } = {},
 ): Promise<{ grants: GrantData[]; total: number }> {
   await connectToDatabase();
 
@@ -187,7 +204,10 @@ export async function getAuthorizationGrantsForPatient(
   }
 
   if (!includeExpired) {
-    query.$or = [{ "grantDetails.status": { $ne: "EXPIRED" } }, { "grantDetails.expiresAt": { $gt: new Date() } }];
+    query.$or = [
+      { "grantDetails.status": { $ne: "EXPIRED" } },
+      { "grantDetails.expiresAt": { $gt: new Date() } },
+    ];
   }
 
   // Get total count for pagination
@@ -201,7 +221,8 @@ export async function getAuthorizationGrantsForPatient(
     })
     .populate({
       path: "requestingPractitionerId",
-      select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+      select:
+        "userId professionalInfo.specialty professionalInfo.practitionerType",
       populate: {
         path: "userId",
         select: "personalInfo.firstName personalInfo.lastName auth.role",
@@ -239,7 +260,10 @@ export async function getAuthorizationGrantsForPatient(
     grantedAt: grant.grantDetails?.grantedAt,
     expiresAt:
       grant.grantDetails?.expiresAt ||
-      new Date(grant.createdAt.getTime() + (grant.grantDetails?.timeWindowHours || 24) * 60 * 60 * 1000),
+      new Date(
+        grant.createdAt.getTime() +
+          (grant.grantDetails?.timeWindowHours || 24) * 60 * 60 * 1000,
+      ),
     timeWindowHours: grant.grantDetails?.timeWindowHours || 24,
   }));
 

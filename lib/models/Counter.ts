@@ -23,7 +23,11 @@ const counterSchema = new Schema<ICounter>({
  * Uses findOneAndUpdate with upsert to avoid race conditions
  */
 counterSchema.statics.increment = async function (id: string): Promise<number> {
-  const result = await this.findOneAndUpdate({ _id: id }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+  const result = await this.findOneAndUpdate(
+    { _id: id },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true },
+  );
   return result?.seq ?? 1;
 };
 

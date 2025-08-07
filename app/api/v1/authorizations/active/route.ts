@@ -24,10 +24,17 @@ async function transformGrant(grant: any) {
         ? {
             id: practitioner._id.toString(),
             firstName:
-              practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
-            lastName: practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User",
+              practitioner.userId?.personalInfo?.firstName ||
+              practitioner.personalInfo?.firstName ||
+              "Unknown",
+            lastName:
+              practitioner.userId?.personalInfo?.lastName ||
+              practitioner.personalInfo?.lastName ||
+              "User",
             role:
-              practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+              practitioner.professionalInfo?.practitionerType ||
+              practitioner.professionalInfo?.role ||
+              "practitioner",
             specialty: practitioner.professionalInfo?.specialty || "General",
           }
         : null,
@@ -39,7 +46,9 @@ async function transformGrant(grant: any) {
       isExpired: grant.isExpired(),
       remainingTimeMinutes: Math.max(
         0,
-        Math.floor((grant.grantDetails.expiresAt.getTime() - Date.now()) / (1000 * 60))
+        Math.floor(
+          (grant.grantDetails.expiresAt.getTime() - Date.now()) / (1000 * 60),
+        ),
       ),
       requestMetadata: {
         ipAddress: grant.requestMetadata.ipAddress,
@@ -63,23 +72,34 @@ async function activeHandler(request: NextRequest, authContext: any) {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     // Get active grants for this user
-    const activeGrants = await AuthorizationGrant.findActiveGrants(authContext.userId);
+    const activeGrants = await AuthorizationGrant.findActiveGrants(
+      authContext.userId,
+    );
 
     // Transform grants with resilient error handling
-    const settledResults = await Promise.allSettled(activeGrants.map(transformGrant));
+    const settledResults = await Promise.allSettled(
+      activeGrants.map(transformGrant),
+    );
 
     const formattedGrants = settledResults
-      .filter((result) => result.status === "fulfilled" && result.value !== null)
+      .filter(
+        (result) => result.status === "fulfilled" && result.value !== null,
+      )
       .map((result) => (result as PromiseFulfilledResult<any>).value);
 
     // Log any failed transformations
     const failedCount = settledResults.length - formattedGrants.length;
     if (failedCount > 0) {
-      console.warn(`Failed to transform ${failedCount} grants for user ${authContext.userId}`);
+      console.warn(
+        `Failed to transform ${failedCount} grants for user ${authContext.userId}`,
+      );
     }
 
     return NextResponse.json({
@@ -92,8 +112,10 @@ async function activeHandler(request: NextRequest, authContext: any) {
   } catch (error) {
     console.error("Error fetching active authorization grants:", error);
     return NextResponse.json(
-      { error: `Failed to fetch active grants: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
+      {
+        error: `Failed to fetch active grants: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
+      { status: 500 },
     );
   }
 }

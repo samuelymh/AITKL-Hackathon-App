@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -94,17 +100,19 @@ export function OrganizationSelect({
 
   // Helper to get auth headers
   const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('accessToken') || document.cookie
-      .split('; ')
-      .find(row => row.startsWith('accessToken='))
-      ?.split('=')[1];
+    const token =
+      localStorage.getItem("accessToken") ||
+      document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("accessToken="))
+        ?.split("=")[1];
 
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     return headers;
@@ -115,13 +123,17 @@ export function OrganizationSelect({
     if (!organizationTypes || organizationTypes.length === 0) {
       return orgs;
     }
-    return orgs.filter((org: Organization) => organizationTypes.includes(org.type));
+    return orgs.filter((org: Organization) =>
+      organizationTypes.includes(org.type),
+    );
   };
 
   // Helper to try public fallback
   const tryPublicFallback = async (): Promise<Organization[]> => {
     try {
-      const publicResponse = await fetch('/api/organizations/public?verified=true&limit=50');
+      const publicResponse = await fetch(
+        "/api/organizations/public?verified=true&limit=50",
+      );
       if (publicResponse.ok) {
         const publicData = await publicResponse.json();
         if (publicData.success && publicData.data?.organizations) {
@@ -141,7 +153,7 @@ export function OrganizationSelect({
       const apiUrl = getApiEndpoint();
       const headers = getAuthHeaders();
       const response = await fetch(apiUrl, { headers });
-      
+
       // Handle authentication errors with fallback
       if (response.status === 401) {
         console.warn("Authentication required, trying public endpoint");
@@ -156,7 +168,10 @@ export function OrganizationSelect({
         const filteredOrgs = filterOrganizationsByType(data.data.organizations);
         setOrganizations(filteredOrgs);
       } else {
-        console.error("Failed to fetch organizations:", data.error || data.message);
+        console.error(
+          "Failed to fetch organizations:",
+          data.error || data.message,
+        );
         if (response.status !== 401) {
           toast({
             title: "Error",
@@ -217,9 +232,15 @@ export function OrganizationSelect({
         </Label>
       )}
 
-      <Select value={value} onValueChange={onValueChange} disabled={disabled || loading}>
+      <Select
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled || loading}
+      >
         <SelectTrigger className={errorMessage ? "border-red-500" : ""}>
-          <SelectValue placeholder={loading ? "Loading organizations..." : placeholder} />
+          <SelectValue
+            placeholder={loading ? "Loading organizations..." : placeholder}
+          />
           {loading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </SelectTrigger>
 
@@ -230,7 +251,9 @@ export function OrganizationSelect({
                 <div className="flex items-center justify-between w-full">
                   <div className="flex flex-col">
                     <span className="font-medium">{org.name}</span>
-                    <span className="text-sm text-gray-500">{formatOrganizationLabel(org)}</span>
+                    <span className="text-sm text-gray-500">
+                      {formatOrganizationLabel(org)}
+                    </span>
                   </div>
                   {showBadge && isOrganizationVerified(org) && (
                     <Badge variant="secondary" className="text-xs ml-2">
@@ -282,11 +305,19 @@ export function OrganizationSelect({
 }
 
 // Preset configurations for common use cases
-export const PharmacyOrganizationSelect = (props: Omit<OrganizationSelectProps, "organizationTypes" | "endpoint">) => (
+export const PharmacyOrganizationSelect = (
+  props: Omit<OrganizationSelectProps, "organizationTypes" | "endpoint">,
+) => (
   <OrganizationSelect
     {...props}
     endpoint="/api/pharmacist/organizations?verified=true&limit=100"
-    organizationTypes={["pharmacy", "hospital", "clinic", "healthcare_network", "pharmaceutical_company"]}
+    organizationTypes={[
+      "pharmacy",
+      "hospital",
+      "clinic",
+      "healthcare_network",
+      "pharmaceutical_company",
+    ]}
     helperText="Can't find your organization?"
     helperLink={{
       text: "Register it here",
@@ -307,7 +338,9 @@ export const GeneralOrganizationSelect = (props: OrganizationSelectProps) => (
   />
 );
 
-export const HospitalOrganizationSelect = (props: Omit<OrganizationSelectProps, "organizationTypes">) => (
+export const HospitalOrganizationSelect = (
+  props: Omit<OrganizationSelectProps, "organizationTypes">,
+) => (
   <OrganizationSelect
     {...props}
     endpoint="/api/organizations/public?type=hospital,clinic&verified=true&limit=50"

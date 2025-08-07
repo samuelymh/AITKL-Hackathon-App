@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -74,6 +81,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
           role: parsedUser.role || "patient",
           phone: parsedUser.phone || "",
         };
+        // check if the token is still valid before setting it
         setToken(savedToken);
         setRefreshToken(savedRefreshToken);
         setUser(userWithRole);
@@ -208,7 +216,16 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       register,
       refreshAuthToken,
     }),
-    [user, token, refreshToken, isLoading, login, logout, register, refreshAuthToken]
+    [
+      user,
+      token,
+      refreshToken,
+      isLoading,
+      login,
+      logout,
+      register,
+      refreshAuthToken,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

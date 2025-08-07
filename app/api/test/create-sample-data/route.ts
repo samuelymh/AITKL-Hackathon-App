@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "No pharmacist found in database",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -191,9 +191,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

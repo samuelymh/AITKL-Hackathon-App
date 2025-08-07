@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
     // Get authentication context
     const authContext = getAuthContext(request);
     if (!authContext?.isAuthenticated) {
-      return NextResponse.json({ error: "Authorization token required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authorization token required" },
+        { status: 401 },
+      );
     }
 
     const userId = authContext.userId;
@@ -24,8 +27,11 @@ export async function GET(request: NextRequest) {
     if (!practitioner) {
       console.log("No practitioner found for userId:", userId);
       return NextResponse.json(
-        { error: "Practitioner profile not found. Please complete your professional profile first." },
-        { status: 404 }
+        {
+          error:
+            "Practitioner profile not found. Please complete your professional profile first.",
+        },
+        { status: 404 },
       );
     }
 
@@ -61,12 +67,15 @@ export async function GET(request: NextRequest) {
               role: anyMembership.membershipDetails.role,
               status: anyMembership.status,
             }
-          : "None"
+          : "None",
       );
 
       return NextResponse.json(
-        { error: "No pharmacy organization membership found. Please contact your administrator." },
-        { status: 404 }
+        {
+          error:
+            "No pharmacy organization membership found. Please contact your administrator.",
+        },
+        { status: 404 },
       );
     }
 
@@ -74,7 +83,10 @@ export async function GET(request: NextRequest) {
     const organization = await Organization.findById(membership.organizationId);
 
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     }
 
     // Return the organization information
@@ -84,12 +96,15 @@ export async function GET(request: NextRequest) {
         id: organization._id.toString(),
         name: organization.organizationInfo?.name || "Unknown Organization",
         type: organization.organizationInfo?.type || "PHARMACY",
-        registrationNumber: organization.organizationInfo?.registrationNumber || "",
+        registrationNumber:
+          organization.organizationInfo?.registrationNumber || "",
         department: membership.membershipDetails.department,
         position: membership.membershipDetails.position,
         role: membership.membershipDetails.role,
         status: membership.status,
-        isPending: membership.status === "pending" || membership.status === "pending_verification",
+        isPending:
+          membership.status === "pending" ||
+          membership.status === "pending_verification",
         isVerified: membership.verificationInfo?.isVerified || false,
       },
     });
@@ -100,7 +115,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to fetch organization information",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

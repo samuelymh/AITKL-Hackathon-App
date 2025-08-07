@@ -10,7 +10,9 @@ async function validateEncryptedUserModel() {
 
   try {
     // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/test-healthcare");
+    await mongoose.connect(
+      process.env.MONGODB_URI || "mongodb://localhost:27017/test-healthcare",
+    );
     console.log("✅ Connected to database");
 
     // Test data (include auth field with passwordHash to satisfy validation)
@@ -72,13 +74,21 @@ async function validateEncryptedUserModel() {
     const emailValue = foundUser.personalInfo.contact.email;
     const phoneValue = foundUser.personalInfo.contact.phone;
 
-    console.log(`   Email: ${typeof emailValue === "string" ? emailValue : "[encrypted]"}`);
-    console.log(`   Phone: ${typeof phoneValue === "string" ? phoneValue : "[encrypted]"}`);
+    console.log(
+      `   Email: ${typeof emailValue === "string" ? emailValue : "[encrypted]"}`,
+    );
+    console.log(
+      `   Phone: ${typeof phoneValue === "string" ? phoneValue : "[encrypted]"}`,
+    );
 
     // Verify data integrity
     console.log("\n🔍 Verifying data integrity...");
-    const emailMatch = foundUser.personalInfo.contact.email === testUserData.personalInfo.contact.email;
-    const phoneMatch = foundUser.personalInfo.contact.phone === testUserData.personalInfo.contact.phone;
+    const emailMatch =
+      foundUser.personalInfo.contact.email ===
+      testUserData.personalInfo.contact.email;
+    const phoneMatch =
+      foundUser.personalInfo.contact.phone ===
+      testUserData.personalInfo.contact.phone;
     const nameMatch =
       (await foundUser.getFullName()) ===
       `${testUserData.personalInfo.firstName} ${testUserData.personalInfo.lastName}`;
@@ -104,7 +114,9 @@ async function validateEncryptedUserModel() {
 
       // Test manual decryption
       if (typeof foundUser.decryptField === "function") {
-        const decryptedName = await foundUser.decryptField("personalInfo.firstName");
+        const decryptedName = await foundUser.decryptField(
+          "personalInfo.firstName",
+        );
         console.log(`   Manually decrypted name: ${decryptedName}`);
       } else {
         console.log("⚠️  decryptField method not available on user instance");
@@ -122,7 +134,9 @@ async function validateEncryptedUserModel() {
 
     // Test query capabilities
     console.log("\n🔍 Testing query capabilities...");
-    const userByDigitalId = await User.findByDigitalId(foundUser.digitalIdentifier);
+    const userByDigitalId = await User.findByDigitalId(
+      foundUser.digitalIdentifier,
+    );
 
     if (userByDigitalId) {
       console.log("✅ Query by digital ID successful");
@@ -134,7 +148,9 @@ async function validateEncryptedUserModel() {
     await User.deleteOne({ _id: user._id });
     console.log("\n🧹 Cleanup completed");
 
-    console.log("\n🎉 All tests passed! Encrypted User model is working correctly.");
+    console.log(
+      "\n🎉 All tests passed! Encrypted User model is working correctly.",
+    );
   } catch (error) {
     console.error("❌ Test failed:", error);
     process.exit(1);

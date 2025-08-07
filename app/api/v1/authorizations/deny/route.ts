@@ -25,12 +25,18 @@ const DenyRequestSchema = z.object({
  * PATCH /api/v1/authorizations/deny
  * Deny an authorization request (patient action)
  */
-async function denyAuthorizationHandler(request: NextRequest, authContext: any) {
+async function denyAuthorizationHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     const body = await request.json();
@@ -42,7 +48,10 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
       .populate("requestingPractitionerId");
 
     if (!authGrant) {
-      return NextResponse.json({ error: "Authorization grant not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Authorization grant not found" },
+        { status: 404 },
+      );
     }
 
     // Verify ownership - check if this grant belongs to the current user
@@ -50,14 +59,19 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
       authGrant.userId.toString() !== authContext.digitalIdentifier &&
       authGrant.userId.toString() !== authContext.userId
     ) {
-      return NextResponse.json({ error: "Unauthorized: This grant does not belong to you" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Unauthorized: This grant does not belong to you" },
+        { status: 403 },
+      );
     }
 
     // Check if grant is in PENDING status
     if (authGrant.grantDetails?.status !== "PENDING") {
       return NextResponse.json(
-        { error: `Cannot deny grant with status: ${authGrant.grantDetails?.status || "unknown"}` },
-        { status: 400 }
+        {
+          error: `Cannot deny grant with status: ${authGrant.grantDetails?.status || "unknown"}`,
+        },
+        { status: 400 },
       );
     }
 
@@ -75,25 +89,33 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
             status: "denied",
             updatedAt: new Date(),
           },
-        }
+        },
       );
-      console.log(`Updated notification status for grantId: ${validatedData.grantId}`);
+      console.log(
+        `Updated notification status for grantId: ${validatedData.grantId}`,
+      );
     } catch (notificationError) {
       console.error("Error updating notification status:", notificationError);
       // Don't fail the grant denial if notification update fails
     }
 
     // Log the denial action
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_MODIFICATION, request, authContext.userId, {
-      action: "PATIENT_DENIED_ACCESS",
-      grantId: authGrant._id.toString(),
-      organizationId: authGrant.organizationId?._id?.toString(),
-      requestingPractitionerId: authGrant.requestingPractitionerId?._id?.toString(),
-      reason: validatedData.reason,
-      previousStatus: currentStatus,
-      newStatus: updatedGrant.grantDetails?.status,
-      patientDecision: "deny",
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.DATA_MODIFICATION,
+      request,
+      authContext.userId,
+      {
+        action: "PATIENT_DENIED_ACCESS",
+        grantId: authGrant._id.toString(),
+        organizationId: authGrant.organizationId?._id?.toString(),
+        requestingPractitionerId:
+          authGrant.requestingPractitionerId?._id?.toString(),
+        reason: validatedData.reason,
+        previousStatus: currentStatus,
+        newStatus: updatedGrant.grantDetails?.status,
+        patientDecision: "deny",
+      },
+    );
 
     // Format response
     const organization = authGrant.organizationId as any;
@@ -109,14 +131,18 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
         newStatus: updatedGrant.grantDetails?.status,
         organization: organization
           ? {
-              name: organization.organizationInfo?.name || "Unknown Organization",
+              name:
+                organization.organizationInfo?.name || "Unknown Organization",
               type: organization.organizationInfo?.type || "UNKNOWN",
             }
           : null,
         practitioner: practitioner
           ? {
               name: `${practitioner.userId?.personalInfo?.firstName || "Unknown"} ${practitioner.userId?.personalInfo?.lastName || "User"}`,
-              type: practitioner.professionalInfo?.practitionerType || practitioner.auth?.role || "practitioner",
+              type:
+                practitioner.professionalInfo?.practitionerType ||
+                practitioner.auth?.role ||
+                "practitioner",
             }
           : null,
         accessScope: updatedGrant.accessScope || [],
@@ -135,7 +161,7 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
       {
         action: "PATIENT_DENY_ERROR",
         error: error instanceof Error ? error.message : "Unknown error",
-      }
+      },
     );
 
     return NextResponse.json(
@@ -143,7 +169,7 @@ async function denyAuthorizationHandler(request: NextRequest, authContext: any) 
         error: "Failed to deny authorization request",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

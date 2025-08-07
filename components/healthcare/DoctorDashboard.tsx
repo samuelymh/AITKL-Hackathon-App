@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,7 +77,8 @@ export function DoctorDashboard() {
   const { user, token, refreshAuthToken, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [recentAccess, setRecentAccess] = useState<PatientAccess[]>([]);
-  const [professionalProfileComplete, setProfessionalProfileComplete] = useState<boolean | null>(null);
+  const [professionalProfileComplete, setProfessionalProfileComplete] =
+    useState<boolean | null>(null);
   const [stats, setStats] = useState<DoctorStats>({
     patientsToday: 0,
     activeAccess: 0,
@@ -187,17 +194,41 @@ export function DoctorDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmed":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Confirmed</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Confirmed
+          </Badge>
+        );
       case "waiting":
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Waiting</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            Waiting
+          </Badge>
+        );
       case "completed":
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completed</Badge>;
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            Completed
+          </Badge>
+        );
       case "cancelled":
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            Cancelled
+          </Badge>
+        );
       case "PENDING":
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            Pending
+          </Badge>
+        );
       case "ACTIVE":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Active
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -236,9 +267,16 @@ export function DoctorDashboard() {
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
             <div className="flex items-center justify-between">
-              <span>Complete your professional profile to access all healthcare provider features.</span>
+              <span>
+                Complete your professional profile to access all healthcare
+                provider features.
+              </span>
               <Link href="/dashboard/doctor-profile">
-                <Button variant="outline" size="sm" className="ml-4 flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 flex items-center gap-2"
+                >
                   Complete Profile
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -286,7 +324,9 @@ export function DoctorDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.pendingRequests}</p>
-                <p className="text-sm text-muted-foreground">Pending Requests</p>
+                <p className="text-sm text-muted-foreground">
+                  Pending Requests
+                </p>
               </div>
             </div>
           </CardContent>
@@ -299,7 +339,9 @@ export function DoctorDashboard() {
                 <Pill className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.prescriptionsWritten}</p>
+                <p className="text-2xl font-bold">
+                  {stats.prescriptionsWritten}
+                </p>
                 <p className="text-sm text-muted-foreground">Prescriptions</p>
               </div>
             </div>
@@ -308,7 +350,11 @@ export function DoctorDashboard() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
@@ -334,7 +380,9 @@ export function DoctorDashboard() {
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <UserCheck className="h-4 w-4" />
             Profile
-            {professionalProfileComplete === false && <div className="w-2 h-2 bg-orange-500 rounded-full ml-1"></div>}
+            {professionalProfileComplete === false && (
+              <div className="w-2 h-2 bg-orange-500 rounded-full ml-1"></div>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -352,7 +400,10 @@ export function DoctorDashboard() {
               <CardContent>
                 <div className="space-y-3">
                   {appointments.slice(0, 4).map((appointment) => (
-                    <div key={appointment.id} className="flex items-center justify-between py-2">
+                    <div
+                      key={appointment.id}
+                      className="flex items-center justify-between py-2"
+                    >
                       <div>
                         <p className="font-medium">{appointment.patientName}</p>
                         <p className="text-sm text-muted-foreground">
@@ -375,7 +426,11 @@ export function DoctorDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button onClick={() => setActiveTab("scanner")} className="w-full justify-start" variant="outline">
+                <Button
+                  onClick={() => setActiveTab("scanner")}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
                   <QrCode className="h-4 w-4 mr-2" />
                   Scan Patient QR Code
                 </Button>
@@ -390,7 +445,11 @@ export function DoctorDashboard() {
                   View Patient Records
                 </Button>
 
-                <Button onClick={() => setActiveTab("access")} className="w-full justify-start" variant="outline">
+                <Button
+                  onClick={() => setActiveTab("access")}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Manage Patient Access
                 </Button>
@@ -410,18 +469,26 @@ export function DoctorDashboard() {
               {recentAccess.length > 0 ? (
                 <div className="space-y-3">
                   {recentAccess.slice(0, 3).map((access) => (
-                    <div key={access.grantId} className="flex items-center justify-between py-2">
+                    <div
+                      key={access.grantId}
+                      className="flex items-center justify-between py-2"
+                    >
                       <div>
                         <p className="font-medium">{access.patient.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Access requested • {new Date(access.grantedAt).toLocaleTimeString()}
+                          Access requested •{" "}
+                          {new Date(access.grantedAt).toLocaleTimeString()}
                         </p>
                       </div>
                       {getStatusBadge(access.status)}
                     </div>
                   ))}
                   <Separator />
-                  <Button variant="ghost" onClick={() => setActiveTab("access")} className="w-full">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setActiveTab("access")}
+                    className="w-full"
+                  >
                     View All Access Requests
                   </Button>
                 </div>
@@ -429,7 +496,9 @@ export function DoctorDashboard() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No recent patient access activity</p>
-                  <p className="text-sm">Start by scanning a patient's QR code</p>
+                  <p className="text-sm">
+                    Start by scanning a patient's QR code
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -456,15 +525,23 @@ export function DoctorDashboard() {
                 <Users className="h-5 w-5" />
                 Patient Access Management
               </CardTitle>
-              <CardDescription>Track and manage your patient access requests and active sessions</CardDescription>
+              <CardDescription>
+                Track and manage your patient access requests and active
+                sessions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {recentAccess.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No patient access requests yet</p>
-                  <p className="text-sm">Scan a patient QR code to get started</p>
-                  <Button onClick={() => setActiveTab("scanner")} className="mt-4">
+                  <p className="text-sm">
+                    Scan a patient QR code to get started
+                  </p>
+                  <Button
+                    onClick={() => setActiveTab("scanner")}
+                    className="mt-4"
+                  >
                     <QrCode className="h-4 w-4 mr-2" />
                     Open QR Scanner
                   </Button>
@@ -473,11 +550,18 @@ export function DoctorDashboard() {
                 <ScrollArea className="h-96">
                   <div className="space-y-4">
                     {recentAccess.map((access) => (
-                      <div key={access.grantId} className="border rounded-lg p-4 space-y-3">
+                      <div
+                        key={access.grantId}
+                        className="border rounded-lg p-4 space-y-3"
+                      >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold">{access.patient.name}</h3>
-                            <p className="text-sm text-muted-foreground">ID: {access.patient.digitalIdentifier}</p>
+                            <h3 className="font-semibold">
+                              {access.patient.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              ID: {access.patient.digitalIdentifier}
+                            </p>
                           </div>
                           {getStatusBadge(access.status)}
                         </div>
@@ -485,40 +569,72 @@ export function DoctorDashboard() {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Grant ID</p>
-                            <code className="text-xs bg-muted px-2 py-1 rounded">{access.grantId}</code>
+                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                              {access.grantId}
+                            </code>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Expires</p>
-                            <p className="text-xs">{new Date(access.expiresAt).toLocaleString()}</p>
+                            <p className="text-xs">
+                              {new Date(access.expiresAt).toLocaleString()}
+                            </p>
                           </div>
                         </div>
 
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Access Permissions</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Access Permissions
+                          </p>
                           <div className="grid grid-cols-2 gap-2">
                             <Badge
-                              variant={access.accessScope.canViewMedicalHistory ? "default" : "outline"}
+                              variant={
+                                access.accessScope.canViewMedicalHistory
+                                  ? "default"
+                                  : "outline"
+                              }
                               className="text-xs justify-center"
                             >
-                              {access.accessScope.canViewMedicalHistory ? "✓" : "✗"} Medical History
+                              {access.accessScope.canViewMedicalHistory
+                                ? "✓"
+                                : "✗"}{" "}
+                              Medical History
                             </Badge>
                             <Badge
-                              variant={access.accessScope.canViewPrescriptions ? "default" : "outline"}
+                              variant={
+                                access.accessScope.canViewPrescriptions
+                                  ? "default"
+                                  : "outline"
+                              }
                               className="text-xs justify-center"
                             >
-                              {access.accessScope.canViewPrescriptions ? "✓" : "✗"} Prescriptions
+                              {access.accessScope.canViewPrescriptions
+                                ? "✓"
+                                : "✗"}{" "}
+                              Prescriptions
                             </Badge>
                             <Badge
-                              variant={access.accessScope.canCreateEncounters ? "default" : "outline"}
+                              variant={
+                                access.accessScope.canCreateEncounters
+                                  ? "default"
+                                  : "outline"
+                              }
                               className="text-xs justify-center"
                             >
-                              {access.accessScope.canCreateEncounters ? "✓" : "✗"} Create Encounters
+                              {access.accessScope.canCreateEncounters
+                                ? "✓"
+                                : "✗"}{" "}
+                              Create Encounters
                             </Badge>
                             <Badge
-                              variant={access.accessScope.canViewAuditLogs ? "default" : "outline"}
+                              variant={
+                                access.accessScope.canViewAuditLogs
+                                  ? "default"
+                                  : "outline"
+                              }
                               className="text-xs justify-center"
                             >
-                              {access.accessScope.canViewAuditLogs ? "✓" : "✗"} Audit Logs
+                              {access.accessScope.canViewAuditLogs ? "✓" : "✗"}{" "}
+                              Audit Logs
                             </Badge>
                           </div>
                         </div>
@@ -529,7 +645,11 @@ export function DoctorDashboard() {
                               <FileText className="h-4 w-4 mr-2" />
                               View Records
                             </Button>
-                            <Button size="sm" variant="outline" className="flex-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1"
+                            >
                               <Edit className="h-4 w-4 mr-2" />
                               New Encounter
                             </Button>
@@ -552,15 +672,22 @@ export function DoctorDashboard() {
                 <Calendar className="h-5 w-5" />
                 Today's Appointments
               </CardTitle>
-              <CardDescription>Manage your scheduled appointments for today</CardDescription>
+              <CardDescription>
+                Manage your scheduled appointments for today
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {appointments.map((appointment) => (
-                  <div key={appointment.id} className="border rounded-lg p-4 space-y-3">
+                  <div
+                    key={appointment.id}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold">{appointment.patientName}</h3>
+                        <h3 className="font-semibold">
+                          {appointment.patientName}
+                        </h3>
                         <p className="text-sm text-muted-foreground">
                           {appointment.time} • {appointment.type}
                         </p>
@@ -599,21 +726,29 @@ export function DoctorDashboard() {
                 <UserCheck className="h-5 w-5" />
                 Professional Profile
               </CardTitle>
-              <CardDescription>Manage your professional information and credentials</CardDescription>
+              <CardDescription>
+                Manage your professional information and credentials
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      professionalProfileComplete ? "bg-green-100" : "bg-orange-100"
+                      professionalProfileComplete
+                        ? "bg-green-100"
+                        : "bg-orange-100"
                     }`}
                   >
-                    <ProfileStatusIcon isComplete={professionalProfileComplete || false} />
+                    <ProfileStatusIcon
+                      isComplete={professionalProfileComplete || false}
+                    />
                   </div>
                   <div>
                     <h3 className="font-medium">
-                      {professionalProfileComplete ? "Profile Complete" : "Profile Incomplete"}
+                      {professionalProfileComplete
+                        ? "Profile Complete"
+                        : "Profile Incomplete"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {professionalProfileComplete
@@ -623,9 +758,15 @@ export function DoctorDashboard() {
                   </div>
                 </div>
                 <Link href="/dashboard/doctor-profile">
-                  <Button variant={professionalProfileComplete ? "outline" : "default"}>
+                  <Button
+                    variant={
+                      professionalProfileComplete ? "outline" : "default"
+                    }
+                  >
                     <Edit className="h-4 w-4 mr-2" />
-                    {professionalProfileComplete ? "Edit Profile" : "Complete Profile"}
+                    {professionalProfileComplete
+                      ? "Edit Profile"
+                      : "Complete Profile"}
                   </Button>
                 </Link>
               </div>
@@ -639,7 +780,9 @@ export function DoctorDashboard() {
                     <Stethoscope className="h-5 w-5 text-blue-600" />
                     <div>
                       <p className="font-medium">Medical License & Specialty</p>
-                      <p className="text-sm text-muted-foreground">License verification and specialty information</p>
+                      <p className="text-sm text-muted-foreground">
+                        License verification and specialty information
+                      </p>
                     </div>
                   </div>
 
@@ -657,7 +800,9 @@ export function DoctorDashboard() {
                     <Building className="h-5 w-5 text-purple-600" />
                     <div>
                       <p className="font-medium">Organization & Department</p>
-                      <p className="text-sm text-muted-foreground">Hospital or clinic affiliation details</p>
+                      <p className="text-sm text-muted-foreground">
+                        Hospital or clinic affiliation details
+                      </p>
                     </div>
                   </div>
 
@@ -665,7 +810,9 @@ export function DoctorDashboard() {
                     <Shield className="h-5 w-5 text-orange-600" />
                     <div>
                       <p className="font-medium">Emergency Contact</p>
-                      <p className="text-sm text-muted-foreground">Professional emergency contact information</p>
+                      <p className="text-sm text-muted-foreground">
+                        Professional emergency contact information
+                      </p>
                     </div>
                   </div>
                 </div>

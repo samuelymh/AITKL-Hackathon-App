@@ -8,7 +8,10 @@ import { getPharmacyStatistics } from "@/lib/services/pharmacy-service";
  * GET /api/pharmacist/stats
  * Get statistics for a pharmacist including prescriptions processed, pending verifications, etc.
  */
-async function getPharmacistStatsHandler(request: NextRequest, authContext: any) {
+async function getPharmacistStatsHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     await connectToDatabase();
 
@@ -17,9 +20,14 @@ async function getPharmacistStatsHandler(request: NextRequest, authContext: any)
     }
 
     // Find the practitioner record for the authenticated user
-    const practitioner = await Practitioner.findOne({ userId: authContext.userId });
+    const practitioner = await Practitioner.findOne({
+      userId: authContext.userId,
+    });
     if (!practitioner) {
-      return NextResponse.json({ error: "Practitioner not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Practitioner not found" },
+        { status: 404 },
+      );
     }
 
     // Get pharmacy statistics
@@ -31,7 +39,10 @@ async function getPharmacistStatsHandler(request: NextRequest, authContext: any)
     });
   } catch (error) {
     console.error("Error fetching pharmacist stats:", error);
-    return NextResponse.json({ error: "Failed to fetch pharmacist stats" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch pharmacist stats" },
+      { status: 500 },
+    );
   }
 }
 

@@ -5,7 +5,13 @@ import PrescriptionQueue, {
   createOrganizationActions,
   type PrescriptionRequest,
 } from "@/components/healthcare/PrescriptionQueue";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +19,9 @@ import { useAuth } from "@/contexts/AuthContext";
 // Example of how an organization would use the PrescriptionQueue component
 const OrganizationPrescriptionOverview: React.FC = () => {
   const { user } = useAuth();
-  const [allPrescriptions, setAllPrescriptions] = useState<PrescriptionRequest[]>([]);
+  const [allPrescriptions, setAllPrescriptions] = useState<
+    PrescriptionRequest[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +40,10 @@ const OrganizationPrescriptionOverview: React.FC = () => {
         const result = await response.json();
         setAllPrescriptions(result.data);
       } else {
-        console.error("Failed to fetch organization prescriptions:", response.statusText);
+        console.error(
+          "Failed to fetch organization prescriptions:",
+          response.statusText,
+        );
       }
     } catch (error) {
       console.error("Error fetching organization prescriptions:", error);
@@ -43,7 +54,10 @@ const OrganizationPrescriptionOverview: React.FC = () => {
 
   const handleReviewPrescription = (prescriptionId: string) => {
     // Navigate to detailed prescription review page
-    window.open(`/organization/prescriptions/review/${prescriptionId}`, "_blank");
+    window.open(
+      `/organization/prescriptions/review/${prescriptionId}`,
+      "_blank",
+    );
   };
 
   const handleViewPatientRecord = (patientId: string) => {
@@ -59,29 +73,44 @@ const OrganizationPrescriptionOverview: React.FC = () => {
     },
   });
 
-  const pendingPrescriptions = allPrescriptions.filter((p) => p.status === "ISSUED");
-  const filledPrescriptions = allPrescriptions.filter((p) => p.status === "FILLED");
-  const cancelledPrescriptions = allPrescriptions.filter((p) => p.status === "CANCELLED");
+  const pendingPrescriptions = allPrescriptions.filter(
+    (p) => p.status === "ISSUED",
+  );
+  const filledPrescriptions = allPrescriptions.filter(
+    (p) => p.status === "FILLED",
+  );
+  const cancelledPrescriptions = allPrescriptions.filter(
+    (p) => p.status === "CANCELLED",
+  );
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Organization Prescription Overview</CardTitle>
-          <CardDescription>Monitor and review all prescriptions within your healthcare organization</CardDescription>
+          <CardDescription>
+            Monitor and review all prescriptions within your healthcare
+            organization
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{pendingPrescriptions.length}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {pendingPrescriptions.length}
+              </div>
               <div className="text-sm text-gray-600">Pending Prescriptions</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{filledPrescriptions.length}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {filledPrescriptions.length}
+              </div>
               <div className="text-sm text-gray-600">Filled Today</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{cancelledPrescriptions.length}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {cancelledPrescriptions.length}
+              </div>
               <div className="text-sm text-gray-600">Cancelled</div>
             </div>
           </div>
@@ -92,13 +121,19 @@ const OrganizationPrescriptionOverview: React.FC = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pending" className="flex items-center gap-2">
             Pending
-            <Badge variant="outline" className="text-orange-600 border-orange-300">
+            <Badge
+              variant="outline"
+              className="text-orange-600 border-orange-300"
+            >
               {pendingPrescriptions.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="filled" className="flex items-center gap-2">
             Filled
-            <Badge variant="outline" className="text-green-600 border-green-300">
+            <Badge
+              variant="outline"
+              className="text-green-600 border-green-300"
+            >
               {filledPrescriptions.length}
             </Badge>
           </TabsTrigger>

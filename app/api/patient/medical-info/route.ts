@@ -32,7 +32,9 @@ interface ApiResponse<T = any> {
 
 // Medical information validation schema
 const MedicalInfoSchema = z.object({
-  bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+  bloodType: z
+    .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+    .optional(),
   foodAllergies: z.array(z.string()).optional(),
   drugAllergies: z.array(z.string()).optional(),
   knownMedicalConditions: z.array(z.string()).optional(),
@@ -57,14 +59,20 @@ export async function GET(request: NextRequest) {
     // Verify authentication
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
-      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = verifyToken(token);
 
     if (!decoded) {
-      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Invalid token" },
+        { status: 401 },
+      );
     }
 
     const result = await executeDatabaseOperation(async () => {
@@ -75,7 +83,10 @@ export async function GET(request: NextRequest) {
       }
 
       // Only patients can access their own medical info, or healthcare providers with permission
-      if (decoded.role === "patient" && user._id.toString() !== decoded.userId) {
+      if (
+        decoded.role === "patient" &&
+        user._id.toString() !== decoded.userId
+      ) {
         throw new Error("Access denied");
       }
 
@@ -94,11 +105,14 @@ export async function GET(request: NextRequest) {
           relationship: user.medicalInfo?.emergencyContact?.relationship || "",
         },
         additionalNotes: user.medicalInfo?.additionalNotes || "",
-        lastUpdated: (user as any).auditModifiedDateTime || (user as any).updatedAt,
+        lastUpdated:
+          (user as any).auditModifiedDateTime || (user as any).updatedAt,
       };
 
       // Helper function to safely decrypt or return plaintext
-      const { encryptionService, encryptionUtils } = await import("@/lib/services/encryption-service");
+      const { encryptionService, encryptionUtils } = await import(
+        "@/lib/services/encryption-service"
+      );
 
       const safeDecrypt = async (field: any): Promise<string> => {
         try {
@@ -114,28 +128,43 @@ export async function GET(request: NextRequest) {
 
       // Decrypt emergency contact information
       if (user.medicalInfo?.emergencyContact?.name) {
-        medicalInfo.emergencyContact.name = await safeDecrypt(user.medicalInfo.emergencyContact.name);
+        medicalInfo.emergencyContact.name = await safeDecrypt(
+          user.medicalInfo.emergencyContact.name,
+        );
       }
       if (user.medicalInfo?.emergencyContact?.phone) {
-        medicalInfo.emergencyContact.phone = await safeDecrypt(user.medicalInfo.emergencyContact.phone);
+        medicalInfo.emergencyContact.phone = await safeDecrypt(
+          user.medicalInfo.emergencyContact.phone,
+        );
       }
 
       // Process knownAllergies if they exist
-      if (user.medicalInfo?.knownAllergies && Array.isArray(user.medicalInfo.knownAllergies)) {
+      if (
+        user.medicalInfo?.knownAllergies &&
+        Array.isArray(user.medicalInfo.knownAllergies)
+      ) {
         for (let i = 0; i < user.medicalInfo.knownAllergies.length; i++) {
           try {
-            const decrypted = await safeDecrypt(user.medicalInfo.knownAllergies[i]);
+            const decrypted = await safeDecrypt(
+              user.medicalInfo.knownAllergies[i],
+            );
             if (decrypted) {
               if (decrypted.startsWith("food:")) {
                 medicalInfo.foodAllergies.push(decrypted.replace("food:", ""));
               } else if (decrypted.startsWith("drug:")) {
                 medicalInfo.drugAllergies.push(decrypted.replace("drug:", ""));
               } else if (decrypted.startsWith("condition:")) {
-                medicalInfo.knownMedicalConditions.push(decrypted.replace("condition:", ""));
+                medicalInfo.knownMedicalConditions.push(
+                  decrypted.replace("condition:", ""),
+                );
               } else if (decrypted.startsWith("medication:")) {
-                medicalInfo.currentMedications.push(decrypted.replace("medication:", ""));
+                medicalInfo.currentMedications.push(
+                  decrypted.replace("medication:", ""),
+                );
               } else if (decrypted.startsWith("surgery:")) {
-                medicalInfo.pastSurgicalHistory.push(decrypted.replace("surgery:", ""));
+                medicalInfo.pastSurgicalHistory.push(
+                  decrypted.replace("surgery:", ""),
+                );
               }
             }
           } catch (error) {
@@ -154,7 +183,7 @@ export async function GET(request: NextRequest) {
           error: result.error || "Failed to fetch medical information",
           timestamp: result.timestamp,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -168,10 +197,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json<ApiResponse>(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch medical information",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch medical information",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -184,21 +216,30 @@ export async function PUT(request: NextRequest) {
     // Verify authentication
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
-      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     const token = authHeader.replace("Bearer ", "");
     const decoded = verifyToken(token);
 
     if (!decoded) {
-      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Invalid token" },
+        { status: 401 },
+      );
     }
 
     // Only patients can update their own medical info
     if (decoded.role !== "patient") {
       return NextResponse.json(
-        { success: false, error: "Only patients can update their medical information" },
-        { status: 403 }
+        {
+          success: false,
+          error: "Only patients can update their medical information",
+        },
+        { status: 403 },
       );
     }
 
@@ -221,19 +262,33 @@ export async function PUT(request: NextRequest) {
 
       // Combine all medical data into the knownAllergies encrypted field with prefixes
       if (validatedData.foodAllergies) {
-        encryptedAllergies.push(...validatedData.foodAllergies.map((allergy) => `food:${allergy}`));
+        encryptedAllergies.push(
+          ...validatedData.foodAllergies.map((allergy) => `food:${allergy}`),
+        );
       }
       if (validatedData.drugAllergies) {
-        encryptedAllergies.push(...validatedData.drugAllergies.map((allergy) => `drug:${allergy}`));
+        encryptedAllergies.push(
+          ...validatedData.drugAllergies.map((allergy) => `drug:${allergy}`),
+        );
       }
       if (validatedData.knownMedicalConditions) {
-        encryptedAllergies.push(...validatedData.knownMedicalConditions.map((condition) => `condition:${condition}`));
+        encryptedAllergies.push(
+          ...validatedData.knownMedicalConditions.map(
+            (condition) => `condition:${condition}`,
+          ),
+        );
       }
       if (validatedData.currentMedications) {
-        encryptedAllergies.push(...validatedData.currentMedications.map((med) => `medication:${med}`));
+        encryptedAllergies.push(
+          ...validatedData.currentMedications.map((med) => `medication:${med}`),
+        );
       }
       if (validatedData.pastSurgicalHistory) {
-        encryptedAllergies.push(...validatedData.pastSurgicalHistory.map((surgery) => `surgery:${surgery}`));
+        encryptedAllergies.push(
+          ...validatedData.pastSurgicalHistory.map(
+            (surgery) => `surgery:${surgery}`,
+          ),
+        );
       }
 
       // Update medical information
@@ -265,7 +320,9 @@ export async function PUT(request: NextRequest) {
 
       return {
         message: "Medical information updated successfully",
-        lastUpdated: (savedUser as any).auditModifiedDateTime || (savedUser as any).updatedAt,
+        lastUpdated:
+          (savedUser as any).auditModifiedDateTime ||
+          (savedUser as any).updatedAt,
       };
     }, "Update Medical Information");
 
@@ -276,7 +333,7 @@ export async function PUT(request: NextRequest) {
           error: result.error || "Failed to update medical information",
           timestamp: result.timestamp,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -296,17 +353,20 @@ export async function PUT(request: NextRequest) {
           details: error.errors,
           timestamp: new Date(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to update medical information",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update medical information",
         timestamp: new Date(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

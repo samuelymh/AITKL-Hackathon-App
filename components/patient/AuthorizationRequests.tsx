@@ -15,7 +15,13 @@ import {
   Activity,
   Loader2,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -68,66 +74,91 @@ interface AuthorizationRequestsProps {
   className?: string;
 }
 
-export function AuthorizationRequests({ userId, className }: AuthorizationRequestsProps) {
+export function AuthorizationRequests({
+  userId,
+  className,
+}: AuthorizationRequestsProps) {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { token } = useAuth();
 
   // Debug: Add component instance ID
   const componentId = useRef(Math.random().toString(36).substring(2, 9));
-  console.log(`🧩 AuthorizationRequests component mounted with ID: ${componentId.current}`);
+  console.log(
+    `🧩 AuthorizationRequests component mounted with ID: ${componentId.current}`,
+  );
 
   // Transform notification data to authorization requests
-  const transformNotificationsToRequests = useCallback((notifications: any[]) => {
-    if (!notifications) return [];
+  const transformNotificationsToRequests = useCallback(
+    (notifications: any[]) => {
+      if (!notifications) return [];
 
-    return notifications
-      .filter((item: any) => item.type === "AUTHORIZATION_REQUEST")
-      .map((item: any) => ({
-        grantId: item.data?.grantId || item.id,
-        organization: {
-          id: item.organization?._id || item.data?.organizationId || "",
-          name: item.organization?.organizationInfo?.name || item.data?.organizationName || "Unknown Organization",
-          type: (item.organization?.organizationInfo?.type || "UNKNOWN") as any,
-          address: item.organization?.address || "",
-        },
-        practitioner: {
-          id: item.practitioner?._id || item.data?.requestingPractitionerId || "",
-          // Simplified name parsing using destructuring and nullish coalescing
-          ...(() => {
-            const [firstName, ...rest] = item.practitionerName?.split(" ") || [];
-            return {
-              firstName: firstName || "Unknown",
-              lastName: rest.join(" ") || "Practitioner",
-            };
-          })(),
-          role: item.practitionerType || ((item.practitioner?.professionalInfo?.practitionerType || "doctor") as any),
-          specialty: item.practitioner?.professionalInfo?.specialty,
-        },
-        requestedScope: item.accessScope ||
-          item.data?.accessScope || {
-            canViewMedicalHistory: true,
-            canViewPrescriptions: true,
-            canCreateEncounters: false,
-            canViewAuditLogs: false,
+      return notifications
+        .filter((item: any) => item.type === "AUTHORIZATION_REQUEST")
+        .map((item: any) => ({
+          grantId: item.data?.grantId || item.id,
+          organization: {
+            id: item.organization?._id || item.data?.organizationId || "",
+            name:
+              item.organization?.organizationInfo?.name ||
+              item.data?.organizationName ||
+              "Unknown Organization",
+            type: (item.organization?.organizationInfo?.type ||
+              "UNKNOWN") as any,
+            address: item.organization?.address || "",
           },
-        timeWindow: {
-          hours: item.data?.timeWindowHours || 24,
-          requestedAt: new Date(item.createdAt),
-          expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-        timeWindowHours: item.data?.timeWindowHours || 24,
-        createdAt: new Date(item.createdAt),
-        expiresAt: item.expiresAt ? new Date(item.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000),
-        status: item.grantStatus || (item.status === "COMPLETED" ? "APPROVED" : "PENDING"),
-        urgency: item.priority >= 8 ? "urgent" : "normal",
-        metadata: {
-          title: item.title,
-          body: item.body,
-          notificationId: item.id,
-        },
-      }));
-  }, []);
+          practitioner: {
+            id:
+              item.practitioner?._id ||
+              item.data?.requestingPractitionerId ||
+              "",
+            // Simplified name parsing using destructuring and nullish coalescing
+            ...(() => {
+              const [firstName, ...rest] =
+                item.practitionerName?.split(" ") || [];
+              return {
+                firstName: firstName || "Unknown",
+                lastName: rest.join(" ") || "Practitioner",
+              };
+            })(),
+            role:
+              item.practitionerType ||
+              ((item.practitioner?.professionalInfo?.practitionerType ||
+                "doctor") as any),
+            specialty: item.practitioner?.professionalInfo?.specialty,
+          },
+          requestedScope: item.accessScope ||
+            item.data?.accessScope || {
+              canViewMedicalHistory: true,
+              canViewPrescriptions: true,
+              canCreateEncounters: false,
+              canViewAuditLogs: false,
+            },
+          timeWindow: {
+            hours: item.data?.timeWindowHours || 24,
+            requestedAt: new Date(item.createdAt),
+            expiresAt: item.expiresAt
+              ? new Date(item.expiresAt)
+              : new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+          timeWindowHours: item.data?.timeWindowHours || 24,
+          createdAt: new Date(item.createdAt),
+          expiresAt: item.expiresAt
+            ? new Date(item.expiresAt)
+            : new Date(Date.now() + 24 * 60 * 60 * 1000),
+          status:
+            item.grantStatus ||
+            (item.status === "COMPLETED" ? "APPROVED" : "PENDING"),
+          urgency: item.priority >= 8 ? "urgent" : "normal",
+          metadata: {
+            title: item.title,
+            body: item.body,
+            notificationId: item.id,
+          },
+        }));
+    },
+    [],
+  );
 
   // Simple single-fetch implementation (no polling)
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -149,7 +180,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch notifications: ${response.statusText}`,
+        );
       }
 
       const result = await response.json();
@@ -159,9 +192,13 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
 
       setNotifications(result.data || []);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error("Unknown error occurred");
+      const error =
+        err instanceof Error ? err : new Error("Unknown error occurred");
       setError(error);
-      console.error(`❌ [${componentId.current}] Error fetching notifications:`, error);
+      console.error(
+        `❌ [${componentId.current}] Error fetching notifications:`,
+        error,
+      );
 
       // Check if it's a JWT expiration error
       if (
@@ -197,18 +234,24 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
   }, [fetchNotifications]);
 
   console.log(
-    `📊 [${componentId.current}] Notifications state - loading: ${loading}, count: ${notifications?.length || 0}`
+    `📊 [${componentId.current}] Notifications state - loading: ${loading}, count: ${notifications?.length || 0}`,
   );
 
   // Transform notifications to requests
   const requests = transformNotificationsToRequests(notifications || []);
 
   // Handle approve/deny actions
-  const handleRequestAction = async (grantId: string, action: "approve" | "deny") => {
+  const handleRequestAction = async (
+    grantId: string,
+    action: "approve" | "deny",
+  ) => {
     setProcessingIds((prev) => new Set(prev).add(grantId));
 
     try {
-      const endpoint = action === "approve" ? "/api/v1/authorizations/approve" : "/api/v1/authorizations/deny";
+      const endpoint =
+        action === "approve"
+          ? "/api/v1/authorizations/approve"
+          : "/api/v1/authorizations/deny";
 
       const response = await fetch(endpoint, {
         method: "PATCH",
@@ -245,14 +288,18 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
               }),
             });
           } catch (notificationError) {
-            console.warn("Failed to mark notification as read:", notificationError);
+            console.warn(
+              "Failed to mark notification as read:",
+              notificationError,
+            );
           }
         }
       } else {
         const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.error || `Failed to ${action} authorization request`,
+          description:
+            errorData.error || `Failed to ${action} authorization request`,
           variant: "destructive",
         });
       }
@@ -291,28 +338,40 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
     switch (status) {
       case "PENDING":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200"
+          >
             <Clock className="h-3 w-3 mr-1" />
             Pending
           </Badge>
         );
       case "ACTIVE":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
             <CheckCircle className="h-3 w-3 mr-1" />
             Active
           </Badge>
         );
       case "EXPIRED":
         return (
-          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+          <Badge
+            variant="outline"
+            className="bg-gray-50 text-gray-700 border-gray-200"
+          >
             <XCircle className="h-3 w-3 mr-1" />
             Expired
           </Badge>
         );
       case "REVOKED":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200"
+          >
             <XCircle className="h-3 w-3 mr-1" />
             Revoked
           </Badge>
@@ -344,15 +403,30 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
       admin: "Administrator",
       other: "Healthcare Professional",
     };
-    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
+    return (
+      typeMap[type.toLowerCase()] ||
+      type.charAt(0).toUpperCase() + type.slice(1)
+    );
   };
 
   // Render access scope
   const renderAccessScope = (scope: AccessScope) => {
     const permissions = [
-      { label: "Medical History", enabled: scope.canViewMedicalHistory, icon: FileText },
-      { label: "Prescriptions", enabled: scope.canViewPrescriptions, icon: Pill },
-      { label: "Create Records", enabled: scope.canCreateEncounters, icon: FileText },
+      {
+        label: "Medical History",
+        enabled: scope.canViewMedicalHistory,
+        icon: FileText,
+      },
+      {
+        label: "Prescriptions",
+        enabled: scope.canViewPrescriptions,
+        icon: Pill,
+      },
+      {
+        label: "Create Records",
+        enabled: scope.canCreateEncounters,
+        icon: FileText,
+      },
       { label: "Audit Logs", enabled: scope.canViewAuditLogs, icon: Eye },
     ];
 
@@ -362,7 +436,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
           <div
             key={permission.label}
             className={`flex items-center gap-2 text-xs p-2 rounded ${
-              permission.enabled ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"
+              permission.enabled
+                ? "bg-green-50 text-green-700"
+                : "bg-gray-50 text-gray-500"
             }`}
           >
             <permission.icon className="h-3 w-3" />
@@ -396,7 +472,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
 
   const pendingRequests = requests.filter((r) => r.status === "PENDING");
   const activeRequests = requests.filter((r) => r.status === "ACTIVE");
-  const inactiveRequests = requests.filter((r) => ["EXPIRED", "REVOKED"].includes(r.status));
+  const inactiveRequests = requests.filter((r) =>
+    ["EXPIRED", "REVOKED"].includes(r.status),
+  );
 
   return (
     <Card className={className}>
@@ -407,7 +485,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
               <Shield className="h-5 w-5 text-primary" />
               Access Requests
             </CardTitle>
-            <CardDescription>Manage healthcare provider access to your medical records</CardDescription>
+            <CardDescription>
+              Manage healthcare provider access to your medical records
+            </CardDescription>
           </div>
           {pendingRequests.length > 0 && (
             <Badge variant="destructive" className="bg-red-100 text-red-700">
@@ -423,23 +503,38 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         {pendingRequests.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Label className="font-medium text-yellow-700">Pending Approval</Label>
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+              <Label className="font-medium text-yellow-700">
+                Pending Approval
+              </Label>
+              <Badge
+                variant="outline"
+                className="bg-yellow-50 text-yellow-700 border-yellow-200"
+              >
                 {pendingRequests.length}
               </Badge>
             </div>
             <div className="space-y-4">
               {pendingRequests.map((request) => (
-                <div key={request.grantId} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 space-y-4">
+                <div
+                  key={request.grantId}
+                  className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 space-y-4"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 bg-white rounded-lg">{getOrgTypeIcon(request.organization.type)}</div>
+                      <div className="p-2 bg-white rounded-lg">
+                        {getOrgTypeIcon(request.organization.type)}
+                      </div>
                       <div>
-                        <h4 className="font-medium">{request.organization.name}</h4>
+                        <h4 className="font-medium">
+                          {request.organization.name}
+                        </h4>
                         <p className="text-sm text-muted-foreground">
-                          {request.practitioner.firstName} {request.practitioner.lastName}
-                          {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
-                          {request.practitioner.specialty && ` • ${request.practitioner.specialty}`}
+                          {request.practitioner.firstName}{" "}
+                          {request.practitioner.lastName}
+                          {request.practitioner.role &&
+                            ` • ${formatPractitionerType(request.practitioner.role)}`}
+                          {request.practitioner.specialty &&
+                            ` • ${request.practitioner.specialty}`}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
@@ -453,7 +548,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                   </div>
 
                   <div>
-                    <Label className="text-sm font-medium">Requested Access ({request.timeWindowHours}h)</Label>
+                    <Label className="text-sm font-medium">
+                      Requested Access ({request.timeWindowHours}h)
+                    </Label>
                     {renderAccessScope(request.requestedScope)}
                   </div>
 
@@ -489,23 +586,38 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
             {pendingRequests.length > 0 && <Separator />}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Label className="font-medium text-green-700">Active Access</Label>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <Label className="font-medium text-green-700">
+                  Active Access
+                </Label>
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 border-green-200"
+                >
                   {activeRequests.length}
                 </Badge>
               </div>
               <div className="space-y-4">
                 {activeRequests.map((request) => (
-                  <div key={request.grantId} className="border border-green-200 bg-green-50 rounded-lg p-4 space-y-4">
+                  <div
+                    key={request.grantId}
+                    className="border border-green-200 bg-green-50 rounded-lg p-4 space-y-4"
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 bg-white rounded-lg">{getOrgTypeIcon(request.organization.type)}</div>
+                        <div className="p-2 bg-white rounded-lg">
+                          {getOrgTypeIcon(request.organization.type)}
+                        </div>
                         <div>
-                          <h4 className="font-medium">{request.organization.name}</h4>
+                          <h4 className="font-medium">
+                            {request.organization.name}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
-                            {request.practitioner.firstName} {request.practitioner.lastName}
-                            {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
-                            {request.practitioner.specialty && ` • ${request.practitioner.specialty}`}
+                            {request.practitioner.firstName}{" "}
+                            {request.practitioner.lastName}
+                            {request.practitioner.role &&
+                              ` • ${formatPractitionerType(request.practitioner.role)}`}
+                            {request.practitioner.specialty &&
+                              ` • ${request.practitioner.specialty}`}
                           </p>
                           {request.expiresAt && (
                             <div className="flex items-center gap-2 mt-1">
@@ -521,7 +633,9 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium">Current Access</Label>
+                      <Label className="text-sm font-medium">
+                        Current Access
+                      </Label>
                       {renderAccessScope(request.requestedScope)}
                     </div>
 
@@ -546,9 +660,12 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
         {requests.length === 0 && (
           <div className="text-center py-8">
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-medium text-muted-foreground">No Access Requests</h3>
+            <h3 className="font-medium text-muted-foreground">
+              No Access Requests
+            </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              When healthcare providers scan your QR code, their access requests will appear here.
+              When healthcare providers scan your QR code, their access requests
+              will appear here.
             </p>
           </div>
         )}
@@ -569,10 +686,14 @@ export function AuthorizationRequests({ userId, className }: AuthorizationReques
                       className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
                     >
                       <div>
-                        <span className="font-medium">{request.organization.name}</span>
+                        <span className="font-medium">
+                          {request.organization.name}
+                        </span>
                         <span className="text-muted-foreground ml-2">
-                          {request.practitioner.firstName} {request.practitioner.lastName}
-                          {request.practitioner.role && ` • ${formatPractitionerType(request.practitioner.role)}`}
+                          {request.practitioner.firstName}{" "}
+                          {request.practitioner.lastName}
+                          {request.practitioner.role &&
+                            ` • ${formatPractitionerType(request.practitioner.role)}`}
                         </span>
                       </div>
                       {getStatusBadge(request.status)}

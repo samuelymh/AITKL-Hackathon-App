@@ -23,7 +23,9 @@ export default function AdminOrganizationVerificationPage() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <Alert variant="destructive">
-              <AlertDescription>Please log in to access the admin panel.</AlertDescription>
+              <AlertDescription>
+                Please log in to access the admin panel.
+              </AlertDescription>
             </Alert>
           </CardContent>
         </Card>
@@ -37,7 +39,9 @@ export default function AdminOrganizationVerificationPage() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <Alert variant="destructive">
-              <AlertDescription>Access denied. Admin privileges required.</AlertDescription>
+              <AlertDescription>
+                Access denied. Admin privileges required.
+              </AlertDescription>
             </Alert>
           </CardContent>
         </Card>
@@ -59,9 +63,12 @@ export default function AdminOrganizationVerificationPage() {
         />
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Organization Verification</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Organization Verification
+          </h1>
           <p className="text-gray-600 mt-2">
-            Review and approve organization registration requests to ensure platform security and compliance.
+            Review and approve organization registration requests to ensure
+            platform security and compliance.
           </p>
         </div>
 

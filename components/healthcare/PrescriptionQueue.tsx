@@ -1,7 +1,13 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +34,13 @@ interface PrescriptionAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  variant?: "default" | "outline" | "destructive" | "secondary" | "ghost" | "link";
+  variant?:
+    | "default"
+    | "outline"
+    | "destructive"
+    | "secondary"
+    | "ghost"
+    | "link";
   className?: string;
   onClick: (prescriptionId: string) => void;
   showForStatus?: string[];
@@ -61,7 +73,10 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
     switch (status) {
       case "ISSUED":
         return (
-          <Badge variant="outline" className="text-orange-600 border-orange-300">
+          <Badge
+            variant="outline"
+            className="text-orange-600 border-orange-300"
+          >
             Pending
           </Badge>
         );
@@ -98,7 +113,11 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
   };
 
   const getActionsForPrescription = (prescription: PrescriptionRequest) => {
-    return actions.filter((action) => !action.showForStatus || action.showForStatus.includes(prescription.status));
+    return actions.filter(
+      (action) =>
+        !action.showForStatus ||
+        action.showForStatus.includes(prescription.status),
+    );
   };
 
   return (
@@ -131,8 +150,12 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-medium">{prescription.patientName}</p>
-                      <p className="text-sm text-gray-600">ID: {prescription.id}</p>
-                      <p className="text-xs text-gray-500">Patient ID: {prescription.patientId}</p>
+                      <p className="text-sm text-gray-600">
+                        ID: {prescription.id}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Patient ID: {prescription.patientId}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       {getPriorityBadge(prescription.priority)}
@@ -142,17 +165,23 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
 
                   <div className="text-sm space-y-1">
                     <p>
-                      <strong>{prescription.medicationName}</strong> {prescription.dosage}
+                      <strong>{prescription.medicationName}</strong>{" "}
+                      {prescription.dosage}
                     </p>
                     <p>Frequency: {prescription.frequency}</p>
-                    <p>Prescriber: {prescription.prescribingPractitioner.name}</p>
+                    <p>
+                      Prescriber: {prescription.prescribingPractitioner.name}
+                    </p>
                     <p>Type: {prescription.prescribingPractitioner.type}</p>
                     {prescription.notes && <p>Notes: {prescription.notes}</p>}
-                    <p className="text-xs text-gray-500">Issued: {new Date(prescription.issuedAt).toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">
+                      Issued: {new Date(prescription.issuedAt).toLocaleString()}
+                    </p>
                   </div>
 
                   {/* Action buttons */}
-                  {(getActionsForPrescription(prescription).length > 0 || onViewPatientRecord) && (
+                  {(getActionsForPrescription(prescription).length > 0 ||
+                    onViewPatientRecord) && (
                     <div className="flex gap-2 mt-3 flex-wrap">
                       {getActionsForPrescription(prescription).map((action) => (
                         <Button
@@ -168,7 +197,13 @@ const PrescriptionQueue: React.FC<PrescriptionQueueProps> = ({
                       ))}
 
                       {onViewPatientRecord && (
-                        <Button size="sm" variant="ghost" onClick={() => onViewPatientRecord(prescription.patientId)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            onViewPatientRecord(prescription.patientId)
+                          }
+                        >
                           <Eye className="w-4 h-4 mr-1" />
                           View Record
                         </Button>

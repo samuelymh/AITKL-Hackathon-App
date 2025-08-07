@@ -27,13 +27,19 @@ export async function GET(request: NextRequest) {
 
     const doctor = await Practitioner.findOne({ userId: doctorUser._id });
     if (!doctor) {
-      return NextResponse.json({ error: "No practitioner record found for doctor" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No practitioner record found for doctor" },
+        { status: 404 },
+      );
     }
 
     // Find an organization
     const organization = await Organization.findOne();
     if (!organization) {
-      return NextResponse.json({ error: "No organization found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No organization found" },
+        { status: 404 },
+      );
     }
 
     // Create a sample encounter with prescriptions
@@ -113,6 +119,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error creating sample prescriptions:", error);
-    return NextResponse.json({ error: "Failed to create sample prescriptions" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create sample prescriptions" },
+      { status: 500 },
+    );
   }
 }

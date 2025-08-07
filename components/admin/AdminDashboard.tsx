@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -298,7 +304,7 @@ export function AdminDashboard() {
               lastLogin: admin.lastLogin || "Never",
               status: admin.emailVerified ? "active" : "inactive",
               createdAt: admin.createdAt,
-            }))
+            })),
           );
           return; // Don't use fallback data if API succeeds
         }
@@ -311,7 +317,9 @@ export function AdminDashboard() {
             email: "admin@test.com",
             lastLogin: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
             status: "active",
-            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
+            createdAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 24 * 30,
+            ).toISOString(),
           },
           {
             id: "2",
@@ -319,7 +327,9 @@ export function AdminDashboard() {
             email: "admin2@healthcare.com",
             lastLogin: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
             status: "active",
-            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
+            createdAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 24 * 15,
+            ).toISOString(),
           },
           {
             id: "3",
@@ -327,7 +337,9 @@ export function AdminDashboard() {
             email: "admin3@system.com",
             lastLogin: "Never",
             status: "inactive",
-            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+            createdAt: new Date(
+              Date.now() - 1000 * 60 * 60 * 24 * 7,
+            ).toISOString(),
           },
         ]);
       }
@@ -359,7 +371,7 @@ export function AdminDashboard() {
               verified: 0,
               pending: 0,
               rejected: 0,
-            }
+            },
           );
           return; // Don't use fallback data if API succeeds
         }
@@ -405,11 +417,23 @@ export function AdminDashboard() {
   const getActivityStatusBadge = (status: string) => {
     switch (status) {
       case "success":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Success</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Success
+          </Badge>
+        );
       case "warning":
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Warning</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            Warning
+          </Badge>
+        );
       case "error":
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Error</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            Error
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -418,9 +442,17 @@ export function AdminDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Active
+          </Badge>
+        );
       case "inactive":
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Inactive</Badge>;
+        return (
+          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
+            Inactive
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -442,11 +474,23 @@ export function AdminDashboard() {
   const getVerificationStatusBadge = (status: string) => {
     switch (status) {
       case "verified":
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Verified</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Verified
+          </Badge>
+        );
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            Pending
+          </Badge>
+        );
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            Rejected
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -460,9 +504,12 @@ export function AdminDashboard() {
           <Shield className="h-6 w-6 text-purple-600" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">System Administration</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            System Administration
+          </h1>
           <p className="text-gray-600">
-            Welcome back, {user?.firstName} {user?.lastName} - System Administrator
+            Welcome back, {user?.firstName} {user?.lastName} - System
+            Administrator
           </p>
         </div>
       </div>
@@ -470,15 +517,26 @@ export function AdminDashboard() {
       {/* System Health Alert */}
       {stats.systemHealth !== "healthy" && (
         <Alert
-          className={stats.systemHealth === "critical" ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50"}
+          className={
+            stats.systemHealth === "critical"
+              ? "border-red-200 bg-red-50"
+              : "border-yellow-200 bg-yellow-50"
+          }
         >
           <AlertTriangle
             className={`h-4 w-4 ${stats.systemHealth === "critical" ? "text-red-600" : "text-yellow-600"}`}
           />
-          <AlertDescription className={stats.systemHealth === "critical" ? "text-red-800" : "text-yellow-800"}>
+          <AlertDescription
+            className={
+              stats.systemHealth === "critical"
+                ? "text-red-800"
+                : "text-yellow-800"
+            }
+          >
             <div className="flex items-center justify-between">
               <span>
-                System health status: {stats.systemHealth}. Please review system logs and take necessary action.
+                System health status: {stats.systemHealth}. Please review system
+                logs and take necessary action.
               </span>
               <Button variant="outline" size="sm" className="ml-4">
                 View Details
@@ -525,7 +583,9 @@ export function AdminDashboard() {
                 <Building className="h-4 w-4 text-yellow-600" />
               </div>
               <div>
-                <p className="text-lg font-bold">{stats.pendingOrganizations}</p>
+                <p className="text-lg font-bold">
+                  {stats.pendingOrganizations}
+                </p>
                 <p className="text-xs text-muted-foreground">Pending Orgs</p>
               </div>
             </div>
@@ -541,7 +601,9 @@ export function AdminDashboard() {
                 <Zap className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-lg font-bold capitalize">{stats.systemHealth}</p>
+                <p className="text-lg font-bold capitalize">
+                  {stats.systemHealth}
+                </p>
                 <p className="text-xs text-muted-foreground">System Status</p>
               </div>
             </div>
@@ -555,7 +617,9 @@ export function AdminDashboard() {
                 <FileText className="h-4 w-4 text-green-600" />
               </div>
               <div>
-                <p className="text-lg font-bold">{stats.auditLogs.toLocaleString()}</p>
+                <p className="text-lg font-bold">
+                  {stats.auditLogs.toLocaleString()}
+                </p>
                 <p className="text-xs text-muted-foreground">Audit Logs</p>
               </div>
             </div>
@@ -578,7 +642,11 @@ export function AdminDashboard() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -593,7 +661,10 @@ export function AdminDashboard() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="organizations" className="flex items-center gap-2">
+          <TabsTrigger
+            value="organizations"
+            className="flex items-center gap-2"
+          >
             <Building className="h-4 w-4" />
             Organizations
             {organizationStats.total > 0 && (
@@ -632,15 +703,21 @@ export function AdminDashboard() {
                 <ScrollArea className="h-64">
                   <div className="space-y-3">
                     {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-center justify-between py-2">
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between py-2"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                             {getActivityIcon(activity.type)}
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{activity.action}</p>
+                            <p className="font-medium text-sm">
+                              {activity.action}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              {activity.user} • {new Date(activity.timestamp).toLocaleString()}
+                              {activity.user} •{" "}
+                              {new Date(activity.timestamp).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -661,7 +738,11 @@ export function AdminDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button onClick={() => setActiveTab("users")} className="w-full justify-start" variant="outline">
+                <Button
+                  onClick={() => setActiveTab("users")}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Create New Admin User
                 </Button>
@@ -685,12 +766,20 @@ export function AdminDashboard() {
                   View Audit Logs
                 </Button>
 
-                <Button onClick={() => setActiveTab("security")} className="w-full justify-start" variant="outline">
+                <Button
+                  onClick={() => setActiveTab("security")}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
                   <Shield className="h-4 w-4 mr-2" />
                   Security Dashboard
                 </Button>
 
-                <Button onClick={() => setActiveTab("system")} className="w-full justify-start" variant="outline">
+                <Button
+                  onClick={() => setActiveTab("system")}
+                  className="w-full justify-start"
+                  variant="outline"
+                >
                   <Settings className="h-4 w-4 mr-2" />
                   System Configuration
                 </Button>
@@ -711,11 +800,15 @@ export function AdminDashboard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Connection Pool</span>
-                    <Badge className="bg-green-100 text-green-800">Healthy</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      Healthy
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Query Performance</span>
-                    <Badge className="bg-green-100 text-green-800">Optimal</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      Optimal
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Storage Usage</span>
@@ -744,7 +837,9 @@ export function AdminDashboard() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Rate Limiting</span>
-                    <Badge className="bg-green-100 text-green-800">Active</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      Active
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -761,7 +856,9 @@ export function AdminDashboard() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">SSL/TLS</span>
-                    <Badge className="bg-green-100 text-green-800">Secure</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      Secure
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Failed Logins</span>
@@ -791,17 +888,24 @@ export function AdminDashboard() {
                   Create Admin
                 </Button>
               </CardTitle>
-              <CardDescription>Manage system administrators and their access levels</CardDescription>
+              <CardDescription>
+                Manage system administrators and their access levels
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-96">
                 <div className="space-y-4">
                   {adminUsers.map((admin) => (
-                    <div key={admin.id} className="border rounded-lg p-4 space-y-3">
+                    <div
+                      key={admin.id}
+                      className="border rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-semibold">{admin.name}</h3>
-                          <p className="text-sm text-muted-foreground">{admin.email}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {admin.email}
+                          </p>
                         </div>
                         {getStatusBadge(admin.status)}
                       </div>
@@ -810,12 +914,16 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-muted-foreground">Last Login</p>
                           <p className="text-xs">
-                            {admin.lastLogin === "Never" ? "Never" : new Date(admin.lastLogin).toLocaleString()}
+                            {admin.lastLogin === "Never"
+                              ? "Never"
+                              : new Date(admin.lastLogin).toLocaleString()}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Created</p>
-                          <p className="text-xs">{new Date(admin.createdAt).toLocaleDateString()}</p>
+                          <p className="text-xs">
+                            {new Date(admin.createdAt).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
 
@@ -828,7 +936,11 @@ export function AdminDashboard() {
                           <RefreshCw className="h-4 w-4 mr-2" />
                           Reset Password
                         </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
                           <Trash2 className="h-4 w-4 mr-2" />
                           Deactivate
                         </Button>
@@ -859,25 +971,36 @@ export function AdminDashboard() {
                   </Link>
                 </div>
               </CardTitle>
-              <CardDescription>All organizations in the system - verified, pending, and rejected</CardDescription>
+              <CardDescription>
+                All organizations in the system - verified, pending, and
+                rejected
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Organization Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{organizationStats.total}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {organizationStats.total}
+                  </p>
                   <p className="text-sm text-blue-600">Total</p>
                 </div>
                 <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{organizationStats.verified}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {organizationStats.verified}
+                  </p>
                   <p className="text-sm text-green-600">Verified</p>
                 </div>
                 <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                  <p className="text-2xl font-bold text-yellow-600">{organizationStats.pending}</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {organizationStats.pending}
+                  </p>
                   <p className="text-sm text-yellow-600">Pending</p>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <p className="text-2xl font-bold text-red-600">{organizationStats.rejected}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {organizationStats.rejected}
+                  </p>
                   <p className="text-sm text-red-600">Rejected</p>
                 </div>
               </div>
@@ -887,11 +1010,18 @@ export function AdminDashboard() {
                 <ScrollArea className="h-96">
                   <div className="space-y-4">
                     {organizations.map((org) => (
-                      <div key={org.id} className="border rounded-lg p-4 space-y-3">
+                      <div
+                        key={org.id}
+                        className="border rounded-lg p-4 space-y-3"
+                      >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-lg">{org.name}</h3>
-                            <p className="text-sm text-muted-foreground">{org.email}</p>
+                            <h3 className="font-semibold text-lg">
+                              {org.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {org.email}
+                            </p>
                           </div>
                           {getVerificationStatusBadge(org.verificationStatus)}
                         </div>
@@ -907,7 +1037,9 @@ export function AdminDashboard() {
                           </div>
                           <div>
                             <p className="text-muted-foreground">Created</p>
-                            <p className="text-xs">{new Date(org.createdAt).toLocaleDateString()}</p>
+                            <p className="text-xs">
+                              {new Date(org.createdAt).toLocaleDateString()}
+                            </p>
                           </div>
                         </div>
 
@@ -950,7 +1082,9 @@ export function AdminDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground mb-4">No organizations found in the system.</p>
+                  <p className="text-muted-foreground mb-4">
+                    No organizations found in the system.
+                  </p>
                   <Link href="/admin/organizations/verification">
                     <Button>
                       View Verification Panel
@@ -971,7 +1105,9 @@ export function AdminDashboard() {
                 <Shield className="h-5 w-5" />
                 Security Dashboard
               </CardTitle>
-              <CardDescription>Monitor system security and access controls</CardDescription>
+              <CardDescription>
+                Monitor system security and access controls
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-muted-foreground">
@@ -991,7 +1127,9 @@ export function AdminDashboard() {
                 <Settings className="h-5 w-5" />
                 System Configuration
               </CardTitle>
-              <CardDescription>Manage system settings and configuration</CardDescription>
+              <CardDescription>
+                Manage system settings and configuration
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-muted-foreground">

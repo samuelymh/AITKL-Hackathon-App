@@ -23,7 +23,7 @@ async function makeRequest(
     method?: string;
     headers?: Record<string, string>;
     body?: any;
-  } = {}
+  } = {},
 ): Promise<{ status: number; data: any }> {
   const url = `${API_BASE_URL}${endpoint}`;
   const { method = "GET", headers = {}, body } = options;
@@ -41,7 +41,9 @@ async function makeRequest(
     const data = await response.json();
     return { status: response.status, data };
   } catch (error) {
-    throw new Error(`Request failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Request failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -53,7 +55,9 @@ async function runSecurityTests(): Promise<TestResult[]> {
 
   // Test 1: No Authentication - Should Fail
   try {
-    const response = await makeRequest("/api/admin/queue/process", { method: "POST" });
+    const response = await makeRequest("/api/admin/queue/process", {
+      method: "POST",
+    });
     results.push({
       name: "No Authentication",
       passed: response.status === 401,
@@ -280,7 +284,9 @@ function displayResults(results: TestResult[]): void {
   if (failed === 0) {
     console.log("🎉 All security tests passed! The API is properly secured.");
   } else {
-    console.log("⚠️  Some tests failed. Please review the security implementation.");
+    console.log(
+      "⚠️  Some tests failed. Please review the security implementation.",
+    );
   }
 }
 

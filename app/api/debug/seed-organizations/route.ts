@@ -8,7 +8,8 @@ const sampleOrganizations = [
       name: "General Hospital",
       type: "HOSPITAL",
       registrationNumber: "GH001",
-      description: "A leading healthcare facility providing comprehensive medical services",
+      description:
+        "A leading healthcare facility providing comprehensive medical services",
     },
     address: {
       street: "Jalan Hospital 123",
@@ -72,7 +73,8 @@ const sampleOrganizations = [
       name: "MedPharm Pharmacy",
       type: "PHARMACY",
       registrationNumber: "MP003",
-      description: "Full-service pharmacy with prescription and OTC medications",
+      description:
+        "Full-service pharmacy with prescription and OTC medications",
     },
     address: {
       street: "Jalan Farmasi 789",
@@ -172,7 +174,10 @@ export async function POST(request: NextRequest) {
   try {
     // Only allow in development
     if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Seed endpoint not available in production" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Seed endpoint not available in production" },
+        { status: 403 },
+      );
     }
 
     await connectToDatabase();
@@ -201,7 +206,9 @@ export async function POST(request: NextRequest) {
     }
 
     const finalCount = await Organization.countDocuments();
-    const verifiedCount = await Organization.countDocuments({ "verification.isVerified": true });
+    const verifiedCount = await Organization.countDocuments({
+      "verification.isVerified": true,
+    });
 
     return NextResponse.json({
       success: true,
@@ -220,7 +227,7 @@ export async function POST(request: NextRequest) {
         error: error instanceof Error ? error.message : "Seed failed",
         stack: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

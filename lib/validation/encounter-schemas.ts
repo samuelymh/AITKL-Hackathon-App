@@ -3,7 +3,9 @@ import { z } from "zod";
 // Base schemas for reusable components
 export const encounterLocationSchema = z.object({
   display: z.string().min(1, "Location display is required"),
-  physicalType: z.enum(["room", "ward", "building", "site", "virtual"]).optional(),
+  physicalType: z
+    .enum(["room", "ward", "building", "site", "virtual"])
+    .optional(),
   ward: z.string().optional(),
   room: z.string().optional(),
   bed: z.string().optional(),
@@ -13,7 +15,9 @@ export const diagnosisSchema = z.object({
   code: z.string().min(1, "Diagnosis code is required"),
   display: z.string().min(1, "Diagnosis display is required"),
   codeSystem: z.string().default("ICD-10"),
-  use: z.enum(["primary", "secondary", "differential", "provisional"]).default("primary"),
+  use: z
+    .enum(["primary", "secondary", "differential", "provisional"])
+    .default("primary"),
   rank: z.number().int().positive().default(1),
   notes: z.string().optional(),
 });
@@ -35,7 +39,15 @@ export const prescriptionSchema = z.object({
   instructions: z.string().optional(),
   substitutionAllowed: z.boolean().default(true),
   status: z
-    .enum(["active", "on-hold", "cancelled", "completed", "entered-in-error", "stopped", "draft"])
+    .enum([
+      "active",
+      "on-hold",
+      "cancelled",
+      "completed",
+      "entered-in-error",
+      "stopped",
+      "draft",
+    ])
     .default("active"),
 });
 
@@ -58,8 +70,12 @@ export const createEncounterSchema = z
   .object({
     // Required identifiers
     userId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid user ID format"),
-    organizationId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid organization ID format"),
-    practitionerId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
+    organizationId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid organization ID format"),
+    practitionerId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
 
     // Encounter details
     status: z
@@ -76,7 +92,16 @@ export const createEncounterSchema = z
       ])
       .default("in-progress"),
 
-    class: z.enum(["inpatient", "outpatient", "ambulatory", "emergency", "home", "field", "daytime", "virtual"]),
+    class: z.enum([
+      "inpatient",
+      "outpatient",
+      "ambulatory",
+      "emergency",
+      "home",
+      "field",
+      "daytime",
+      "virtual",
+    ]),
 
     type: z.enum([
       "consultation",
@@ -119,7 +144,7 @@ export const createEncounterSchema = z
     {
       message: "End date must be after start date",
       path: ["endDateTime"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -132,7 +157,7 @@ export const createEncounterSchema = z
     {
       message: "Inpatient encounters must include admission details",
       path: ["admissionDetails"],
-    }
+    },
   );
 
 // Update encounter schema (similar but allows partial updates)
@@ -166,13 +191,17 @@ export const updateEncounterSchema = z
 
 // Add diagnosis schema
 export const addDiagnosisSchema = z.object({
-  practitionerId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
+  practitionerId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
   diagnosis: diagnosisSchema,
 });
 
 // Add prescription schema
 export const addPrescriptionSchema = z.object({
-  practitionerId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
+  practitionerId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid practitioner ID format"),
   prescription: prescriptionSchema,
 });
 
@@ -205,7 +234,16 @@ export const encounterQuerySchema = z
       ])
       .optional(),
     class: z
-      .enum(["inpatient", "outpatient", "ambulatory", "emergency", "home", "field", "daytime", "virtual"])
+      .enum([
+        "inpatient",
+        "outpatient",
+        "ambulatory",
+        "emergency",
+        "home",
+        "field",
+        "daytime",
+        "virtual",
+      ])
       .optional(),
     type: z
       .enum([
@@ -236,7 +274,7 @@ export const encounterQuerySchema = z
     {
       message: "End date must be after or equal to start date",
       path: ["endDate"],
-    }
+    },
   )
   .refine(
     (data) => {
@@ -246,7 +284,7 @@ export const encounterQuerySchema = z
     {
       message: "Limit cannot exceed 100",
       path: ["limit"],
-    }
+    },
   );
 
 // Type exports for TypeScript

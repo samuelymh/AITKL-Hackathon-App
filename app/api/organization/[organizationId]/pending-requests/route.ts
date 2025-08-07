@@ -10,7 +10,7 @@ import { getPendingAuthorizationGrants } from "@/lib/services/authorization-serv
 async function getPendingRequestsHandler(
   request: NextRequest,
   authContext: any,
-  { params }: { params: { organizationId: string } }
+  { params }: { params: { organizationId: string } },
 ) {
   try {
     await connectToDatabase();
@@ -22,12 +22,18 @@ async function getPendingRequestsHandler(
     const { organizationId } = params;
 
     if (!organizationId) {
-      return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "organizationId is required" },
+        { status: 400 },
+      );
     }
 
     // Validate organizationId format (basic MongoDB ObjectId check)
     if (!/^[0-9a-fA-F]{24}$/.test(organizationId)) {
-      return NextResponse.json({ error: "Invalid organization ID format" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid organization ID format" },
+        { status: 400 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -35,7 +41,10 @@ async function getPendingRequestsHandler(
 
     // Validate limit parameter
     if (limit < 1 || limit > 100) {
-      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Limit must be between 1 and 100" },
+        { status: 400 },
+      );
     }
 
     // Use the optimized service function
@@ -57,21 +66,31 @@ async function getPendingRequestsHandler(
     });
   } catch (error) {
     console.error("Error fetching pending requests:", error);
-    return NextResponse.json({ error: "Failed to fetch pending requests" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch pending requests" },
+      { status: 500 },
+    );
   }
 }
 
 // Export with authentication middleware
-export const GET = withMedicalStaffAuth(async (request: NextRequest, authContext: any) => {
-  // Extract organizationId from URL
-  const url = new URL(request.url);
-  const pathSegments = url.pathname.split("/");
-  const organizationIdIndex = pathSegments.indexOf("organization") + 1;
-  const organizationId = pathSegments[organizationIdIndex];
+export const GET = withMedicalStaffAuth(
+  async (request: NextRequest, authContext: any) => {
+    // Extract organizationId from URL
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/");
+    const organizationIdIndex = pathSegments.indexOf("organization") + 1;
+    const organizationId = pathSegments[organizationIdIndex];
 
-  if (!organizationId) {
-    return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
-  }
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: "organizationId is required" },
+        { status: 400 },
+      );
+    }
 
-  return getPendingRequestsHandler(request, authContext, { params: { organizationId } });
-});
+    return getPendingRequestsHandler(request, authContext, {
+      params: { organizationId },
+    });
+  },
+);

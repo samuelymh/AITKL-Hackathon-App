@@ -45,7 +45,7 @@ export const ACCESS_SCOPE_PERMISSION_MAP: Record<string, PermissionKey> = {
  */
 export const GRANT_ACTION_PERMISSION_MAP: Record<string, PermissionKey> = {
   approve: "canApproveAuthorizationGrants",
-  deny: "canApproveAuthorizationGrants",
+  deny: "canDenyAuthorizationGrants",
   revoke: "canRevokeAuthorizationGrants",
 } as const;
 

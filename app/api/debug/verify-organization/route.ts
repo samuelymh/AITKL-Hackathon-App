@@ -9,13 +9,19 @@ export async function POST(request: NextRequest) {
   try {
     // Only allow in development
     if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Verify endpoint not available in production" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Verify endpoint not available in production" },
+        { status: 403 },
+      );
     }
 
     const { organizationId } = await request.json();
 
     if (!organizationId) {
-      return NextResponse.json({ error: "Organization ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Organization ID is required" },
+        { status: 400 },
+      );
     }
 
     await connectToDatabase();
@@ -23,7 +29,10 @@ export async function POST(request: NextRequest) {
     const organization = await Organization.findById(organizationId);
 
     if (!organization) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 },
+      );
     }
 
     // Update verification status
@@ -52,7 +61,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error instanceof Error ? error.message : "Verification failed",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -47,11 +47,15 @@ export interface OrganizationVerificationActions {
   updateVerificationNote: (orgId: string, note: string) => void;
   updateRejectionReason: (orgId: string, reason: string) => void;
   fetchOrganizations: (page?: number) => Promise<void>;
-  handleVerificationDecision: (organizationId: string, action: "verify" | "reject") => Promise<void>;
+  handleVerificationDecision: (
+    organizationId: string,
+    action: "verify" | "reject",
+  ) => Promise<void>;
   clearMessages: () => void;
 }
 
-export function useOrganizationVerification(): OrganizationVerificationState & OrganizationVerificationActions {
+export function useOrganizationVerification(): OrganizationVerificationState &
+  OrganizationVerificationActions {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,8 +63,12 @@ export function useOrganizationVerification(): OrganizationVerificationState & O
   const [success, setSuccess] = useState("");
   const [status, setStatus] = useState("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [verificationNotes, setVerificationNotes] = useState<Record<string, string>>({});
-  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [verificationNotes, setVerificationNotes] = useState<
+    Record<string, string>
+  >({});
+  const [rejectionReasons, setRejectionReasons] = useState<
+    Record<string, string>
+  >({});
 
   const clearMessages = () => {
     setError("");
@@ -80,7 +88,9 @@ export function useOrganizationVerification(): OrganizationVerificationState & O
       setLoading(true);
       clearMessages();
 
-      const response = await fetch(`/api/admin/organizations/verification?status=${status}&page=${page}&limit=20`);
+      const response = await fetch(
+        `/api/admin/organizations/verification?status=${status}&page=${page}&limit=20`,
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -96,7 +106,11 @@ export function useOrganizationVerification(): OrganizationVerificationState & O
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
-      setError(error instanceof Error ? error.message : "Failed to fetch organizations");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch organizations",
+      );
       setOrganizations([]);
       setPagination(null);
     } finally {
@@ -104,7 +118,10 @@ export function useOrganizationVerification(): OrganizationVerificationState & O
     }
   };
 
-  const handleVerificationDecision = async (organizationId: string, action: "verify" | "reject") => {
+  const handleVerificationDecision = async (
+    organizationId: string,
+    action: "verify" | "reject",
+  ) => {
     if (processingId) return; // Prevent multiple simultaneous requests
 
     try {
@@ -157,11 +174,17 @@ export function useOrganizationVerification(): OrganizationVerificationState & O
         // Refresh the organizations list
         await fetchOrganizations(pagination?.current || 1);
       } else {
-        throw new Error(data.error || "Failed to process verification decision");
+        throw new Error(
+          data.error || "Failed to process verification decision",
+        );
       }
     } catch (error) {
       console.error("Error processing verification:", error);
-      setError(error instanceof Error ? error.message : "Failed to process verification");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to process verification",
+      );
     } finally {
       setProcessingId(null);
     }

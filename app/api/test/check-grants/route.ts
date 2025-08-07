@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking authorization grants:", error);
-    return NextResponse.json({ success: false, error: "Failed to check authorization grants" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check authorization grants" },
+      { status: 500 },
+    );
   }
 }

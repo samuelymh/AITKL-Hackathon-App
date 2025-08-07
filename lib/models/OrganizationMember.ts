@@ -13,22 +13,43 @@ export type MembershipRole =
   | "staff"
   | "guest";
 
-export type MembershipStatus = "active" | "inactive" | "pending" | "pending_verification" | "suspended" | "terminated";
+export type MembershipStatus =
+  | "active"
+  | "inactive"
+  | "pending"
+  | "pending_verification"
+  | "suspended"
+  | "terminated";
 
 export type AccessLevel = "full" | "limited" | "read-only" | "emergency-only";
 
 // Zod schema for validation
 export const OrganizationMemberZodSchema = z.object({
-  organizationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
-    message: "Invalid Organization ID",
-  }),
-  practitionerId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
-    message: "Invalid Practitioner ID",
-  }),
+  organizationId: z
+    .string()
+    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Invalid Organization ID",
+    }),
+  practitionerId: z
+    .string()
+    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Invalid Practitioner ID",
+    }),
 
   membershipDetails: z.object({
-    role: z.enum(["admin", "doctor", "nurse", "pharmacist", "technician", "coordinator", "staff", "guest"] as const),
-    accessLevel: z.enum(["full", "limited", "read-only", "emergency-only"] as const).default("limited"),
+    role: z.enum([
+      "admin",
+      "doctor",
+      "nurse",
+      "pharmacist",
+      "technician",
+      "coordinator",
+      "staff",
+      "guest",
+    ] as const),
+    accessLevel: z
+      .enum(["full", "limited", "read-only", "emergency-only"] as const)
+      .default("limited"),
     department: z.string().optional(),
     position: z.string().optional(),
     employeeId: z.string().optional(),
@@ -56,7 +77,9 @@ export const OrganizationMemberZodSchema = z.object({
         .object({
           monday: z.object({ start: z.string(), end: z.string() }).optional(),
           tuesday: z.object({ start: z.string(), end: z.string() }).optional(),
-          wednesday: z.object({ start: z.string(), end: z.string() }).optional(),
+          wednesday: z
+            .object({ start: z.string(), end: z.string() })
+            .optional(),
           thursday: z.object({ start: z.string(), end: z.string() }).optional(),
           friday: z.object({ start: z.string(), end: z.string() }).optional(),
           saturday: z.object({ start: z.string(), end: z.string() }).optional(),
@@ -64,12 +87,21 @@ export const OrganizationMemberZodSchema = z.object({
         })
         .optional(),
       timeZone: z.string().default("UTC"),
-      availability: z.enum(["available", "busy", "unavailable", "on-call"] as const).default("available"),
+      availability: z
+        .enum(["available", "busy", "unavailable", "on-call"] as const)
+        .default("available"),
     })
     .optional(),
 
   status: z
-    .enum(["active", "inactive", "pending", "pending_verification", "suspended", "terminated"] as const)
+    .enum([
+      "active",
+      "inactive",
+      "pending",
+      "pending_verification",
+      "suspended",
+      "terminated",
+    ] as const)
     .default("pending"),
 
   verificationInfo: z
@@ -93,7 +125,9 @@ export const OrganizationMemberZodSchema = z.object({
     .optional(),
 });
 
-export type OrganizationMemberData = z.infer<typeof OrganizationMemberZodSchema>;
+export type OrganizationMemberData = z.infer<
+  typeof OrganizationMemberZodSchema
+>;
 
 // Mongoose Interface
 export interface IOrganizationMember extends Document {
@@ -159,7 +193,9 @@ export interface IOrganizationMember extends Document {
   // Instance methods
   activate(): Promise<void>;
   deactivate(): Promise<void>;
-  updatePermissions(newPermissions: Partial<IOrganizationMember["permissions"]>): Promise<void>;
+  updatePermissions(
+    newPermissions: Partial<IOrganizationMember["permissions"]>,
+  ): Promise<void>;
   verify(verifiedBy: string, method: string, notes?: string): Promise<void>;
   updateSchedule(schedule: IOrganizationMember["schedule"]): Promise<void>;
   hasPermission(permission: keyof IOrganizationMember["permissions"]): boolean;
@@ -186,7 +222,16 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
     membershipDetails: {
       role: {
         type: String,
-        enum: ["admin", "doctor", "nurse", "pharmacist", "technician", "coordinator", "staff", "guest"],
+        enum: [
+          "admin",
+          "doctor",
+          "nurse",
+          "pharmacist",
+          "technician",
+          "coordinator",
+          "staff",
+          "guest",
+        ],
         required: true,
         index: true,
       },
@@ -302,7 +347,14 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "pending", "pending_verification", "suspended", "terminated"],
+      enum: [
+        "active",
+        "inactive",
+        "pending",
+        "pending_verification",
+        "suspended",
+        "terminated",
+      ],
       default: "pending",
       // index: true, // Removed: covered by compound indexes
     },
@@ -332,7 +384,7 @@ const OrganizationMemberSchema = new Schema<IOrganizationMember>(
   {
     timestamps: true,
     collection: "organizationMembers",
-  }
+  },
 );
 
 // Instance Methods
@@ -351,7 +403,7 @@ OrganizationMemberSchema.methods.deactivate = async function (): Promise<void> {
 };
 
 OrganizationMemberSchema.methods.updatePermissions = async function (
-  newPermissions: Partial<IOrganizationMember["permissions"]>
+  newPermissions: Partial<IOrganizationMember["permissions"]>,
 ): Promise<void> {
   Object.assign(this.permissions, newPermissions);
   await this.save();
@@ -360,7 +412,7 @@ OrganizationMemberSchema.methods.updatePermissions = async function (
 OrganizationMemberSchema.methods.verify = async function (
   verifiedBy: string,
   method: string,
-  notes?: string
+  notes?: string,
 ): Promise<void> {
   if (!this.verificationInfo) {
     this.verificationInfo = { isVerified: false };
@@ -376,29 +428,37 @@ OrganizationMemberSchema.methods.verify = async function (
 };
 
 OrganizationMemberSchema.methods.updateSchedule = async function (
-  schedule: IOrganizationMember["schedule"]
+  schedule: IOrganizationMember["schedule"],
 ): Promise<void> {
   this.schedule = schedule;
   await this.save();
 };
 
 OrganizationMemberSchema.methods.hasPermission = function (
-  permission: keyof IOrganizationMember["permissions"]
+  permission: keyof IOrganizationMember["permissions"],
 ): boolean {
   return this.permissions[permission] === true;
 };
 
 OrganizationMemberSchema.methods.isActive = function (): boolean {
-  return this.status === "active" && (!this.membershipDetails.endDate || this.membershipDetails.endDate > new Date());
+  return (
+    this.status === "active" &&
+    (!this.membershipDetails.endDate ||
+      this.membershipDetails.endDate > new Date())
+  );
 };
 
-OrganizationMemberSchema.methods.getFullProfile = async function (): Promise<any> {
-  await this.populate(["organizationId", "practitionerId"]);
-  return this;
-};
+OrganizationMemberSchema.methods.getFullProfile =
+  async function (): Promise<any> {
+    await this.populate(["organizationId", "practitionerId"]);
+    return this;
+  };
 
 // Static Methods
-OrganizationMemberSchema.statics.findByOrganization = function (organizationId: string, options: any = {}) {
+OrganizationMemberSchema.statics.findByOrganization = function (
+  organizationId: string,
+  options: any = {},
+) {
   const query = this.find({ organizationId });
 
   if (options.status) {
@@ -424,7 +484,10 @@ OrganizationMemberSchema.statics.findByOrganization = function (organizationId: 
   return query.populate(["organizationId", "practitionerId"]);
 };
 
-OrganizationMemberSchema.statics.findByPractitioner = function (practitionerId: string, options: any = {}) {
+OrganizationMemberSchema.statics.findByPractitioner = function (
+  practitionerId: string,
+  options: any = {},
+) {
   const query = this.find({ practitionerId });
 
   if (options.status) {
@@ -438,10 +501,15 @@ OrganizationMemberSchema.statics.findByPractitioner = function (practitionerId: 
   return query.populate(["organizationId", "practitionerId"]);
 };
 
-OrganizationMemberSchema.statics.findActiveMembers = function (organizationId?: string) {
+OrganizationMemberSchema.statics.findActiveMembers = function (
+  organizationId?: string,
+) {
   const query: any = {
     status: "active",
-    $or: [{ "membershipDetails.endDate": { $exists: false } }, { "membershipDetails.endDate": { $gt: new Date() } }],
+    $or: [
+      { "membershipDetails.endDate": { $exists: false } },
+      { "membershipDetails.endDate": { $gt: new Date() } },
+    ],
   };
 
   if (organizationId) {
@@ -453,7 +521,7 @@ OrganizationMemberSchema.statics.findActiveMembers = function (organizationId?: 
 
 OrganizationMemberSchema.statics.findByPermission = function (
   permission: keyof IOrganizationMember["permissions"],
-  organizationId?: string
+  organizationId?: string,
 ) {
   const query: any = {
     [`permissions.${permission}`]: true,
@@ -467,7 +535,9 @@ OrganizationMemberSchema.statics.findByPermission = function (
   return this.find(query).populate(["organizationId", "practitionerId"]);
 };
 
-OrganizationMemberSchema.statics.getPrimaryMembership = function (practitionerId: string) {
+OrganizationMemberSchema.statics.getPrimaryMembership = function (
+  practitionerId: string,
+) {
   return this.findOne({
     practitionerId,
     "membershipDetails.isPrimary": true,
@@ -536,7 +606,10 @@ OrganizationMemberSchema.pre("save", function (next) {
   }
 
   // Ensure only one primary membership per practitioner
-  if (doc.isModified("membershipDetails.isPrimary") && doc.membershipDetails.isPrimary) {
+  if (
+    doc.isModified("membershipDetails.isPrimary") &&
+    doc.membershipDetails.isPrimary
+  ) {
     // This should be handled at application level to avoid race conditions
     // but we can add a validation here
   }
@@ -556,18 +629,27 @@ OrganizationMemberSchema.post("save", async function (doc) {
       },
       {
         $set: { "membershipDetails.isPrimary": false },
-      }
+      },
     );
   }
 });
 
 // Compound Indexes
-OrganizationMemberSchema.index({ organizationId: 1, practitionerId: 1 }, { unique: true });
+OrganizationMemberSchema.index(
+  { organizationId: 1, practitionerId: 1 },
+  { unique: true },
+);
 OrganizationMemberSchema.index({ organizationId: 1, status: 1 });
 OrganizationMemberSchema.index({ practitionerId: 1, status: 1 });
-OrganizationMemberSchema.index({ practitionerId: 1, "membershipDetails.isPrimary": 1 });
+OrganizationMemberSchema.index({
+  practitionerId: 1,
+  "membershipDetails.isPrimary": 1,
+});
 OrganizationMemberSchema.index({ "membershipDetails.role": 1, status: 1 });
-OrganizationMemberSchema.index({ "membershipDetails.department": 1, status: 1 });
+OrganizationMemberSchema.index({
+  "membershipDetails.department": 1,
+  status: 1,
+});
 OrganizationMemberSchema.index({ "verificationInfo.isVerified": 1, status: 1 });
 
 // Text search index
@@ -579,6 +661,9 @@ OrganizationMemberSchema.index({
 
 export const OrganizationMember =
   mongoose.models.OrganizationMember ||
-  mongoose.model<IOrganizationMember>("OrganizationMember", OrganizationMemberSchema);
+  mongoose.model<IOrganizationMember>(
+    "OrganizationMember",
+    OrganizationMemberSchema,
+  );
 
 export default OrganizationMember;

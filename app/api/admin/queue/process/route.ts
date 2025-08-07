@@ -43,11 +43,15 @@ function authenticateQueueRequest(request: NextRequest):
   const apiKey = request.headers.get("x-api-key");
   if (apiKey) {
     if (apiKey === ADMIN_API_KEY && ADMIN_API_KEY) {
-      console.log(`🔑 Admin API key authentication successful from IP: ${clientIP}`);
+      console.log(
+        `🔑 Admin API key authentication successful from IP: ${clientIP}`,
+      );
       return { success: true, authType: "api_key", userId: "admin-api-key" };
     }
     if (apiKey === CRON_API_KEY && CRON_API_KEY) {
-      console.log(`⏰ Cron API key authentication successful from IP: ${clientIP}`);
+      console.log(
+        `⏰ Cron API key authentication successful from IP: ${clientIP}`,
+      );
       return { success: true, authType: "cron", userId: "cron-service" };
     }
 
@@ -61,7 +65,9 @@ function authenticateQueueRequest(request: NextRequest):
   const authResult = authCheck(authContext);
 
   if (!authResult.success) {
-    console.warn(`🚫 Admin authentication failed from IP: ${clientIP} - ${authResult.error}`);
+    console.warn(
+      `🚫 Admin authentication failed from IP: ${clientIP} - ${authResult.error}`,
+    );
     return {
       success: false,
       error: authResult.error || "Authentication required",
@@ -69,7 +75,9 @@ function authenticateQueueRequest(request: NextRequest):
     };
   }
 
-  console.log(`👤 Admin JWT authentication successful from IP: ${clientIP} (User: ${authContext?.userId})`);
+  console.log(
+    `👤 Admin JWT authentication successful from IP: ${clientIP} (User: ${authContext?.userId})`,
+  );
   return {
     success: true,
     authType: "admin",
@@ -101,11 +109,13 @@ export async function POST(request: NextRequest) {
           error: authResult.error,
           timestamp: new Date().toISOString(),
         },
-        { status: authResult.status }
+        { status: authResult.status },
       );
     }
 
-    console.log(`✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`);
+    console.log(
+      `✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`,
+    );
 
     // Parse and validate request body
     let batchSize = 10; // Default batch size
@@ -120,10 +130,12 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error: "Invalid request body",
-            details: error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+            details: error.errors.map(
+              (e) => `${e.path.join(".")}: ${e.message}`,
+            ),
             timestamp: new Date().toISOString(),
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
       // If JSON parsing fails, use default batch size
@@ -138,17 +150,22 @@ export async function POST(request: NextRequest) {
           error: "Batch size must be between 1 and 100",
           timestamp: new Date().toISOString(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log(`🔄 Processing notification queue with batch size: ${batchSize}`);
+    console.log(
+      `🔄 Processing notification queue with batch size: ${batchSize}`,
+    );
 
     // Process pending notifications
-    const result = await PushNotificationService.processPendingNotifications(batchSize);
+    const result =
+      await PushNotificationService.processPendingNotifications(batchSize);
 
     // Log successful processing
-    console.log(`✅ Queue processing completed - Succeeded: ${result.succeeded}, Failed: ${result.failed}`);
+    console.log(
+      `✅ Queue processing completed - Succeeded: ${result.succeeded}, Failed: ${result.failed}`,
+    );
 
     const response = {
       success: true,
@@ -177,7 +194,7 @@ export async function POST(request: NextRequest) {
         details: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -201,11 +218,13 @@ export async function GET(request: NextRequest) {
           error: authResult.error,
           timestamp: new Date().toISOString(),
         },
-        { status: authResult.status }
+        { status: authResult.status },
       );
     }
 
-    console.log(`✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`);
+    console.log(
+      `✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`,
+    );
 
     // Get queue statistics
     const stats = await PushNotificationService.getQueueStats();
@@ -231,7 +250,7 @@ export async function GET(request: NextRequest) {
         details: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

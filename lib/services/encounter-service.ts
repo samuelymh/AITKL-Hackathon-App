@@ -12,7 +12,9 @@ export class EncounterService {
    * Generate unique encounter number using atomic counter
    * Prevents race conditions and ensures uniqueness
    */
-  static async generateEncounterNumber(organizationId: string): Promise<string> {
+  static async generateEncounterNumber(
+    organizationId: string,
+  ): Promise<string> {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -45,29 +47,43 @@ export class EncounterService {
     }
 
     // Validate organization exists
-    const organization = await Organization.findById(encounterData.organizationId);
+    const organization = await Organization.findById(
+      encounterData.organizationId,
+    );
     if (!organization) {
       throw new NotFoundError("Organization not found");
     }
 
     // Validate practitioner exists
-    const practitioner = await Practitioner.findById(encounterData.practitionerId);
+    const practitioner = await Practitioner.findById(
+      encounterData.practitionerId,
+    );
     if (!practitioner) {
       throw new NotFoundError("Practitioner not found");
     }
 
     // Validate practitioner belongs to organization
-    if (practitioner.organizationId.toString() !== encounterData.organizationId) {
-      throw new ValidationError("Practitioner does not belong to the specified organization");
+    if (
+      practitioner.organizationId.toString() !== encounterData.organizationId
+    ) {
+      throw new ValidationError(
+        "Practitioner does not belong to the specified organization",
+      );
     }
   }
 
   /**
    * Create a new encounter with proper data transformation
    */
-  static async createEncounter(encounterData: any, practitionerId: string, authorizationGrantId: string): Promise<any> {
+  static async createEncounter(
+    encounterData: any,
+    practitionerId: string,
+    authorizationGrantId: string,
+  ): Promise<any> {
     // Generate unique encounter number
-    const encounterNumber = await this.generateEncounterNumber(encounterData.organizationId);
+    const encounterNumber = await this.generateEncounterNumber(
+      encounterData.organizationId,
+    );
 
     // Create the encounter with transformed data
     const encounter = new Encounter({
@@ -83,7 +99,9 @@ export class EncounterService {
           __enc_notes: true, // Encrypted field marker
           value: encounterData.notes || "",
         },
-        encounterDate: encounterData.startDateTime ? new Date(encounterData.startDateTime) : new Date(),
+        encounterDate: encounterData.startDateTime
+          ? new Date(encounterData.startDateTime)
+          : new Date(),
         encounterType: encounterData.type || "ROUTINE",
         vitals: encounterData.vitals,
       },
@@ -104,7 +122,9 @@ export class EncounterService {
           frequency: prescription.frequency || "",
           notes: prescription.instructions,
           status: "ISSUED" as any,
-          prescribingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
+          prescribingPractitionerId: new mongoose.Types.ObjectId(
+            practitionerId,
+          ),
           issuedAt: new Date(),
         })) || [],
 
@@ -124,7 +144,7 @@ export class EncounterService {
     userId: string,
     organizationId: string,
     filters: any,
-    pagination: { page: number; limit: number }
+    pagination: { page: number; limit: number },
   ): Promise<{ encounters: any[]; totalCount: number }> {
     // Build MongoDB filter
     const filter: any = {
@@ -187,7 +207,11 @@ export class EncounterService {
   /**
    * Update encounter with allowed fields only
    */
-  static async updateEncounter(encounterId: string, updateData: any, practitionerId: string): Promise<any> {
+  static async updateEncounter(
+    encounterId: string,
+    updateData: any,
+    practitionerId: string,
+  ): Promise<any> {
     // Only allow specific fields to be updated
     const allowedUpdates: any = {};
 
@@ -208,10 +232,14 @@ export class EncounterService {
     allowedUpdates.$inc = { auditVersion: 1 };
 
     // Update the encounter
-    const updatedEncounter = await Encounter.findByIdAndUpdate(encounterId, allowedUpdates, {
-      new: true,
-      runValidators: true,
-    }).populate(["userId", "organizationId", "attendingPractitionerId"]);
+    const updatedEncounter = await Encounter.findByIdAndUpdate(
+      encounterId,
+      allowedUpdates,
+      {
+        new: true,
+        runValidators: true,
+      },
+    ).populate(["userId", "organizationId", "attendingPractitionerId"]);
 
     if (!updatedEncounter) {
       throw new NotFoundError("Encounter not found");

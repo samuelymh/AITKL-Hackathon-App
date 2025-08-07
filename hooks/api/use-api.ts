@@ -75,7 +75,9 @@ export function useApi() {
           const errorData = await response.json().catch(() => ({
             error: `HTTP error! status: ${response.status}`,
           }));
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+          throw new Error(
+            errorData.error || `HTTP error! status: ${response.status}`,
+          );
         }
 
         // Parse response
@@ -93,23 +95,27 @@ export function useApi() {
         throw new Error("An unexpected error occurred");
       }
     },
-    [token, refreshAuthToken, logout]
+    [token, refreshAuthToken, logout],
   );
 
   const get = useCallback(
     <T = any>(url: string, options?: Omit<FetchOptions, "method" | "body">) =>
       makeRequest<T>(url, { ...options, method: "GET" }),
-    [makeRequest]
+    [makeRequest],
   );
 
   const post = useCallback(
-    <T = any>(url: string, data?: any, options?: Omit<FetchOptions, "method">) =>
+    <T = any>(
+      url: string,
+      data?: any,
+      options?: Omit<FetchOptions, "method">,
+    ) =>
       makeRequest<T>(url, {
         ...options,
         method: "POST",
         body: data ? JSON.stringify(data) : undefined,
       }),
-    [makeRequest]
+    [makeRequest],
   );
 
   const put = useCallback(
@@ -119,13 +125,13 @@ export function useApi() {
         method: "PUT",
         body: JSON.stringify(data),
       }),
-    [makeRequest]
+    [makeRequest],
   );
 
   const del = useCallback(
     <T = any>(url: string, options?: Omit<FetchOptions, "method" | "body">) =>
       makeRequest<T>(url, { ...options, method: "DELETE" }),
-    [makeRequest]
+    [makeRequest],
   );
 
   const patch = useCallback(
@@ -135,7 +141,7 @@ export function useApi() {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
-    [makeRequest]
+    [makeRequest],
   );
 
   return {

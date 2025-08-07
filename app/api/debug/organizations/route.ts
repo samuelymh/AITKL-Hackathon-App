@@ -12,12 +12,18 @@ async function handler(request: NextRequest) {
     await connectToDatabase();
 
     const totalCount = await Organization.countDocuments();
-    const verifiedCount = await Organization.countDocuments({ "verification.isVerified": true });
-    const activeCount = await Organization.countDocuments({ "metadata.isActive": true });
+    const verifiedCount = await Organization.countDocuments({
+      "verification.isVerified": true,
+    });
+    const activeCount = await Organization.countDocuments({
+      "metadata.isActive": true,
+    });
 
     const sampleOrgs = await Organization.find()
       .limit(5)
-      .select("organizationInfo.name organizationInfo.type verification.isVerified address.city address.state");
+      .select(
+        "organizationInfo.name organizationInfo.type verification.isVerified address.city address.state",
+      );
 
     return NextResponse.json({
       success: true,
@@ -43,7 +49,7 @@ async function handler(request: NextRequest) {
         error: error instanceof Error ? error.message : "Debug failed",
         stack: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

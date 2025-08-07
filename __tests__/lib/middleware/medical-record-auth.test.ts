@@ -3,7 +3,14 @@
  * Tests the middleware that validates authorization grants for medical record access
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from "@jest/globals";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
 import { NextRequest, NextResponse } from "next/server";
 import { MedicalRecordAuthMiddleware } from "@/lib/middleware/medical-record-auth";
 import connectToDatabase from "@/lib/mongodb";
@@ -59,12 +66,13 @@ describe("Medical Record Authorization Middleware", () => {
 
   describe("validateMedicalRecordAccess", () => {
     test("should authorize valid request with active grant", async () => {
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "viewMedicalHistory"
-      );
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "viewMedicalHistory",
+        );
 
       expect(result.isAuthorized).toBe(true);
       expect(result.authGrant).toEqual(mockAuthGrant);
@@ -76,12 +84,13 @@ describe("Medical Record Authorization Middleware", () => {
         isAuthenticated: false,
       });
 
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "viewMedicalHistory"
-      );
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "viewMedicalHistory",
+        );
 
       expect(result.isAuthorized).toBe(false);
       expect(result.error).toBe("Authentication required");
@@ -90,26 +99,30 @@ describe("Medical Record Authorization Middleware", () => {
     test("should deny access when no grant found", async () => {
       (AuthorizationGrant.findOne as jest.Mock).mockResolvedValue(null);
 
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "viewMedicalHistory"
-      );
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "viewMedicalHistory",
+        );
 
       expect(result.isAuthorized).toBe(false);
-      expect(result.error).toBe("No active authorization grant found for this patient and organization");
+      expect(result.error).toBe(
+        "No active authorization grant found for this patient and organization",
+      );
     });
 
     test("should deny access when grant is expired", async () => {
       mockAuthGrant.isExpired.mockReturnValue(true);
 
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "viewMedicalHistory"
-      );
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "viewMedicalHistory",
+        );
 
       expect(result.isAuthorized).toBe(false);
       expect(result.error).toBe("Authorization grant has expired");
@@ -118,29 +131,37 @@ describe("Medical Record Authorization Middleware", () => {
     test("should deny access when grant lacks required permission", async () => {
       mockAuthGrant.hasPermission.mockReturnValue(false);
 
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "createEncounters"
-      );
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "createEncounters",
+        );
 
       expect(result.isAuthorized).toBe(false);
-      expect(result.error).toBe("Authorization grant does not include permission: createEncounters");
+      expect(result.error).toBe(
+        "Authorization grant does not include permission: createEncounters",
+      );
     });
 
     test("should handle database errors gracefully", async () => {
-      (AuthorizationGrant.findOne as jest.Mock).mockRejectedValue(new Error("Database connection failed"));
-
-      const result = await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
-        mockRequest,
-        "patient123",
-        "org123",
-        "viewMedicalHistory"
+      (AuthorizationGrant.findOne as jest.Mock).mockRejectedValue(
+        new Error("Database connection failed"),
       );
 
+      const result =
+        await MedicalRecordAuthMiddleware.validateMedicalRecordAccess(
+          mockRequest,
+          "patient123",
+          "org123",
+          "viewMedicalHistory",
+        );
+
       expect(result.isAuthorized).toBe(false);
-      expect(result.error).toContain("Failed to validate authorization: Database connection failed");
+      expect(result.error).toContain(
+        "Failed to validate authorization: Database connection failed",
+      );
     });
   });
 
@@ -151,7 +172,8 @@ describe("Medical Record Authorization Middleware", () => {
       } as NextRequest;
 
       // Use reflection to access private method for testing
-      const extractAuthParams = (MedicalRecordAuthMiddleware as any).extractAuthParams;
+      const extractAuthParams = (MedicalRecordAuthMiddleware as any)
+        .extractAuthParams;
       const result = await extractAuthParams(request);
 
       expect(result.patientId).toBe("patient123");
@@ -163,7 +185,8 @@ describe("Medical Record Authorization Middleware", () => {
         url: "https://example.com/api/records",
       } as NextRequest;
 
-      const extractAuthParams = (MedicalRecordAuthMiddleware as any).extractAuthParams;
+      const extractAuthParams = (MedicalRecordAuthMiddleware as any)
+        .extractAuthParams;
       const result = await extractAuthParams(request);
 
       expect(result.patientId).toBeUndefined();
@@ -175,7 +198,8 @@ describe("Medical Record Authorization Middleware", () => {
         url: "https://example.com/api/records?userId=patient123&organizationId=org123",
       } as NextRequest;
 
-      const extractAuthParams = (MedicalRecordAuthMiddleware as any).extractAuthParams;
+      const extractAuthParams = (MedicalRecordAuthMiddleware as any)
+        .extractAuthParams;
       const result = await extractAuthParams(request);
 
       expect(result.patientId).toBe("patient123");
@@ -185,8 +209,13 @@ describe("Medical Record Authorization Middleware", () => {
 
   describe("withMedicalRecordAuth wrapper", () => {
     test("should call handler with valid authorization", async () => {
-      const mockHandler = jest.fn().mockResolvedValue(NextResponse.json({ success: true }));
-      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(mockHandler, "viewMedicalHistory");
+      const mockHandler = jest
+        .fn()
+        .mockResolvedValue(NextResponse.json({ success: true }));
+      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(
+        mockHandler,
+        "viewMedicalHistory",
+      );
 
       const request = {
         url: "https://example.com/api/records?patientId=patient123&organizationId=org123",
@@ -200,7 +229,10 @@ describe("Medical Record Authorization Middleware", () => {
 
     test("should return 400 when required parameters missing", async () => {
       const mockHandler = jest.fn();
-      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(mockHandler, "viewMedicalHistory");
+      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(
+        mockHandler,
+        "viewMedicalHistory",
+      );
 
       const request = {
         url: "https://example.com/api/records",
@@ -209,7 +241,9 @@ describe("Medical Record Authorization Middleware", () => {
       const result = await wrappedHandler(request);
       const response = await result.json();
 
-      expect(response.error).toBe("Patient ID and Organization ID are required");
+      expect(response.error).toBe(
+        "Patient ID and Organization ID are required",
+      );
       expect(mockHandler).not.toHaveBeenCalled();
     });
 
@@ -217,7 +251,10 @@ describe("Medical Record Authorization Middleware", () => {
       (AuthorizationGrant.findOne as jest.Mock).mockResolvedValue(null);
 
       const mockHandler = jest.fn();
-      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(mockHandler, "viewMedicalHistory");
+      const wrappedHandler = MedicalRecordAuthMiddleware.withMedicalRecordAuth(
+        mockHandler,
+        "viewMedicalHistory",
+      );
 
       const request = {
         url: "https://example.com/api/records?patientId=patient123&organizationId=org123",
@@ -226,42 +263,60 @@ describe("Medical Record Authorization Middleware", () => {
       const result = await wrappedHandler(request);
       const response = await result.json();
 
-      expect(response.error).toBe("No active authorization grant found for this patient and organization");
+      expect(response.error).toBe(
+        "No active authorization grant found for this patient and organization",
+      );
       expect(mockHandler).not.toHaveBeenCalled();
     });
   });
 
   describe("hasActiveGrant utility", () => {
     test("should return true for active non-expired grant", async () => {
-      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant("patient123", "org123");
+      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant(
+        "patient123",
+        "org123",
+      );
       expect(hasGrant).toBe(true);
     });
 
     test("should return false when no grant exists", async () => {
       (AuthorizationGrant.findOne as jest.Mock).mockResolvedValue(null);
 
-      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant("patient123", "org123");
+      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant(
+        "patient123",
+        "org123",
+      );
       expect(hasGrant).toBe(false);
     });
 
     test("should return false for expired grant", async () => {
       mockAuthGrant.isExpired.mockReturnValue(true);
 
-      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant("patient123", "org123");
+      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant(
+        "patient123",
+        "org123",
+      );
       expect(hasGrant).toBe(false);
     });
 
     test("should handle database errors gracefully", async () => {
-      (AuthorizationGrant.findOne as jest.Mock).mockRejectedValue(new Error("Database error"));
+      (AuthorizationGrant.findOne as jest.Mock).mockRejectedValue(
+        new Error("Database error"),
+      );
 
-      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant("patient123", "org123");
+      const hasGrant = await MedicalRecordAuthMiddleware.hasActiveGrant(
+        "patient123",
+        "org123",
+      );
       expect(hasGrant).toBe(false);
     });
   });
 
   describe("Permission-specific wrappers", () => {
     test("should create wrapper for viewMedicalHistory", () => {
-      const { withViewMedicalHistory } = require("@/lib/middleware/medical-record-auth");
+      const {
+        withViewMedicalHistory,
+      } = require("@/lib/middleware/medical-record-auth");
       const mockHandler = jest.fn();
 
       const wrapper = withViewMedicalHistory(mockHandler);
@@ -270,7 +325,9 @@ describe("Medical Record Authorization Middleware", () => {
     });
 
     test("should create wrapper for viewPrescriptions", () => {
-      const { withViewPrescriptions } = require("@/lib/middleware/medical-record-auth");
+      const {
+        withViewPrescriptions,
+      } = require("@/lib/middleware/medical-record-auth");
       const mockHandler = jest.fn();
 
       const wrapper = withViewPrescriptions(mockHandler);
@@ -279,7 +336,9 @@ describe("Medical Record Authorization Middleware", () => {
     });
 
     test("should create wrapper for createEncounters", () => {
-      const { withCreateEncounters } = require("@/lib/middleware/medical-record-auth");
+      const {
+        withCreateEncounters,
+      } = require("@/lib/middleware/medical-record-auth");
       const mockHandler = jest.fn();
 
       const wrapper = withCreateEncounters(mockHandler);
@@ -288,7 +347,9 @@ describe("Medical Record Authorization Middleware", () => {
     });
 
     test("should create wrapper for viewAuditLogs", () => {
-      const { withViewAuditLogs } = require("@/lib/middleware/medical-record-auth");
+      const {
+        withViewAuditLogs,
+      } = require("@/lib/middleware/medical-record-auth");
       const mockHandler = jest.fn();
 
       const wrapper = withViewAuditLogs(mockHandler);

@@ -208,10 +208,15 @@ NotificationJobSchema.statics = {
   getPendingJobs: function (limit: number = 10) {
     const now = new Date();
     return this.find({
-      status: { $in: [NotificationJobStatus.PENDING, NotificationJobStatus.RETRYING] },
+      status: {
+        $in: [NotificationJobStatus.PENDING, NotificationJobStatus.RETRYING],
+      },
       $and: [
         {
-          $or: [{ nextRetryAt: { $exists: false } }, { nextRetryAt: { $lte: now } }],
+          $or: [
+            { nextRetryAt: { $exists: false } },
+            { nextRetryAt: { $lte: now } },
+          ],
         },
         {
           $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: now } }],
@@ -229,7 +234,8 @@ NotificationJobSchema.statics = {
     const job = new this({
       ...jobData,
       scheduledAt: jobData.scheduledAt || new Date(),
-      expiresAt: jobData.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours default
+      expiresAt:
+        jobData.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours default
     });
     return job.save();
   },
@@ -262,7 +268,10 @@ NotificationJobSchema.statics = {
       if (!job) return null;
 
       const canRetry = job.retryCount < job.maxRetries;
-      const nextRetryDelay = Math.min(Math.pow(2, job.retryCount) * 1000, 300000); // Exponential backoff, max 5 minutes
+      const nextRetryDelay = Math.min(
+        Math.pow(2, job.retryCount) * 1000,
+        300000,
+      ); // Exponential backoff, max 5 minutes
 
       const update: any = {
         lastError: error,
@@ -293,14 +302,17 @@ NotificationJobSchema.statics = {
   cleanup: function (olderThanHours: number = 24) {
     const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
     return this.deleteMany({
-      status: { $in: [NotificationJobStatus.COMPLETED, NotificationJobStatus.FAILED] },
+      status: {
+        $in: [NotificationJobStatus.COMPLETED, NotificationJobStatus.FAILED],
+      },
       completedAt: { $lt: cutoff },
     });
   },
 };
 
 // Create and export the model with proper typing
-export interface INotificationJobModel extends mongoose.Model<INotificationJob> {
+export interface INotificationJobModel
+  extends mongoose.Model<INotificationJob> {
   getPendingJobs(limit?: number): Promise<INotificationJob[]>;
   createJob(jobData: Partial<INotificationJob>): Promise<INotificationJob>;
   markStarted(jobId: string): Promise<INotificationJob | null>;
@@ -309,10 +321,11 @@ export interface INotificationJobModel extends mongoose.Model<INotificationJob> 
   cleanup(olderThanHours?: number): Promise<{ deletedCount?: number }>;
 }
 
-const NotificationJob: INotificationJobModel = (mongoose.models.NotificationJob ||
+const NotificationJob: INotificationJobModel = (mongoose.models
+  .NotificationJob ||
   mongoose.model<INotificationJob, INotificationJobModel>(
     "NotificationJob",
-    NotificationJobSchema
+    NotificationJobSchema,
   )) as INotificationJobModel;
 
 export default NotificationJob;

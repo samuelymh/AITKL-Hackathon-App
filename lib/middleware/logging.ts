@@ -25,7 +25,7 @@ export function withLogging(
     logRequests?: boolean;
     logResponses?: boolean;
     logErrors?: boolean;
-  } = {}
+  } = {},
 ) {
   const { logRequests = true, logResponses = true, logErrors = true } = options;
 
@@ -65,7 +65,7 @@ export function withLogging(
           error: "Internal server error",
           timestamp: new Date().toISOString(),
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -115,17 +115,26 @@ function shouldAuditLog(request: NextRequest, response: NextResponse): boolean {
   }
 
   // Audit user management operations
-  if (url.includes("/api/users/") && ["POST", "PUT", "DELETE"].includes(method)) {
+  if (
+    url.includes("/api/users/") &&
+    ["POST", "PUT", "DELETE"].includes(method)
+  ) {
     return true;
   }
 
   // Audit prescription operations
-  if (url.includes("/api/prescriptions/") && ["POST", "PUT", "DELETE"].includes(method)) {
+  if (
+    url.includes("/api/prescriptions/") &&
+    ["POST", "PUT", "DELETE"].includes(method)
+  ) {
     return true;
   }
 
   // Audit medical records operations
-  if (url.includes("/api/medical-records/") && ["POST", "PUT", "DELETE"].includes(method)) {
+  if (
+    url.includes("/api/medical-records/") &&
+    ["POST", "PUT", "DELETE"].includes(method)
+  ) {
     return true;
   }
 
@@ -154,7 +163,7 @@ async function storeAuditLog(logEntry: LogEntry): Promise<void> {
         ...logEntry,
         category: "AUDIT",
         severity: logEntry.statusCode >= 400 ? "ERROR" : "INFO",
-      })
+      }),
     );
 
     // TODO: Implement database storage
@@ -168,7 +177,9 @@ async function storeAuditLog(logEntry: LogEntry): Promise<void> {
 /**
  * Security-focused logging for sensitive operations
  */
-export function withSecurityLogging(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function withSecurityLogging(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   return withLogging(handler, {
     logRequests: true,
     logResponses: true,
@@ -179,7 +190,9 @@ export function withSecurityLogging(handler: (request: NextRequest) => Promise<N
 /**
  * Performance-focused logging for monitoring
  */
-export function withPerformanceLogging(handler: (request: NextRequest) => Promise<NextResponse>) {
+export function withPerformanceLogging(
+  handler: (request: NextRequest) => Promise<NextResponse>,
+) {
   return async (request: NextRequest): Promise<NextResponse> => {
     const startTime = Date.now();
 
@@ -200,7 +213,7 @@ export function withPerformanceLogging(handler: (request: NextRequest) => Promis
           method: request.method,
           responseTime,
           timestamp: new Date().toISOString(),
-        })
+        }),
       );
     }
 

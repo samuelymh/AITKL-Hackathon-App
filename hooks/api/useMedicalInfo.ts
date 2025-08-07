@@ -45,7 +45,7 @@ const makeApiCall = async (
   token: string,
   refreshAuthToken: () => Promise<void>,
   logout: () => void,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> => {
   if (!token) {
     throw new Error("No authentication token available");
@@ -98,7 +98,9 @@ const makeApiCall = async (
     if (error instanceof Error && error.message.includes("Session expired")) {
       throw error;
     }
-    throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 };
 
@@ -109,53 +111,73 @@ export const useMedicalInfo = () => {
   const { token, logout, refreshAuthToken } = useAuth();
   const { toast } = useToast();
 
-  const fetchMedicalInfo = useCallback(async (): Promise<MedicalInformation | null> => {
-    if (!token) {
-      throw new Error("Authentication required");
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await makeApiCall("/api/patient/medical-info", token, refreshAuthToken, logout);
-      const result: MedicalInfoApiResponse = await response.json();
-
-      if (result.success && result.data) {
-        // Ensure all array fields are arrays and not objects - defensive programming
-        const processedData: MedicalInformation = {
-          ...result.data,
-          foodAllergies: Array.isArray(result.data.foodAllergies) ? result.data.foodAllergies : [],
-          drugAllergies: Array.isArray(result.data.drugAllergies) ? result.data.drugAllergies : [],
-          knownMedicalConditions: Array.isArray(result.data.knownMedicalConditions)
-            ? result.data.knownMedicalConditions
-            : [],
-          currentMedications: Array.isArray(result.data.currentMedications) ? result.data.currentMedications : [],
-          pastSurgicalHistory: Array.isArray(result.data.pastSurgicalHistory) ? result.data.pastSurgicalHistory : [],
-          emergencyContact: result.data.emergencyContact || {
-            name: "",
-            phone: "",
-            relationship: "",
-          },
-          lastUpdated: result.data.lastUpdated ? new Date(result.data.lastUpdated) : undefined,
-        };
-
-        return processedData;
-      } else if (result.error) {
-        throw new Error(result.error);
+  const fetchMedicalInfo =
+    useCallback(async (): Promise<MedicalInformation | null> => {
+      if (!token) {
+        throw new Error("Authentication required");
       }
-      return null;
-    } catch (error) {
-      console.error("Failed to load medical information:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to load medical information. Please refresh the page.",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, refreshAuthToken, logout, toast]);
+
+      setIsLoading(true);
+      try {
+        const response = await makeApiCall(
+          "/api/patient/medical-info",
+          token,
+          refreshAuthToken,
+          logout,
+        );
+        const result: MedicalInfoApiResponse = await response.json();
+
+        if (result.success && result.data) {
+          // Ensure all array fields are arrays and not objects - defensive programming
+          const processedData: MedicalInformation = {
+            ...result.data,
+            foodAllergies: Array.isArray(result.data.foodAllergies)
+              ? result.data.foodAllergies
+              : [],
+            drugAllergies: Array.isArray(result.data.drugAllergies)
+              ? result.data.drugAllergies
+              : [],
+            knownMedicalConditions: Array.isArray(
+              result.data.knownMedicalConditions,
+            )
+              ? result.data.knownMedicalConditions
+              : [],
+            currentMedications: Array.isArray(result.data.currentMedications)
+              ? result.data.currentMedications
+              : [],
+            pastSurgicalHistory: Array.isArray(result.data.pastSurgicalHistory)
+              ? result.data.pastSurgicalHistory
+              : [],
+            emergencyContact: result.data.emergencyContact || {
+              name: "",
+              phone: "",
+              relationship: "",
+            },
+            lastUpdated: result.data.lastUpdated
+              ? new Date(result.data.lastUpdated)
+              : undefined,
+          };
+
+          return processedData;
+        } else if (result.error) {
+          throw new Error(result.error);
+        }
+        return null;
+      } catch (error) {
+        console.error("Failed to load medical information:", error);
+        toast({
+          title: "Error",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to load medical information. Please refresh the page.",
+          variant: "destructive",
+        });
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    }, [token, refreshAuthToken, logout, toast]);
 
   const saveMedicalInfo = useCallback(
     async (medicalInfo: MedicalInformation): Promise<void> => {
@@ -170,16 +192,23 @@ export const useMedicalInfo = () => {
 
       setIsSaving(true);
       try {
-        const response = await makeApiCall("/api/patient/medical-info", token, refreshAuthToken, logout, {
-          method: "PUT",
-          body: JSON.stringify(medicalInfo),
-        });
+        const response = await makeApiCall(
+          "/api/patient/medical-info",
+          token,
+          refreshAuthToken,
+          logout,
+          {
+            method: "PUT",
+            body: JSON.stringify(medicalInfo),
+          },
+        );
         const result: SaveMedicalInfoResponse = await response.json();
 
         if (result.success) {
           toast({
             title: "Medical Information Saved",
-            description: "Your medical information has been updated successfully.",
+            description:
+              "Your medical information has been updated successfully.",
           });
         } else {
           throw new Error(result.error || "Failed to save medical information");
@@ -188,7 +217,10 @@ export const useMedicalInfo = () => {
         console.error("Failed to save medical information:", error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to save medical information. Please try again.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to save medical information. Please try again.",
           variant: "destructive",
         });
         throw error;
@@ -196,7 +228,7 @@ export const useMedicalInfo = () => {
         setIsSaving(false);
       }
     },
-    [token, refreshAuthToken, logout, toast]
+    [token, refreshAuthToken, logout, toast],
   );
 
   return {

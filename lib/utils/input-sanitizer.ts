@@ -100,7 +100,7 @@ export class InputSanitizer {
    */
   static sanitizeObject<T extends Record<string, any>>(
     obj: T,
-    sanitizationRules: Partial<Record<keyof T, SanitizationRule>>
+    sanitizationRules: Partial<Record<keyof T, SanitizationRule>>,
   ): T {
     const sanitized = { ...obj } as any;
 

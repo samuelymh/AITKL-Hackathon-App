@@ -9,7 +9,10 @@ import { logger } from "@/lib/logger";
  * GET /api/admin/activity
  * Get recent system activity for admin dashboard
  */
-async function getRecentActivityHandler(request: NextRequest, authContext: any) {
+async function getRecentActivityHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     logger.info(`Admin ${authContext.userId} requesting recent activity`);
 
@@ -27,7 +30,9 @@ async function getRecentActivityHandler(request: NextRequest, authContext: any) 
     })
       .sort({ auditCreatedDateTime: -1 })
       .limit(5)
-      .select("personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.role auditCreatedDateTime");
+      .select(
+        "personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.role auditCreatedDateTime",
+      );
 
     // Add user activities
     recentUsers.forEach((user) => {
@@ -72,7 +77,9 @@ async function getRecentActivityHandler(request: NextRequest, authContext: any) 
     })
       .sort({ "auth.lastLogin": -1 })
       .limit(3)
-      .select("personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.lastLogin auth.role");
+      .select(
+        "personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.lastLogin auth.role",
+      );
 
     // Add login activities
     recentLogins.forEach((user) => {
@@ -80,14 +87,18 @@ async function getRecentActivityHandler(request: NextRequest, authContext: any) 
         id: `login-${user._id}`,
         action: `User logged in`,
         user: user.personalInfo?.contact?.email || "Unknown user",
-        timestamp: user.auth?.lastLogin?.toISOString() || new Date().toISOString(),
+        timestamp:
+          user.auth?.lastLogin?.toISOString() || new Date().toISOString(),
         type: "user",
         status: "success",
       });
     });
 
     // Sort all activities by timestamp (most recent first)
-    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    activities.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
     // Return top 10 most recent activities
     const recentActivity = activities.slice(0, 10);
@@ -106,7 +117,7 @@ async function getRecentActivityHandler(request: NextRequest, authContext: any) 
         error: "Failed to retrieve recent activity",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

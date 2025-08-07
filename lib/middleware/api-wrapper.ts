@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EncounterAuthMiddleware, AuthorizedContext } from "@/lib/middleware/encounter-auth";
+import {
+  EncounterAuthMiddleware,
+  AuthorizedContext,
+} from "@/lib/middleware/encounter-auth";
 import { createErrorResponse } from "@/lib/api-helpers";
-import { extractAndValidateAuthParams, validateAuthParamFormat } from "@/lib/utils/api-utils";
-import { AuthorizationError, ValidationError, NotFoundError } from "@/lib/errors/custom-errors";
+import {
+  extractAndValidateAuthParams,
+  validateAuthParamFormat,
+} from "@/lib/utils/api-utils";
+import {
+  AuthorizationError,
+  ValidationError,
+  NotFoundError,
+} from "@/lib/errors/custom-errors";
 
 type RouteHandler = (
   req: NextRequest,
   context: { params: { encounterId?: string } },
-  authorizedContext: AuthorizedContext
+  authorizedContext: AuthorizedContext,
 ) => Promise<NextResponse>;
 
 type RouteHandlerWithBody = (
   req: NextRequest,
   context: { params: { encounterId?: string } },
   authorizedContext: AuthorizedContext,
-  body: any
+  body: any,
 ) => Promise<NextResponse>;
 
 /**
@@ -23,9 +33,15 @@ type RouteHandlerWithBody = (
  */
 export const withEncounterAuth = (
   handler: RouteHandler,
-  permission: "canCreateEncounters" | "canViewMedicalHistory" | "canViewPrescriptions"
+  permission:
+    | "canCreateEncounters"
+    | "canViewMedicalHistory"
+    | "canViewPrescriptions",
 ) => {
-  return async (req: NextRequest, context: { params: { encounterId?: string } }) => {
+  return async (
+    req: NextRequest,
+    context: { params: { encounterId?: string } },
+  ) => {
     try {
       const { searchParams } = new URL(req.url);
 
@@ -41,13 +57,14 @@ export const withEncounterAuth = (
       const { practitionerId, userId, organizationId } = authParams;
 
       // Validate authorization
-      const authorizedContext = await EncounterAuthMiddleware.validateEncounterAuthorization(
-        req,
-        practitionerId,
-        userId,
-        organizationId,
-        permission
-      );
+      const authorizedContext =
+        await EncounterAuthMiddleware.validateEncounterAuthorization(
+          req,
+          practitionerId,
+          userId,
+          organizationId,
+          permission,
+        );
 
       return handler(req, context, authorizedContext);
     } catch (error: any) {
@@ -75,9 +92,15 @@ export const withEncounterAuth = (
  */
 export const withEncounterAuthAndBody = (
   handler: RouteHandlerWithBody,
-  permission: "canCreateEncounters" | "canViewMedicalHistory" | "canViewPrescriptions"
+  permission:
+    | "canCreateEncounters"
+    | "canViewMedicalHistory"
+    | "canViewPrescriptions",
 ) => {
-  return async (req: NextRequest, context: { params: { encounterId?: string } }) => {
+  return async (
+    req: NextRequest,
+    context: { params: { encounterId?: string } },
+  ) => {
     try {
       // Parse body first
       const body = await req.json();
@@ -92,7 +115,9 @@ export const withEncounterAuthAndBody = (
           // For POST/PUT, extract from body
           const { practitionerId, userId, organizationId } = body;
           if (!practitionerId || !userId || !organizationId) {
-            throw new Error("practitionerId, userId, and organizationId are required in request body");
+            throw new Error(
+              "practitionerId, userId, and organizationId are required in request body",
+            );
           }
           authParams = { practitionerId, userId, organizationId };
         }
@@ -104,13 +129,14 @@ export const withEncounterAuthAndBody = (
       const { practitionerId, userId, organizationId } = authParams;
 
       // Validate authorization
-      const authorizedContext = await EncounterAuthMiddleware.validateEncounterAuthorization(
-        req,
-        practitionerId,
-        userId,
-        organizationId,
-        permission
-      );
+      const authorizedContext =
+        await EncounterAuthMiddleware.validateEncounterAuthorization(
+          req,
+          practitionerId,
+          userId,
+          organizationId,
+          permission,
+        );
 
       return handler(req, context, authorizedContext, body);
     } catch (error: any) {
