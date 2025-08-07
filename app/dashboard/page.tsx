@@ -10,6 +10,7 @@ import { QRCodeManager } from "@/components/patient/QRCodeManager";
 import { AuthorizationRequests } from "@/components/patient/AuthorizationRequests";
 import { AuthorizationHistory } from "@/components/patient/AuthorizationHistory";
 import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummary";
+import UploadDocs from "@/components/upload-docs";
 import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
 import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
@@ -44,9 +45,7 @@ function WelcomeCard() {
             Welcome, {user.firstName} {user.lastName}
           </span>
           <Badge variant="secondary">
-            {user.role
-              ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-              : "Patient"}
+            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Patient"}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -154,9 +153,7 @@ function QuickActionsCard() {
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 gap-4">
-          {renderRoleSpecificActions()}
-        </div>
+        <div className="grid grid-cols-1 gap-4">{renderRoleSpecificActions()}</div>
       </CardContent>
     </Card>
   );
@@ -199,19 +196,13 @@ function SystemStatusCard() {
             <>
               <div className="flex items-center justify-between">
                 <span className="text-sm">API Performance</span>
-                <Badge
-                  variant="default"
-                  className="bg-green-100 text-green-800"
-                >
+                <Badge variant="default" className="bg-green-100 text-green-800">
                   142ms avg
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Security Status</span>
-                <Badge
-                  variant="default"
-                  className="bg-green-100 text-green-800"
-                >
+                <Badge variant="default" className="bg-green-100 text-green-800">
                   Secure
                 </Badge>
               </div>
@@ -231,9 +222,7 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-gray-600">
-            Welcome to your Health Records System
-          </p>
+          <p className="mt-2 text-gray-600">Welcome to your Health Records System</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -271,9 +260,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
               <div className="space-y-6">
-                <AuthorizationRequests
-                  userId={user.digitalIdentifier || user.id}
-                />
+              <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+                <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}
                 <Card>
@@ -285,8 +273,7 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 mb-4">
-                      Manage your access control settings, privacy preferences,
-                      and account configuration.
+                      Manage your access control settings, privacy preferences, and account configuration.
                     </p>
                     <Link href="/dashboard/settings">
                       <Button className="w-full flex items-center gap-2">
