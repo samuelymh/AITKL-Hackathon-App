@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FileText, Shield, Upload, Share2, Home } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientNavbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const navItems = [
     {
@@ -15,22 +17,22 @@ export default function PatientNavbar() {
       icon: Home,
     },
     {
-      href: "/dashboard/share-records",
+      href: `/${user?.digitalIdentifier}/share-records`,
       label: "Share",
       icon: Share2,
     },
     {
-      href: "/dashboard/prescriptions",
+      href: `/${user?.digitalIdentifier}/prescriptions`,
       label: "Prescriptions",
       icon: FileText,
     },
     {
-      href: "/dashboard/audit-log",
+      href: `/${user?.digitalIdentifier}/audit-log`,
       label: "Audit",
       icon: Shield,
     },
     {
-      href: "/dashboard/upload-docs",
+      href: `/${user?.digitalIdentifier}/upload-docs`,
       label: "Upload",
       icon: Upload,
     },
