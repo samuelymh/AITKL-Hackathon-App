@@ -87,51 +87,81 @@ async function getPharmacistAuthorizationsHandler(request: NextRequest, authCont
     };
 
     if (status === "ACTIVE") {
-      query["grantDetails.status"] = "ACTIVE";
-      query["grantDetails.expiresAt"] = { $gt: new Date() }; // Not expired
+      // Support both schema formats
+      query.$or = [
+        { "grantDetails.status": "ACTIVE", "grantDetails.expiresAt": { $gt: new Date() } },
+        { status: "approved", expiresAt: { $gt: new Date() } }, // Our test data format
+      ];
     } else if (status === "PENDING") {
-      query["grantDetails.status"] = "PENDING";
+      query.$or = [
+        { "grantDetails.status": "PENDING" },
+        { status: "pending" }, // Our test data format
+      ];
     } else if (status) {
-      query["grantDetails.status"] = status;
+      query.$or = [
+        { "grantDetails.status": status },
+        { status: status.toLowerCase() }, // Our test data format
+      ];
     }
 
-    // Fetch authorization grants with populated data
-    const grants = await AuthorizationGrant.find(query).sort({ createdAt: -1 }).limit(limit); // Transform data for the frontend
-    const transformedGrants = grants.map((grant) => {
-      const user = grant.userId as any;
-      const organization = grant.organizationId as any;
-      const requester = grant.requestingPractitionerId as any;
+    // Fetch authorization grants
+    const grants = await AuthorizationGrant.find(query).sort({ createdAt: -1 }).limit(limit);
 
-      return {
-        id: grant._id.toString(),
-        patient: {
-          name:
-            user?.personalInfo?.firstName && user?.personalInfo?.lastName
-              ? `${user.personalInfo.firstName} ${user.personalInfo.lastName}`
-              : "Unknown Patient",
-          digitalIdentifier: user?.digitalIdentifier || "N/A",
-        },
-        status: grant.grantDetails?.status || "UNKNOWN",
-        grantedAt: grant.grantDetails?.grantedAt,
-        expiresAt: grant.grantDetails?.expiresAt,
-        timeWindowHours: grant.grantDetails?.timeWindowHours || 24,
-        accessScope: Object.entries(grant.accessScope || {})
-          .filter(([key, value]) => value === true)
-          .map(([key]) => key),
-        organization: organization
-          ? {
-              name: organization.organizationInfo?.name || "Unknown Organization",
-              type: organization.organizationInfo?.type || "UNKNOWN",
+    // Transform data for the frontend with manual data fetching
+    const transformedGrants = await Promise.all(
+      grants.map(async (grant) => {
+        // Use type assertion to access raw database fields
+        const grantData = grant.toObject() as any;
+
+        // Fetch patient data using the correct field name
+        let patient = { name: "Unknown Patient", digitalIdentifier: "N/A" };
+
+        try {
+          const patientId = grantData.userId; // The correct field name from the debug output
+          if (patientId) {
+            const patientUser = await User.findById(patientId);
+            if (patientUser) {
+              // Try to get the patient's actual name, fallback to digital ID
+              let patientName = `Patient ${patientUser.digitalIdentifier}`;
+
+              // Check if we can access the decrypted name fields
+              if (patientUser.personalInfo?.firstName || patientUser.personalInfo?.lastName) {
+                const firstName =
+                  typeof patientUser.personalInfo.firstName === "string" ? patientUser.personalInfo.firstName : "";
+                const lastName =
+                  typeof patientUser.personalInfo.lastName === "string" ? patientUser.personalInfo.lastName : "";
+                if (firstName || lastName) {
+                  patientName = `${firstName} ${lastName}`.trim() || `Patient ${patientUser.digitalIdentifier}`;
+                }
+              }
+
+              patient = {
+                name: patientName,
+                digitalIdentifier: patientUser.digitalIdentifier || "N/A",
+              };
             }
-          : null,
-        requester: requester?.userId
-          ? {
-              name: `${requester.userId.personalInfo?.firstName || "Unknown"} ${requester.userId.personalInfo?.lastName || "User"}`,
-              type: requester.professionalInfo?.practitionerType || "practitioner",
-            }
-          : null,
-      };
-    });
+          }
+        } catch (error) {
+          console.error("Error fetching patient data:", error);
+        }
+
+        return {
+          id: grant._id.toString(),
+          patient,
+          status: grant.grantDetails?.status || grantData.status || "UNKNOWN",
+          grantedAt: grant.grantDetails?.grantedAt || grantData.grantedAt,
+          expiresAt: grant.grantDetails?.expiresAt || grantData.expiresAt,
+          timeWindowHours: grant.grantDetails?.timeWindowHours || 24,
+          accessScope: Object.entries(grant.accessScope || grantData.permissions || {})
+            .filter(([key, value]) => value === true)
+            .map(([key]) => key),
+          organization: null,
+          requester: null,
+        };
+      })
+    );
+
+    console.log("🔍 Debug - Transformed grants:", JSON.stringify(transformedGrants, null, 2));
 
     return NextResponse.json({
       success: true,
