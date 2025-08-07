@@ -103,8 +103,48 @@ export default function ShareRecordsPage() {
     };
   }, [qrCodeURL]);
 
-  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
-  const [isActive, setIsActive] = useState(true);
+  // Timer state with localStorage persistence
+  const [timeLeft, setTimeLeft] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("qrTimer");
+      if (saved) {
+        const { endTime, isActive } = JSON.parse(saved);
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+        // If timer has expired, clear localStorage
+        if (remaining <= 0) {
+          localStorage.removeItem("qrTimer");
+          return 30 * 60; // 30 minutes in seconds
+        }
+
+        return remaining;
+      }
+    }
+    return 30 * 60; // 30 minutes in seconds
+  });
+
+  const [isActive, setIsActive] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("qrTimer");
+      if (saved) {
+        const { endTime } = JSON.parse(saved);
+        const now = Date.now();
+        return endTime > now;
+      }
+    }
+    return true;
+  });
+
+  // Save timer state to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && isActive && timeLeft > 0) {
+      const endTime = Date.now() + timeLeft * 1000;
+      localStorage.setItem("qrTimer", JSON.stringify({ endTime, isActive }));
+    } else if (typeof window !== "undefined" && (!isActive || timeLeft <= 0)) {
+      localStorage.removeItem("qrTimer");
+    }
+  }, [timeLeft, isActive]);
 
   useEffect(() => {
     if (!isActive || timeLeft <= 0) return;
@@ -198,7 +238,7 @@ export default function ShareRecordsPage() {
         </div>
       )}
 
-      {/* QR Code Section */}
+      {/* QR Code Section with Fixed Height */}
       <Card className="text-center">
         <CardHeader>
           <CardTitle className="flex items-center justify-center gap-2">
@@ -207,53 +247,55 @@ export default function ShareRecordsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isActive ? (
-            <>
-              {/* Generated QR Code */}
-              <div className="text-center">
-                {qrCodeURL ? (
-                  <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
-                      <img
-                        src={qrCodeURL}
-                        alt="Patient QR Code"
-                        className="w-64 h-64 mx-auto"
-                      />
+          <div className="h-96 flex flex-col justify-center">
+            {isActive ? (
+              <>
+                {/* Generated QR Code */}
+                <div className="text-center">
+                  {qrCodeURL ? (
+                    <div className="space-y-4">
+                      <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 inline-block">
+                        <img
+                          src={qrCodeURL}
+                          alt="Patient QR Code"
+                          className="w-64 h-64 mx-auto"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="w-64 h-64 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
-                    {isGenerating ? (
-                      <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-                    ) : (
-                      <QrCode className="h-8 w-8 text-gray-400" />
-                    )}
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="w-64 h-64 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                      {isGenerating ? (
+                        <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+                      ) : (
+                        <QrCode className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              {/* Countdown Timer */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm text-gray-600">Expires in</span>
+                {/* Countdown Timer */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm text-gray-600">Expires in</span>
+                  </div>
+                  <div className="text-3xl font-mono font-bold text-orange-600">
+                    {formatTime(timeLeft)}
+                  </div>
                 </div>
-                <div className="text-3xl font-mono font-bold text-orange-600">
-                  {formatTime(timeLeft)}
+              </>
+            ) : (
+              <div className="py-16 space-y-4">
+                <X className="w-16 h-16 mx-auto text-gray-400" />
+                <div className="text-lg font-semibold text-gray-600">
+                  Access Expired
                 </div>
+                <p className="text-sm text-gray-500">
+                  Generate a new QR code to share your records
+                </p>
               </div>
-            </>
-          ) : (
-            <div className="py-16 space-y-4">
-              <X className="w-16 h-16 mx-auto text-gray-400" />
-              <div className="text-lg font-semibold text-gray-600">
-                Access Expired
-              </div>
-              <p className="text-sm text-gray-500">
-                Generate a new QR code to share your records
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
