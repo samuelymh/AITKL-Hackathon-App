@@ -17,7 +17,7 @@ export default function PatientDashboard() {
         </p>
       </div>
       {/* Main Actions */}
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <Link href={`/${user?.digitalIdentifier}/share-records`}>
           <Button
             variant="outline"
@@ -37,52 +37,60 @@ export default function PatientDashboard() {
           </Button>
         </Link>
 
-        <Button
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
-        >
-          <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-4">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">My Prescriptions</div>
-            <div className="text-sm text-gray-600">
-              View active and past prescriptions
+        <Link href={`/${user?.digitalIdentifier}/prescriptions`}>
+          <Button
+            variant="outline"
+            className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          >
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-4">
+              <FileText className="w-5 h-5 text-white" />
             </div>
-          </div>
-        </Button>
+            <div className="text-left">
+              <div className="font-semibold text-gray-900">
+                My Prescriptions
+              </div>
+              <div className="text-sm text-gray-600">
+                View active and past prescriptions
+              </div>
+            </div>
+          </Button>
+        </Link>
 
-        <Button
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
-        >
-          <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">Audit Log</div>
-            <div className="text-sm text-gray-600">
-              See who accessed your records
+        <Link href={`/${user?.digitalIdentifier}/audit-log`}>
+          <Button
+            variant="outline"
+            className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          >
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
+              <Shield className="w-5 h-5 text-white" />
             </div>
-          </div>
-        </Button>
+            <div className="text-left">
+              <div className="font-semibold text-gray-900">Audit Log</div>
+              <div className="text-sm text-gray-600">
+                See who accessed your records
+              </div>
+            </div>
+          </Button>
+        </Link>
 
-        <Button
-          variant="outline"
-          className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
-        >
-          <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center mr-4">
-            <Upload className="w-5 h-5 text-white" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-900">
-              Upload Health Docs
+        <Link href={`/${user?.digitalIdentifier}/upload-docs`}>
+          <Button
+            variant="outline"
+            className="w-full h-16 justify-start bg-white border-gray-200 hover:bg-gray-50"
+          >
+            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center mr-4">
+              <Upload className="w-5 h-5 text-white" />
             </div>
-            <div className="text-sm text-gray-600">
-              Add medical documents to your record
+            <div className="text-left">
+              <div className="font-semibold text-gray-900">
+                Upload Health Docs
+              </div>
+              <div className="text-sm text-gray-600">
+                Add medical documents to your record
+              </div>
             </div>
-          </div>
-        </Button>
+          </Button>
+        </Link>
       </div>
       {/* Quick Stats */}
       <div>

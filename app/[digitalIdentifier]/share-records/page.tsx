@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, Clock, X, QrCode, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import ProtectedLayout from "@/components/ui-alternative/protected-layout";
 
 interface QRData {
   type: string;
