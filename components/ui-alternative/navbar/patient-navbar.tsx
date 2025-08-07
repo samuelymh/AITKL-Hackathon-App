@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { FileText, Shield, Upload, Share2, Home } from "lucide-react";
+import { FileText, Shield, Upload, Home, QrCode } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function PatientNavbar() {
@@ -19,7 +19,7 @@ export default function PatientNavbar() {
     {
       href: `/${user?.digitalIdentifier}/share-records`,
       label: "Share",
-      icon: Share2,
+      icon: QrCode,
     },
     {
       href: `/${user?.digitalIdentifier}/prescriptions`,
