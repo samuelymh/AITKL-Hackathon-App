@@ -97,7 +97,7 @@ export default function OrganizationSelector({
         setIsLoading(false);
       }
     }, 300),
-    [toast]
+    [toast],
   );
 
   // Effect to trigger search when query changes
@@ -125,7 +125,10 @@ export default function OrganizationSelector({
     setIsOpen(true);
 
     // Clear selection if user modifies the search after selecting
-    if (selectedOrganization && value !== selectedOrganization.organizationInfo.name) {
+    if (
+      selectedOrganization &&
+      value !== selectedOrganization.organizationInfo.name
+    ) {
       onSelect(null);
     }
   };
@@ -164,12 +167,17 @@ export default function OrganizationSelector({
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-green-600" />
-                  <span className="font-medium text-green-900">{selectedOrganization.organizationInfo.name}</span>
-                  {selectedOrganization.verification.isVerified && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  <span className="font-medium text-green-900">
+                    {selectedOrganization.organizationInfo.name}
+                  </span>
+                  {selectedOrganization.verification.isVerified && (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-green-700">
                   <MapPin className="h-3 w-3" />
-                  {selectedOrganization.address.city}, {selectedOrganization.address.state}
+                  {selectedOrganization.address.city},{" "}
+                  {selectedOrganization.address.state}
                 </div>
                 <Badge variant="secondary" className="text-xs">
                   {selectedOrganization.organizationInfo.type}
@@ -214,8 +222,12 @@ export default function OrganizationSelector({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{org.organizationInfo.name}</span>
-                          {org.verification.isVerified && <CheckCircle className="h-4 w-4 text-green-600" />}
+                          <span className="font-medium">
+                            {org.organizationInfo.name}
+                          </span>
+                          {org.verification.isVerified && (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          )}
                         </div>
                         <Badge variant="outline" className="text-xs">
                           {org.organizationInfo.type}
@@ -224,16 +236,21 @@ export default function OrganizationSelector({
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-3 w-3" />
-                        {org.address.street}, {org.address.city}, {org.address.state}
+                        {org.address.street}, {org.address.city},{" "}
+                        {org.address.state}
                       </div>
 
                       {org.organizationInfo.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{org.organizationInfo.description}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {org.organizationInfo.description}
+                        </p>
                       )}
 
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {org.organizationInfo.registrationNumber && (
-                          <span>Reg: {org.organizationInfo.registrationNumber}</span>
+                          <span>
+                            Reg: {org.organizationInfo.registrationNumber}
+                          </span>
                         )}
                         <span>{org.metadata.memberCount} members</span>
                       </div>
@@ -243,18 +260,28 @@ export default function OrganizationSelector({
               </div>
             )}
 
-            {!isLoading && hasSearched && organizations.length === 0 && searchQuery.trim() && (
-              <div className="p-8 text-center text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">No organizations found for "{searchQuery}"</p>
-                <p className="text-xs mt-1">Try a different search term or check if your organization is registered.</p>
-              </div>
-            )}
+            {!isLoading &&
+              hasSearched &&
+              organizations.length === 0 &&
+              searchQuery.trim() && (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm">
+                    No organizations found for "{searchQuery}"
+                  </p>
+                  <p className="text-xs mt-1">
+                    Try a different search term or check if your organization is
+                    registered.
+                  </p>
+                </div>
+              )}
 
             {!isLoading && !hasSearched && searchQuery.trim() === "" && (
               <div className="p-8 text-center text-muted-foreground">
                 <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">Start typing to search for organizations</p>
+                <p className="text-sm">
+                  Start typing to search for organizations
+                </p>
               </div>
             )}
           </CardContent>
@@ -265,7 +292,10 @@ export default function OrganizationSelector({
 }
 
 // Debounce utility function
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T {
+function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number,
+): T {
   let timeoutId: NodeJS.Timeout;
   return ((...args: any[]) => {
     clearTimeout(timeoutId);

@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
     const search = url.searchParams.get("search");
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100); // Cap at 100
+    const limit = Math.min(
+      parseInt(url.searchParams.get("limit") || "50"),
+      100,
+    ); // Cap at 100
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
     // Build query filter - only show verified organizations for public API
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
     // Get organizations with pagination
     const organizations = await Organization.find(filter)
       .select(
-        "organizationInfo.name organizationInfo.type organizationInfo.description address verification.isVerified _id"
+        "organizationInfo.name organizationInfo.type organizationInfo.description address verification.isVerified _id",
       )
       .sort({ "organizationInfo.name": 1 })
       .skip(offset)
@@ -110,7 +113,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to retrieve organizations",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

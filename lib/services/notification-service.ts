@@ -1,4 +1,7 @@
-import NotificationJob, { NotificationJobType, JobPriority } from "./notification-queue";
+import NotificationJob, {
+  NotificationJobType,
+  JobPriority,
+} from "./notification-queue";
 import mongoose from "mongoose";
 
 export interface NotificationData {
@@ -31,10 +34,15 @@ export async function createAuthorizationRequestNotification(
   organization: any,
   requestingPractitionerId: string,
   scope: string[],
-  timeWindowHours: number
+  timeWindowHours: number,
 ): Promise<void> {
   try {
-    console.log("Creating notification job for patient:", patientId, "grant:", grantId);
+    console.log(
+      "Creating notification job for patient:",
+      patientId,
+      "grant:",
+      grantId,
+    );
 
     const notificationJob = await NotificationJob.createJob({
       type: NotificationJobType.AUTHORIZATION_REQUEST,
@@ -67,7 +75,9 @@ export async function createAuthorizationRequestNotification(
  * Create a general notification job
  * @param params - Notification parameters
  */
-export async function createNotificationJob(params: CreateNotificationParams): Promise<void> {
+export async function createNotificationJob(
+  params: CreateNotificationParams,
+): Promise<void> {
   await NotificationJob.createJob({
     type: params.type,
     priority: params.priority,
@@ -83,7 +93,10 @@ export async function createNotificationJob(params: CreateNotificationParams): P
  * @param notificationId - ID of the notification
  * @param userId - ID of the user (for security check)
  */
-export async function markNotificationCompleted(notificationId: string, userId: string): Promise<boolean> {
+export async function markNotificationCompleted(
+  notificationId: string,
+  userId: string,
+): Promise<boolean> {
   const notification = await NotificationJob.findOneAndUpdate(
     {
       _id: notificationId,
@@ -93,7 +106,7 @@ export async function markNotificationCompleted(notificationId: string, userId: 
       status: "COMPLETED",
       completedAt: new Date(),
     },
-    { new: true }
+    { new: true },
   );
 
   return !!notification;
@@ -110,14 +123,17 @@ export async function getNotificationsForUser(
     status?: string;
     limit?: number;
     includeGrantDetails?: boolean;
-  } = {}
+  } = {},
 ) {
   const { status, limit = 20, includeGrantDetails = false } = options;
 
   // Build match query
   const matchQuery: any = {
     userId: new mongoose.Types.ObjectId(userId),
-    $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
+    $or: [
+      { expiresAt: { $exists: false } },
+      { expiresAt: { $gt: new Date() } },
+    ],
   };
 
   if (status) {
@@ -126,7 +142,10 @@ export async function getNotificationsForUser(
 
   // If grant details are not needed, use simple query
   if (!includeGrantDetails) {
-    const notifications = await NotificationJob.find(matchQuery).sort({ scheduledAt: -1 }).limit(limit).lean();
+    const notifications = await NotificationJob.find(matchQuery)
+      .sort({ scheduledAt: -1 })
+      .limit(limit)
+      .lean();
 
     return notifications.map((notification) => ({
       id: notification._id,
@@ -188,7 +207,8 @@ export async function getNotificationsForUser(
       // Get practitioner name by loading the user model instance
       let practitionerName = "Unknown Practitioner";
       let practitionerType = "practitioner";
-      const practitionerId = notification.payload?.data?.requestingPractitionerId;
+      const practitionerId =
+        notification.payload?.data?.requestingPractitionerId;
 
       if (practitionerId) {
         try {
@@ -203,17 +223,27 @@ export async function getNotificationsForUser(
 
           // Try to get more detailed practitioner type from Practitioner model
           try {
-            const Practitioner = (await import("../models/Practitioner")).default;
-            const practitionerProfile = await Practitioner.findOne({ userId: practitionerId });
+            const Practitioner = (await import("../models/Practitioner"))
+              .default;
+            const practitionerProfile = await Practitioner.findOne({
+              userId: practitionerId,
+            });
             if (practitionerProfile?.professionalInfo?.practitionerType) {
-              practitionerType = practitionerProfile.professionalInfo.practitionerType;
+              practitionerType =
+                practitionerProfile.professionalInfo.practitionerType;
             }
           } catch (practitionerError) {
             // If Practitioner model lookup fails, we'll use the role from User model
-            console.debug(`Could not fetch detailed practitioner info for ${practitionerId}:`, practitionerError);
+            console.debug(
+              `Could not fetch detailed practitioner info for ${practitionerId}:`,
+              practitionerError,
+            );
           }
         } catch (error) {
-          console.warn(`Failed to get practitioner name for ${practitionerId}:`, error);
+          console.warn(
+            `Failed to get practitioner name for ${practitionerId}:`,
+            error,
+          );
         }
       }
 
@@ -230,7 +260,7 @@ export async function getNotificationsForUser(
         practitionerType: practitionerType,
         ...additionalData,
       };
-    })
+    }),
   );
 
   return notificationsWithNames;

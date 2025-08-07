@@ -4,7 +4,11 @@
  */
 
 import mongoose from "mongoose";
-import NotificationJob, { INotificationJob, NotificationJobType, JobPriority } from "./notification-queue";
+import NotificationJob, {
+  INotificationJob,
+  NotificationJobType,
+  JobPriority,
+} from "./notification-queue";
 import connectToDatabase from "@/lib/mongodb";
 
 // Web Push API configuration (for browser notifications)
@@ -47,12 +51,14 @@ export class NotificationQueueProcessor {
       delaySeconds?: number;
       expiresInHours?: number;
       deviceTokens?: string[];
-    } = {}
+    } = {},
   ): Promise<string> {
     try {
       await connectToDatabase();
 
-      const scheduledAt = options.delaySeconds ? new Date(Date.now() + options.delaySeconds * 1000) : new Date();
+      const scheduledAt = options.delaySeconds
+        ? new Date(Date.now() + options.delaySeconds * 1000)
+        : new Date();
 
       const expiresAt = options.expiresInHours
         ? new Date(Date.now() + options.expiresInHours * 60 * 60 * 1000)
@@ -114,13 +120,16 @@ export class NotificationQueueProcessor {
           results.succeeded++;
         } catch (error) {
           results.failed++;
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
           results.errors.push(`Job ${job._id}: ${errorMessage}`);
           console.error(`Failed to process job ${job._id}:`, error);
         }
       }
 
-      console.log(`📋 Batch complete: ${results.succeeded} succeeded, ${results.failed} failed`);
+      console.log(
+        `📋 Batch complete: ${results.succeeded} succeeded, ${results.failed} failed`,
+      );
       return results;
     } catch (error) {
       console.error("Failed to process notification batch:", error);
@@ -158,7 +167,8 @@ export class NotificationQueueProcessor {
       await NotificationJob.markCompleted(job._id.toString());
       console.log(`✅ Job ${job._id} completed successfully`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       await NotificationJob.markFailed(job._id.toString(), errorMessage);
       throw error;
     }
@@ -167,7 +177,9 @@ export class NotificationQueueProcessor {
   /**
    * Send authorization request notification
    */
-  private static async sendAuthorizationNotification(job: INotificationJob): Promise<void> {
+  private static async sendAuthorizationNotification(
+    job: INotificationJob,
+  ): Promise<void> {
     const { payload, deviceTokens } = job;
 
     // For demo purposes, we'll log the notification
@@ -186,7 +198,9 @@ export class NotificationQueueProcessor {
   /**
    * Send status update notification
    */
-  private static async sendStatusUpdateNotification(job: INotificationJob): Promise<void> {
+  private static async sendStatusUpdateNotification(
+    job: INotificationJob,
+  ): Promise<void> {
     const { payload, deviceTokens } = job;
 
     console.log("🔔 Sending status update notification:", {
@@ -202,7 +216,9 @@ export class NotificationQueueProcessor {
   /**
    * Send reminder notification
    */
-  private static async sendReminderNotification(job: INotificationJob): Promise<void> {
+  private static async sendReminderNotification(
+    job: INotificationJob,
+  ): Promise<void> {
     const { payload, deviceTokens } = job;
 
     console.log("🔔 Sending reminder notification:", {
@@ -217,7 +233,9 @@ export class NotificationQueueProcessor {
   /**
    * Send system alert notification
    */
-  private static async sendSystemAlertNotification(job: INotificationJob): Promise<void> {
+  private static async sendSystemAlertNotification(
+    job: INotificationJob,
+  ): Promise<void> {
     const { payload, deviceTokens } = job;
 
     console.log("🚨 Sending system alert notification:", {
@@ -235,10 +253,12 @@ export class NotificationQueueProcessor {
    */
   private static async simulateNotificationSend(
     payload: INotificationJob["payload"],
-    deviceTokens?: string[]
+    deviceTokens?: string[],
   ): Promise<void> {
     // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 400));
+    await new Promise((resolve) =>
+      setTimeout(resolve, 100 + Math.random() * 400),
+    );
 
     // Simulate occasional failures for testing retry logic
     if (Math.random() < 0.05) {
@@ -319,9 +339,11 @@ export class NotificationHelpers {
     grantId: string,
     organizationName: string,
     practitionerName?: string,
-    isUrgent: boolean = false
+    isUrgent: boolean = false,
   ): Promise<string> {
-    const practitionerSuffix = practitionerName ? ` for Dr. ${practitionerName}` : "";
+    const practitionerSuffix = practitionerName
+      ? ` for Dr. ${practitionerName}`
+      : "";
 
     return await NotificationQueueProcessor.enqueue(
       NotificationJobType.AUTHORIZATION_REQUEST,
@@ -357,7 +379,7 @@ export class NotificationHelpers {
       {
         priority: isUrgent ? JobPriority.URGENT : JobPriority.HIGH,
         expiresInHours: 48, // Authorization requests expire in 48 hours
-      }
+      },
     );
   }
 
@@ -367,7 +389,7 @@ export class NotificationHelpers {
   static async enqueueStatusUpdate(
     userId: string,
     grantId: string,
-    status: "approved" | "denied" | "revoked" | "expired"
+    status: "approved" | "denied" | "revoked" | "expired",
   ): Promise<string> {
     const statusMessages = {
       approved: "Your healthcare access request has been approved",
@@ -392,7 +414,7 @@ export class NotificationHelpers {
       {
         priority: JobPriority.NORMAL,
         expiresInHours: 24,
-      }
+      },
     );
   }
 }

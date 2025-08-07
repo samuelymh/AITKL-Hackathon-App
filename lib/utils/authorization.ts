@@ -39,7 +39,10 @@ export class AuthorizationService {
   /**
    * Check if user role has permission for specific actions
    */
-  private static hasRolePermission(role: UserRole, permission: string): boolean {
+  private static hasRolePermission(
+    role: UserRole,
+    permission: string,
+  ): boolean {
     const rolePermissions: Record<UserRole, string[]> = {
       [UserRole.ADMIN]: ["*"], // Admin has all permissions
       [UserRole.SYSTEM]: ["*"], // System has all permissions
@@ -58,7 +61,11 @@ export class AuthorizationService {
         "update:prescriptions",
         "dispense:medications",
       ],
-      [UserRole.PATIENT]: ["read:own-data", "update:own-profile", "share:medical-records"],
+      [UserRole.PATIENT]: [
+        "read:own-data",
+        "update:own-profile",
+        "share:medical-records",
+      ],
     };
 
     const permissions = rolePermissions[role] || [];
@@ -97,7 +104,10 @@ export class AuthorizationService {
   /**
    * Check if user can access organization data
    */
-  static canAccessOrganization(authContext: AuthContext, organizationId: string): boolean {
+  static canAccessOrganization(
+    authContext: AuthContext,
+    organizationId: string,
+  ): boolean {
     // Admin can access all organizations
     if (this.isAdmin(authContext)) {
       return true;
@@ -114,7 +124,7 @@ export class AuthorizationService {
   static validateOrganizationMembershipCreate(
     authContext: AuthContext,
     organizationId: string,
-    targetUserId: string
+    targetUserId: string,
   ): { authorized: boolean; error?: string } {
     // User can only create membership for themselves during registration
     if (authContext.user.id !== targetUserId) {
@@ -140,7 +150,9 @@ export class AuthorizationService {
  * Middleware function to check authorization
  */
 export function requirePermission(permission: string) {
-  return (authContext: AuthContext): { authorized: boolean; error?: string } => {
+  return (
+    authContext: AuthContext,
+  ): { authorized: boolean; error?: string } => {
     if (!AuthorizationService.hasPermission(authContext, permission)) {
       return {
         authorized: false,
@@ -155,7 +167,9 @@ export function requirePermission(permission: string) {
  * Middleware function to require admin role
  */
 export function requireAdmin() {
-  return (authContext: AuthContext): { authorized: boolean; error?: string } => {
+  return (
+    authContext: AuthContext,
+  ): { authorized: boolean; error?: string } => {
     if (!AuthorizationService.isAdmin(authContext)) {
       return {
         authorized: false,

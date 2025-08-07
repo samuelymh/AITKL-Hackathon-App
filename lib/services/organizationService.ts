@@ -45,7 +45,8 @@ export class OrganizationService {
 
     if (data.organizationInfo.registrationNumber) {
       existingOrgConditions.push({
-        "organizationInfo.registrationNumber": data.organizationInfo.registrationNumber,
+        "organizationInfo.registrationNumber":
+          data.organizationInfo.registrationNumber,
       });
     }
 
@@ -64,7 +65,10 @@ export class OrganizationService {
   /**
    * Create a new organization
    */
-  static async createOrganization(data: OrganizationRegistrationData, createdBy: string) {
+  static async createOrganization(
+    data: OrganizationRegistrationData,
+    createdBy: string,
+  ) {
     await this.ensureConnection();
 
     const organization = new Organization({
@@ -77,7 +81,9 @@ export class OrganizationService {
       metadata: {
         isActive: true,
         memberCount: 0,
-        establishedDate: data.metadata?.establishedDate ? new Date(data.metadata.establishedDate) : undefined,
+        establishedDate: data.metadata?.establishedDate
+          ? new Date(data.metadata.establishedDate)
+          : undefined,
       },
       auditCreatedBy: createdBy,
     });
@@ -107,13 +113,18 @@ export class OrganizationService {
       page?: number;
       limit?: number;
       onlyVerified?: boolean;
-    } = {}
+    } = {},
   ) {
     await this.ensureConnection();
 
     const { page = 1, limit = 20, onlyVerified = false } = options;
 
-    return await Organization.searchOrganizations(query || "", type as any, location, { page, limit, onlyVerified });
+    return await Organization.searchOrganizations(
+      query || "",
+      type as any,
+      location,
+      { page, limit, onlyVerified },
+    );
   }
 
   /**
@@ -123,11 +134,16 @@ export class OrganizationService {
     query?: string,
     type?: string,
     location?: { city?: string; state?: string },
-    onlyVerified: boolean = false
+    onlyVerified: boolean = false,
   ) {
     await this.ensureConnection();
 
-    const filters = this.buildSearchFilters(query, type, location, onlyVerified);
+    const filters = this.buildSearchFilters(
+      query,
+      type,
+      location,
+      onlyVerified,
+    );
     return await Organization.countDocuments(filters);
   }
 
@@ -138,7 +154,7 @@ export class OrganizationService {
     query?: string,
     type?: string,
     location?: { city?: string; state?: string },
-    onlyVerified: boolean = false
+    onlyVerified: boolean = false,
   ) {
     const filters: any = {
       auditDeletedDateTime: { $exists: false },
@@ -147,7 +163,12 @@ export class OrganizationService {
     if (query?.trim()) {
       filters.$or = [
         { "organizationInfo.name": { $regex: query, $options: "i" } },
-        { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },
+        {
+          "organizationInfo.registrationNumber": {
+            $regex: query,
+            $options: "i",
+          },
+        },
         { "address.city": { $regex: query, $options: "i" } },
         { "address.state": { $regex: query, $options: "i" } },
       ];
@@ -175,10 +196,15 @@ export class OrganizationService {
   /**
    * Validate if organization exists and return appropriate error
    */
-  static validateExistingOrganization(existingOrg: any, registrationNumber?: string) {
+  static validateExistingOrganization(
+    existingOrg: any,
+    registrationNumber?: string,
+  ) {
     if (!existingOrg) return null;
 
-    if (existingOrg.organizationInfo.registrationNumber === registrationNumber) {
+    if (
+      existingOrg.organizationInfo.registrationNumber === registrationNumber
+    ) {
       return {
         error: "Organization with this registration number already exists",
         status: 409,
@@ -194,7 +220,11 @@ export class OrganizationService {
   /**
    * Get organizations for verification with pagination and filtering
    */
-  static async getOrganizationsForVerification(status: string, page: number, limit: number) {
+  static async getOrganizationsForVerification(
+    status: string,
+    page: number,
+    limit: number,
+  ) {
     try {
       await this.ensureConnection();
 
@@ -212,7 +242,7 @@ export class OrganizationService {
       const [organizations, totalCount] = await Promise.all([
         Organization.find(filter)
           .select(
-            "organizationInfo.name organizationInfo.type organizationInfo.registrationNumber organizationInfo.description address contact verification auditCreatedBy auditUpdatedBy auditCreatedDateTime auditUpdatedDateTime"
+            "organizationInfo.name organizationInfo.type organizationInfo.registrationNumber organizationInfo.description address contact verification auditCreatedBy auditUpdatedBy auditCreatedDateTime auditUpdatedDateTime",
           )
           .sort({ auditCreatedDateTime: -1 })
           .skip(skip)
@@ -264,7 +294,7 @@ export class OrganizationService {
         File,
       });
       throw new Error(
-        `Failed to fetch organizations for verification: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to fetch organizations for verification: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -277,7 +307,7 @@ export class OrganizationService {
     action: "verify" | "reject",
     adminUserId: string,
     notes?: string,
-    rejectionReason?: string
+    rejectionReason?: string,
   ) {
     try {
       await this.ensureConnection();
@@ -293,7 +323,8 @@ export class OrganizationService {
         "verification.verifiedAt": action === "verify" ? new Date() : null,
         "verification.verifiedBy": action === "verify" ? adminUserId : null,
         "verification.notes": notes || "",
-        "verification.rejectionReason": action === "reject" ? rejectionReason : "",
+        "verification.rejectionReason":
+          action === "reject" ? rejectionReason : "",
         auditUpdatedBy: adminUserId,
         auditUpdatedDateTime: new Date(),
       };
@@ -301,7 +332,9 @@ export class OrganizationService {
       await Organization.findByIdAndUpdate(organizationId, updateData);
 
       const actionText = action === "verify" ? "verified" : "rejected";
-      logger.info(`Organization ${organizationId} ${actionText} by admin ${adminUserId}`);
+      logger.info(
+        `Organization ${organizationId} ${actionText} by admin ${adminUserId}`,
+      );
 
       return {
         success: true,

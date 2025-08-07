@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +44,12 @@ interface Organization {
 }
 
 export default function OrganizationDemoPage() {
-  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<Organization | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
-  const [registeredOrganizations, setRegisteredOrganizations] = useState<Organization[]>([]);
+  const [registeredOrganizations, setRegisteredOrganizations] = useState<
+    Organization[]
+  >([]);
 
   const handleOrganizationSelect = (organization: Organization | null) => {
     setSelectedOrganization(organization);
@@ -70,7 +79,8 @@ export default function OrganizationDemoPage() {
           Organization Management Demo
         </h1>
         <p className="text-muted-foreground">
-          Demonstration of organization search, selection, and registration functionality for healthcare professionals.
+          Demonstration of organization search, selection, and registration
+          functionality for healthcare professionals.
         </p>
       </div>
 
@@ -95,7 +105,8 @@ export default function OrganizationDemoPage() {
             <CardHeader>
               <CardTitle>Organization Search & Selection</CardTitle>
               <CardDescription>
-                Search for and select your healthcare organization. This would be used during professional registration.
+                Search for and select your healthcare organization. This would
+                be used during professional registration.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -109,10 +120,16 @@ export default function OrganizationDemoPage() {
 
                 {selectedOrganization && (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h3 className="font-semibold text-green-900 mb-2">Organization Selected Successfully!</h3>
+                    <h3 className="font-semibold text-green-900 mb-2">
+                      Organization Selected Successfully!
+                    </h3>
                     <p className="text-sm text-green-700">
-                      You have selected <strong>{selectedOrganization.organizationInfo.name}</strong>. In a real
-                      application, this would be saved as part of your professional profile and used for authorization
+                      You have selected{" "}
+                      <strong>
+                        {selectedOrganization.organizationInfo.name}
+                      </strong>
+                      . In a real application, this would be saved as part of
+                      your professional profile and used for authorization
                       requests.
                     </p>
                   </div>
@@ -123,10 +140,22 @@ export default function OrganizationDemoPage() {
                     <strong>Note:</strong> In the actual application flow:
                   </p>
                   <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                    <li>This component would be integrated into the professional registration form</li>
-                    <li>Selected organization would be saved to the practitioner&apos;s profile</li>
-                    <li>Only verified organizations would be able to authorize access to patient records</li>
-                    <li>Practitioners can be associated with multiple organizations</li>
+                    <li>
+                      This component would be integrated into the professional
+                      registration form
+                    </li>
+                    <li>
+                      Selected organization would be saved to the
+                      practitioner&apos;s profile
+                    </li>
+                    <li>
+                      Only verified organizations would be able to authorize
+                      access to patient records
+                    </li>
+                    <li>
+                      Practitioners can be associated with multiple
+                      organizations
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -140,16 +169,20 @@ export default function OrganizationDemoPage() {
               <CardHeader>
                 <CardTitle>Organization Registration</CardTitle>
                 <CardDescription>
-                  Register a new healthcare organization if you cannot find it in the search.
+                  Register a new healthcare organization if you cannot find it
+                  in the search.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
                   <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">Register Your Organization</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Register Your Organization
+                  </h3>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Can&apos;t find your organization in the search? Register it here. All organizations will be
-                    reviewed for verification before they can authorize patient access.
+                    Can&apos;t find your organization in the search? Register it
+                    here. All organizations will be reviewed for verification
+                    before they can authorize patient access.
                   </p>
                   <Button onClick={handleShowRegistrationForm}>
                     <Plus className="h-4 w-4 mr-2" />
@@ -169,7 +202,9 @@ export default function OrganizationDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Recently Registered Organizations</CardTitle>
-                <CardDescription>Organizations you have registered in this session.</CardDescription>
+                <CardDescription>
+                  Organizations you have registered in this session.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -177,12 +212,16 @@ export default function OrganizationDemoPage() {
                     <div key={index} className="p-3 border rounded-lg">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="font-medium">{org.organizationInfo.name}</h4>
+                          <h4 className="font-medium">
+                            {org.organizationInfo.name}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
                             {org.address.city}, {org.address.state}
                           </p>
                         </div>
-                        <Badge variant="outline">{org.organizationInfo.type}</Badge>
+                        <Badge variant="outline">
+                          {org.organizationInfo.type}
+                        </Badge>
                       </div>
                     </div>
                   ))}
@@ -197,7 +236,9 @@ export default function OrganizationDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Implementation Status</CardTitle>
-                <CardDescription>Current implementation progress</CardDescription>
+                <CardDescription>
+                  Current implementation progress
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -264,39 +305,53 @@ export default function OrganizationDemoPage() {
           <Card>
             <CardHeader>
               <CardTitle>Knowledge Base Alignment</CardTitle>
-              <CardDescription>How this implementation aligns with the knowledge base requirements</CardDescription>
+              <CardDescription>
+                How this implementation aligns with the knowledge base
+                requirements
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-2">✅ Organization-Centric Registration</h4>
+                  <h4 className="font-semibold mb-2">
+                    ✅ Organization-Centric Registration
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Professional signup now starts with organization selection, allowing practitioners to work with
-                    multiple organizations as specified in the knowledge base.
+                    Professional signup now starts with organization selection,
+                    allowing practitioners to work with multiple organizations
+                    as specified in the knowledge base.
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">✅ Search and Registration</h4>
+                  <h4 className="font-semibold mb-2">
+                    ✅ Search and Registration
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Professionals can search for existing organizations or register new ones, with proper validation and
-                    verification workflow.
+                    Professionals can search for existing organizations or
+                    register new ones, with proper validation and verification
+                    workflow.
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">✅ Multi-Organization Support</h4>
+                  <h4 className="font-semibold mb-2">
+                    ✅ Multi-Organization Support
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    The OrganizationMember model (to be implemented) will support the many-to-many relationship between
-                    practitioners and organizations.
+                    The OrganizationMember model (to be implemented) will
+                    support the many-to-many relationship between practitioners
+                    and organizations.
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">✅ Verification Workflow</h4>
+                  <h4 className="font-semibold mb-2">
+                    ✅ Verification Workflow
+                  </h4>
                   <p className="text-sm text-muted-foreground">
-                    Organizations require verification before they can authorize access to patient records, ensuring
-                    security and compliance.
+                    Organizations require verification before they can authorize
+                    access to patient records, ensuring security and compliance.
                   </p>
                 </div>
               </div>

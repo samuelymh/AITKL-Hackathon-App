@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import AuthorizationGrant, { GrantStatus } from "@/lib/models/AuthorizationGrant";
+import AuthorizationGrant, {
+  GrantStatus,
+} from "@/lib/models/AuthorizationGrant";
 import Practitioner from "@/lib/models/Practitioner";
 import { AuthorizationError, NotFoundError } from "@/lib/errors/custom-errors";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
@@ -32,19 +34,37 @@ export class EncounterAuthMiddleware {
     practitionerId: string,
     userId: string,
     organizationId: string,
-    requiredPermission: "canCreateEncounters" | "canViewMedicalHistory" | "canViewPrescriptions"
+    requiredPermission:
+      | "canCreateEncounters"
+      | "canViewMedicalHistory"
+      | "canViewPrescriptions",
   ): Promise<AuthorizedContext> {
     // Step 1: Validate practitioner exists and belongs to organization
-    const practitioner = await this.validatePractitioner(practitionerId, organizationId);
+    const practitioner = await this.validatePractitioner(
+      practitionerId,
+      organizationId,
+    );
 
     // Step 2: Find and validate active authorization grant
-    const authGrant = await this.validateAuthorizationGrant(userId, organizationId, requiredPermission);
+    const authGrant = await this.validateAuthorizationGrant(
+      userId,
+      organizationId,
+      requiredPermission,
+    );
 
     // Step 3: Validate practitioner permissions
-    await this.validatePractitionerPermissions(practitioner, requiredPermission);
+    await this.validatePractitionerPermissions(
+      practitioner,
+      requiredPermission,
+    );
 
     // Step 4: Log the authorized access for audit
-    await this.logAuthorizedAccess(request, practitioner, authGrant, requiredPermission);
+    await this.logAuthorizedAccess(
+      request,
+      practitioner,
+      authGrant,
+      requiredPermission,
+    );
 
     // Step 5: Return authorized context
     return {
@@ -58,8 +78,12 @@ export class EncounterAuthMiddleware {
   /**
    * Validate practitioner exists and belongs to the organization
    */
-  private static async validatePractitioner(practitionerId: string, organizationId: string) {
-    const practitioner = await Practitioner.findById(practitionerId).populate("organizationId");
+  private static async validatePractitioner(
+    practitionerId: string,
+    organizationId: string,
+  ) {
+    const practitioner =
+      await Practitioner.findById(practitionerId).populate("organizationId");
 
     if (!practitioner) {
       throw new NotFoundError("Practitioner not found");
@@ -67,7 +91,9 @@ export class EncounterAuthMiddleware {
 
     // Check if practitioner belongs to the organization
     if (practitioner.organizationId._id.toString() !== organizationId) {
-      throw new AuthorizationError("Practitioner does not belong to the specified organization");
+      throw new AuthorizationError(
+        "Practitioner does not belong to the specified organization",
+      );
     }
 
     // Check if practitioner account is active
@@ -81,7 +107,11 @@ export class EncounterAuthMiddleware {
   /**
    * Find and validate active authorization grant
    */
-  private static async validateAuthorizationGrant(userId: string, organizationId: string, requiredPermission: string) {
+  private static async validateAuthorizationGrant(
+    userId: string,
+    organizationId: string,
+    requiredPermission: string,
+  ) {
     const authGrant = await AuthorizationGrant.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       organizationId: new mongoose.Types.ObjectId(organizationId),
@@ -91,7 +121,9 @@ export class EncounterAuthMiddleware {
     }).populate(["userId", "organizationId"]);
 
     if (!authGrant) {
-      throw new AuthorizationError("No active authorization grant found for this patient and organization");
+      throw new AuthorizationError(
+        "No active authorization grant found for this patient and organization",
+      );
     }
 
     // Check if grant has expired
@@ -100,8 +132,14 @@ export class EncounterAuthMiddleware {
     }
 
     // Check if grant has the required permission
-    if (!authGrant.hasPermission(this.mapPermissionToGrantScope(requiredPermission))) {
-      throw new AuthorizationError(`Authorization grant does not include permission: ${requiredPermission}`);
+    if (
+      !authGrant.hasPermission(
+        this.mapPermissionToGrantScope(requiredPermission),
+      )
+    ) {
+      throw new AuthorizationError(
+        `Authorization grant does not include permission: ${requiredPermission}`,
+      );
     }
 
     return authGrant;
@@ -110,25 +148,36 @@ export class EncounterAuthMiddleware {
   /**
    * Validate practitioner has the required permissions
    */
-  private static async validatePractitionerPermissions(practitioner: any, requiredPermission: string) {
+  private static async validatePractitionerPermissions(
+    practitioner: any,
+    requiredPermission: string,
+  ) {
     switch (requiredPermission) {
       case "canCreateEncounters":
         if (!practitioner.permissions?.canCreateEncounters) {
-          throw new AuthorizationError("Practitioner does not have permission to create encounters");
+          throw new AuthorizationError(
+            "Practitioner does not have permission to create encounters",
+          );
         }
         break;
       case "canViewMedicalHistory":
         if (!practitioner.permissions?.canViewMedicalHistory) {
-          throw new AuthorizationError("Practitioner does not have permission to view medical history");
+          throw new AuthorizationError(
+            "Practitioner does not have permission to view medical history",
+          );
         }
         break;
       case "canViewPrescriptions":
         if (!practitioner.permissions?.canViewPrescriptions) {
-          throw new AuthorizationError("Practitioner does not have permission to view prescriptions");
+          throw new AuthorizationError(
+            "Practitioner does not have permission to view prescriptions",
+          );
         }
         break;
       default:
-        throw new AuthorizationError(`Unknown permission: ${requiredPermission}`);
+        throw new AuthorizationError(
+          `Unknown permission: ${requiredPermission}`,
+        );
     }
   }
 
@@ -139,16 +188,21 @@ export class EncounterAuthMiddleware {
     request: NextRequest,
     practitioner: any,
     authGrant: any,
-    requiredPermission: string
+    requiredPermission: string,
   ) {
-    await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, authGrant.userId._id.toString(), {
-      action: "ENCOUNTER_ACCESS_AUTHORIZED",
-      practitionerId: practitioner._id.toString(),
-      organizationId: authGrant.organizationId._id.toString(),
-      authorizationGrantId: authGrant._id.toString(),
-      requiredPermission,
-      grantExpiresAt: authGrant.grantDetails.expiresAt,
-    });
+    await auditLogger.logSecurityEvent(
+      SecurityEventType.DATA_ACCESS,
+      request,
+      authGrant.userId._id.toString(),
+      {
+        action: "ENCOUNTER_ACCESS_AUTHORIZED",
+        practitionerId: practitioner._id.toString(),
+        organizationId: authGrant.organizationId._id.toString(),
+        authorizationGrantId: authGrant._id.toString(),
+        requiredPermission,
+        grantExpiresAt: authGrant.grantDetails.expiresAt,
+      },
+    );
   }
 
   /**
@@ -167,7 +221,10 @@ export class EncounterAuthMiddleware {
   /**
    * Validate encounter belongs to the authorized context
    */
-  static async validateEncounterAccess(encounterId: string, authorizedContext: AuthorizedContext): Promise<any> {
+  static async validateEncounterAccess(
+    encounterId: string,
+    authorizedContext: AuthorizedContext,
+  ): Promise<any> {
     const Encounter = (await import("@/lib/models/Encounter")).default;
 
     const encounter = await Encounter.findById(encounterId).populate([
@@ -181,13 +238,23 @@ export class EncounterAuthMiddleware {
     }
 
     // Verify encounter belongs to the same patient
-    if (encounter.userId._id.toString() !== authorizedContext.authGrant.userId._id.toString()) {
-      throw new AuthorizationError("Encounter does not belong to the authorized patient");
+    if (
+      encounter.userId._id.toString() !==
+      authorizedContext.authGrant.userId._id.toString()
+    ) {
+      throw new AuthorizationError(
+        "Encounter does not belong to the authorized patient",
+      );
     }
 
     // Verify encounter belongs to the same organization
-    if (encounter.organizationId._id.toString() !== authorizedContext.authGrant.organizationId._id.toString()) {
-      throw new AuthorizationError("Encounter does not belong to the authorized organization");
+    if (
+      encounter.organizationId._id.toString() !==
+      authorizedContext.authGrant.organizationId._id.toString()
+    ) {
+      throw new AuthorizationError(
+        "Encounter does not belong to the authorized organization",
+      );
     }
 
     return encounter;
@@ -196,7 +263,11 @@ export class EncounterAuthMiddleware {
   /**
    * Quick authorization check for read-only operations
    */
-  static async quickAuthCheck(practitionerId: string, userId: string, organizationId: string): Promise<boolean> {
+  static async quickAuthCheck(
+    practitionerId: string,
+    userId: string,
+    organizationId: string,
+  ): Promise<boolean> {
     try {
       // Check for active grant
       const authGrant = await AuthorizationGrant.findOne({
@@ -213,7 +284,10 @@ export class EncounterAuthMiddleware {
 
       // Check practitioner belongs to organization
       const practitioner = await Practitioner.findById(practitionerId);
-      if (!practitioner || practitioner.organizationId.toString() !== organizationId) {
+      if (
+        !practitioner ||
+        practitioner.organizationId.toString() !== organizationId
+      ) {
         return false;
       }
 
@@ -229,20 +303,23 @@ export class EncounterAuthMiddleware {
  * Express-style middleware wrapper for Next.js API routes
  */
 export function withEncounterAuth(
-  requiredPermission: "canCreateEncounters" | "canViewMedicalHistory" | "canViewPrescriptions"
+  requiredPermission:
+    | "canCreateEncounters"
+    | "canViewMedicalHistory"
+    | "canViewPrescriptions",
 ) {
   return async function (
     request: NextRequest,
     practitionerId: string,
     userId: string,
-    organizationId: string
+    organizationId: string,
   ): Promise<AuthorizedContext> {
     return await EncounterAuthMiddleware.validateEncounterAuthorization(
       request,
       practitionerId,
       userId,
       organizationId,
-      requiredPermission
+      requiredPermission,
     );
   };
 }

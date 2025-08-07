@@ -4,13 +4,40 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, MapPin, Phone, Mail, Globe, AlertCircle } from "lucide-react";
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
@@ -65,7 +92,9 @@ export default function OrganizationRegistrationForm({
   onCancel,
   className,
 }: Readonly<OrganizationRegistrationFormProps>) {
-  const [organizationTypes, setOrganizationTypes] = useState<OrganizationType[]>([]);
+  const [organizationTypes, setOrganizationTypes] = useState<
+    OrganizationType[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -112,7 +141,8 @@ export default function OrganizationRegistrationForm({
         console.error("Error loading organization types:", error);
         toast({
           title: "Error",
-          description: "Failed to load organization types. Please refresh the page.",
+          description:
+            "Failed to load organization types. Please refresh the page.",
           variant: "destructive",
         });
       }
@@ -134,7 +164,9 @@ export default function OrganizationRegistrationForm({
         },
         metadata: data.metadata?.establishedDate
           ? {
-              establishedDate: new Date(data.metadata.establishedDate).toISOString(),
+              establishedDate: new Date(
+                data.metadata.establishedDate,
+              ).toISOString(),
             }
           : undefined,
       };
@@ -152,7 +184,8 @@ export default function OrganizationRegistrationForm({
       if (response.ok && result.success) {
         toast({
           title: "Success",
-          description: "Organization registered successfully! It will be reviewed for verification.",
+          description:
+            "Organization registered successfully! It will be reviewed for verification.",
         });
 
         onSuccess?.(result.data.organization);
@@ -164,7 +197,10 @@ export default function OrganizationRegistrationForm({
       console.error("Registration error:", error);
       toast({
         title: "Registration Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -180,7 +216,8 @@ export default function OrganizationRegistrationForm({
           Register Your Organization
         </CardTitle>
         <CardDescription>
-          Register your healthcare organization to allow practitioners to join and request access to patient records.
+          Register your healthcare organization to allow practitioners to join
+          and request access to patient records.
         </CardDescription>
       </CardHeader>
 
@@ -188,8 +225,8 @@ export default function OrganizationRegistrationForm({
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            All organizations will be reviewed for verification. Only verified organizations can authorize access to
-            patient records.
+            All organizations will be reviewed for verification. Only verified
+            organizations can authorize access to patient records.
           </AlertDescription>
         </Alert>
 
@@ -197,7 +234,9 @@ export default function OrganizationRegistrationForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Organization Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Organization Information</h3>
+              <h3 className="text-lg font-semibold">
+                Organization Information
+              </h3>
 
               <FormField
                 control={form.control}
@@ -230,7 +269,9 @@ export default function OrganizationRegistrationForm({
                           <SelectItem key={type.value} value={type.value}>
                             <div>
                               <div className="font-medium">{type.label}</div>
-                              <div className="text-xs text-muted-foreground">{type.description}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {type.description}
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
@@ -248,9 +289,14 @@ export default function OrganizationRegistrationForm({
                   <FormItem>
                     <FormLabel>Registration Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Government registration ID (optional)" {...field} />
+                      <Input
+                        placeholder="Government registration ID (optional)"
+                        {...field}
+                      />
                     </FormControl>
-                    <FormDescription>Official registration number from relevant authorities</FormDescription>
+                    <FormDescription>
+                      Official registration number from relevant authorities
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -388,7 +434,11 @@ export default function OrganizationRegistrationForm({
                       Email Address *
                     </FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="contact@hospital.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="contact@hospital.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -405,7 +455,10 @@ export default function OrganizationRegistrationForm({
                       Website
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="https://www.hospital.com" {...field} />
+                      <Input
+                        placeholder="https://www.hospital.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -426,7 +479,9 @@ export default function OrganizationRegistrationForm({
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
-                    <FormDescription>When was your organization established?</FormDescription>
+                    <FormDescription>
+                      When was your organization established?
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

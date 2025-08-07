@@ -4,20 +4,48 @@ import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PharmacyOrganizationSelect } from "@/components/ui/organization-select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, User, Building, Award, Clock, Phone, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  User,
+  Building,
+  Award,
+  Clock,
+  Phone,
+  Loader2,
+} from "lucide-react";
 
 // Pharmacy Professional Info Schema
 const PharmacistProfessionalInfoSchema = z.object({
-  licenseNumber: z.string().min(3, "License number must be at least 3 characters").max(50),
-  specialty: z.string().min(2, "Specialty must be at least 2 characters").max(100),
+  licenseNumber: z
+    .string()
+    .min(3, "License number must be at least 3 characters")
+    .max(50),
+  specialty: z
+    .string()
+    .min(2, "Specialty must be at least 2 characters")
+    .max(100),
   practitionerType: z
     .enum([
       "pharmacist",
@@ -32,7 +60,10 @@ const PharmacistProfessionalInfoSchema = z.object({
     .number()
     .min(0, "Years of experience cannot be negative")
     .max(70, "Years of experience seems too high"),
-  currentPosition: z.string().min(2, "Position must be at least 2 characters").max(100),
+  currentPosition: z
+    .string()
+    .min(2, "Position must be at least 2 characters")
+    .max(100),
   department: z.string().optional(),
   organizationId: z.string().optional(),
 
@@ -43,13 +74,19 @@ const PharmacistProfessionalInfoSchema = z.object({
         issuingBody: z.string().min(2, "Issuing body required"),
         issueDate: z.string(),
         expiryDate: z.string().optional(),
-        verificationStatus: z.enum(["pending", "verified", "expired"]).default("pending"),
-      })
+        verificationStatus: z
+          .enum(["pending", "verified", "expired"])
+          .default("pending"),
+      }),
     )
     .default([]),
 
-  specializations: z.array(z.string().min(2, "Specialization must be at least 2 characters")).default([]),
-  languages: z.array(z.string().min(2, "Language must be at least 2 characters")).default([]),
+  specializations: z
+    .array(z.string().min(2, "Specialization must be at least 2 characters"))
+    .default([]),
+  languages: z
+    .array(z.string().min(2, "Language must be at least 2 characters"))
+    .default([]),
 
   continuingEducation: z
     .object({
@@ -63,7 +100,9 @@ const PharmacistProfessionalInfoSchema = z.object({
     .object({
       name: z.string().min(2, "Emergency contact name required"),
       relationship: z.string().min(2, "Relationship required"),
-      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
+      phone: z
+        .string()
+        .regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
       email: z.string().email("Invalid email format").optional(),
     })
     .optional(),
@@ -77,7 +116,9 @@ const PharmacistProfessionalInfoSchema = z.object({
     .optional(),
 });
 
-type PharmacistProfessionalInfo = z.infer<typeof PharmacistProfessionalInfoSchema>;
+type PharmacistProfessionalInfo = z.infer<
+  typeof PharmacistProfessionalInfoSchema
+>;
 
 export default function PharmacistProfessionalProfile() {
   const { toast } = useToast();
@@ -135,7 +176,9 @@ export default function PharmacistProfessionalProfile() {
 
         // Handle profile response
         if (!response.ok) {
-          throw new Error(`Failed to load profile: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Failed to load profile: ${response.status} ${response.statusText}`,
+          );
         }
 
         const profileData = await response.json();
@@ -175,10 +218,15 @@ export default function PharmacistProfessionalProfile() {
 
           setCompletionPercentage(profile.completionPercentage || 0);
         } else {
-          console.warn("Profile fetch succeeded but returned no data:", profileData.message);
+          console.warn(
+            "Profile fetch succeeded but returned no data:",
+            profileData.message,
+          );
           toast({
             title: "Info",
-            description: profileData.message || "No existing profile found. You can create one now.",
+            description:
+              profileData.message ||
+              "No existing profile found. You can create one now.",
             variant: "default",
           });
         }
@@ -233,7 +281,10 @@ export default function PharmacistProfessionalProfile() {
       console.error("Error saving professional info:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save professional information",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save professional information",
         variant: "destructive",
       });
     } finally {
@@ -293,8 +344,12 @@ export default function PharmacistProfessionalProfile() {
     <div className="space-y-6">
       <div className="flex items-center justify-end">
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground">Profile Completion:</span>
-          <Badge variant={completionPercentage >= 80 ? "default" : "secondary"}>{completionPercentage}%</Badge>
+          <span className="text-sm text-muted-foreground">
+            Profile Completion:
+          </span>
+          <Badge variant={completionPercentage >= 80 ? "default" : "secondary"}>
+            {completionPercentage}%
+          </Badge>
         </div>
       </div>
 
@@ -306,15 +361,23 @@ export default function PharmacistProfessionalProfile() {
               <User className="h-5 w-5" />
               <span>Basic Professional Information</span>
             </CardTitle>
-            <CardDescription>Your core professional details and qualifications</CardDescription>
+            <CardDescription>
+              Your core professional details and qualifications
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="licenseNumber">Pharmacy License Number *</Label>
-                <Input id="licenseNumber" placeholder="e.g., PH12345" {...form.register("licenseNumber")} />
+                <Input
+                  id="licenseNumber"
+                  placeholder="e.g., PH12345"
+                  {...form.register("licenseNumber")}
+                />
                 {form.formState.errors.licenseNumber && (
-                  <p className="text-sm text-red-600">{form.formState.errors.licenseNumber.message}</p>
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.licenseNumber.message}
+                  </p>
                 )}
               </div>
 
@@ -322,7 +385,9 @@ export default function PharmacistProfessionalProfile() {
                 <Label htmlFor="practitionerType">Pharmacist Type *</Label>
                 <Select
                   value={form.watch("practitionerType")}
-                  onValueChange={(value) => form.setValue("practitionerType", value as any)}
+                  onValueChange={(value) =>
+                    form.setValue("practitionerType", value as any)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select pharmacist type" />
@@ -339,7 +404,10 @@ export default function PharmacistProfessionalProfile() {
 
               <div className="space-y-2">
                 <Label htmlFor="specialty">Primary Specialty *</Label>
-                <Select value={form.watch("specialty")} onValueChange={(value) => form.setValue("specialty", value)}>
+                <Select
+                  value={form.watch("specialty")}
+                  onValueChange={(value) => form.setValue("specialty", value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select specialty" />
                   </SelectTrigger>
@@ -361,7 +429,9 @@ export default function PharmacistProfessionalProfile() {
                   min="0"
                   max="70"
                   placeholder="e.g., 5"
-                  {...form.register("yearsOfExperience", { valueAsNumber: true })}
+                  {...form.register("yearsOfExperience", {
+                    valueAsNumber: true,
+                  })}
                 />
               </div>
 
@@ -376,7 +446,11 @@ export default function PharmacistProfessionalProfile() {
 
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Input id="department" placeholder="e.g., Outpatient Pharmacy, ICU" {...form.register("department")} />
+                <Input
+                  id="department"
+                  placeholder="e.g., Outpatient Pharmacy, ICU"
+                  {...form.register("department")}
+                />
               </div>
             </div>
           </CardContent>
@@ -389,7 +463,9 @@ export default function PharmacistProfessionalProfile() {
               <Building className="h-5 w-5" />
               <span>Organization</span>
             </CardTitle>
-            <CardDescription>Select your current organization or workplace</CardDescription>
+            <CardDescription>
+              Select your current organization or workplace
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <PharmacyOrganizationSelect
@@ -410,14 +486,21 @@ export default function PharmacistProfessionalProfile() {
               <Award className="h-5 w-5" />
               <span>Certifications</span>
             </CardTitle>
-            <CardDescription>Add your professional certifications and credentials</CardDescription>
+            <CardDescription>
+              Add your professional certifications and credentials
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {certificationFields.map((field, index) => (
               <div key={field.id} className="border p-4 rounded-lg space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Certification {index + 1}</h4>
-                  <Button type="button" variant="outline" size="sm" onClick={() => removeCertification(index)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeCertification(index)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -441,12 +524,18 @@ export default function PharmacistProfessionalProfile() {
 
                   <div className="space-y-2">
                     <Label>Issue Date</Label>
-                    <Input type="date" {...form.register(`certifications.${index}.issueDate`)} />
+                    <Input
+                      type="date"
+                      {...form.register(`certifications.${index}.issueDate`)}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label>Expiry Date</Label>
-                    <Input type="date" {...form.register(`certifications.${index}.expiryDate`)} />
+                    <Input
+                      type="date"
+                      {...form.register(`certifications.${index}.expiryDate`)}
+                    />
                   </div>
                 </div>
               </div>
@@ -466,7 +555,9 @@ export default function PharmacistProfessionalProfile() {
               <Clock className="h-5 w-5" />
               <span>Continuing Education</span>
             </CardTitle>
-            <CardDescription>Track your continuing education requirements</CardDescription>
+            <CardDescription>
+              Track your continuing education requirements
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -477,13 +568,19 @@ export default function PharmacistProfessionalProfile() {
                   type="number"
                   min="0"
                   placeholder="0"
-                  {...form.register("continuingEducation.totalHours", { valueAsNumber: true })}
+                  {...form.register("continuingEducation.totalHours", {
+                    valueAsNumber: true,
+                  })}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="lastCompletedDate">Last Completed</Label>
-                <Input id="lastCompletedDate" type="date" {...form.register("continuingEducation.lastCompletedDate")} />
+                <Input
+                  id="lastCompletedDate"
+                  type="date"
+                  {...form.register("continuingEducation.lastCompletedDate")}
+                />
               </div>
 
               <div className="space-y-2">
@@ -505,13 +602,19 @@ export default function PharmacistProfessionalProfile() {
               <Phone className="h-5 w-5" />
               <span>Emergency Contact</span>
             </CardTitle>
-            <CardDescription>Professional emergency contact information</CardDescription>
+            <CardDescription>
+              Professional emergency contact information
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="emergencyName">Contact Name</Label>
-                <Input id="emergencyName" placeholder="Full name" {...form.register("emergencyContact.name")} />
+                <Input
+                  id="emergencyName"
+                  placeholder="Full name"
+                  {...form.register("emergencyContact.name")}
+                />
               </div>
 
               <div className="space-y-2">

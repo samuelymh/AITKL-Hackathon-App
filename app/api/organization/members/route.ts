@@ -5,18 +5,27 @@ import { Practitioner } from "@/lib/models/Practitioner";
 import Organization from "@/lib/models/Organization";
 import { createErrorResponse, createSuccessResponse } from "@/lib/api-helpers";
 import { getAuthContext } from "@/lib/auth";
-import { ORGANIZATION_MEMBER_STATUS, ORGANIZATION_MEMBER_ROLES } from "@/lib/constants/organization-member";
+import {
+  ORGANIZATION_MEMBER_STATUS,
+  ORGANIZATION_MEMBER_ROLES,
+} from "@/lib/constants/organization-member";
 import mongoose from "mongoose";
 
 /**
  * Check if user has admin permissions in an organization
  */
-async function checkOrganizationAdminPermission(userId: string, organizationId: string): Promise<boolean> {
+async function checkOrganizationAdminPermission(
+  userId: string,
+  organizationId: string,
+): Promise<boolean> {
   const adminMembership = await OrganizationMember.findOne({
     organizationId,
     practitionerId: userId,
     status: ORGANIZATION_MEMBER_STATUS.ACTIVE,
-    $or: [{ "membershipDetails.role": ORGANIZATION_MEMBER_ROLES.ADMIN }, { "permissions.canManageMembers": true }],
+    $or: [
+      { "membershipDetails.role": ORGANIZATION_MEMBER_ROLES.ADMIN },
+      { "permissions.canManageMembers": true },
+    ],
   });
 
   return !!adminMembership;
@@ -46,18 +55,33 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!practitionerId || !organizationId || !role) {
-      return createErrorResponse("Missing required fields: practitionerId, organizationId, role", 400);
+      return createErrorResponse(
+        "Missing required fields: practitionerId, organizationId, role",
+        400,
+      );
     }
 
     // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(practitionerId) || !mongoose.Types.ObjectId.isValid(organizationId)) {
-      return createErrorResponse("Invalid practitioner or organization ID", 400);
+    if (
+      !mongoose.Types.ObjectId.isValid(practitionerId) ||
+      !mongoose.Types.ObjectId.isValid(organizationId)
+    ) {
+      return createErrorResponse(
+        "Invalid practitioner or organization ID",
+        400,
+      );
     }
 
     // Authorization check: Only admins of the organization can add members
-    const hasAdminPermission = await checkOrganizationAdminPermission(authContext.userId, organizationId);
+    const hasAdminPermission = await checkOrganizationAdminPermission(
+      authContext.userId,
+      organizationId,
+    );
     if (!hasAdminPermission) {
-      return createErrorResponse("Insufficient permissions to manage organization members", 403);
+      return createErrorResponse(
+        "Insufficient permissions to manage organization members",
+        403,
+      );
     }
 
     // Check if practitioner exists
@@ -79,7 +103,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingMembership) {
-      return createErrorResponse("Practitioner is already a member of this organization", 409);
+      return createErrorResponse(
+        "Practitioner is already a member of this organization",
+        409,
+      );
     }
 
     // Create the organization membership
@@ -175,6 +202,9 @@ export async function GET(request: NextRequest) {
     return createSuccessResponse(memberships);
   } catch (error) {
     console.error("Error retrieving organization memberships:", error);
-    return createErrorResponse("Failed to retrieve organization memberships", 500);
+    return createErrorResponse(
+      "Failed to retrieve organization memberships",
+      500,
+    );
   }
 }

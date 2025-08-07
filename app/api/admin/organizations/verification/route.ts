@@ -24,7 +24,7 @@ const verificationDecisionSchema = z
     {
       message: "Rejection reason is required when rejecting an organization",
       path: ["rejectionReason"],
-    }
+    },
   );
 
 /**
@@ -39,29 +39,44 @@ async function getHandler(request: NextRequest, authContext: any) {
     const { searchParams } = new URL(request.url);
 
     // Validate and sanitize query parameters
-    const rawStatus = searchParams.get("status") || OrganizationVerificationStatus.PENDING;
+    const rawStatus =
+      searchParams.get("status") || OrganizationVerificationStatus.PENDING;
     status = InputSanitizer.sanitizeText(rawStatus);
 
     // Validate status is one of allowed values
-    if (!Object.values(OrganizationVerificationStatus).includes(status as OrganizationVerificationStatus)) {
+    if (
+      !Object.values(OrganizationVerificationStatus).includes(
+        status as OrganizationVerificationStatus,
+      )
+    ) {
       return NextResponse.json(
         { success: false, error: "Invalid status parameter" },
-        { status: HttpStatus.BAD_REQUEST }
+        { status: HttpStatus.BAD_REQUEST },
       );
     }
 
     page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "20")), 100);
+    limit = Math.min(
+      Math.max(1, parseInt(searchParams.get("limit") || "20")),
+      100,
+    );
 
     // Log admin access for audit
-    logger.info(`Admin ${authContext.userId} accessing organization verification list`, {
+    logger.info(
+      `Admin ${authContext.userId} accessing organization verification list`,
+      {
+        status,
+        page,
+        limit,
+        adminId: authContext.userId,
+      },
+    );
+
+    const result = await OrganizationService.getOrganizationsForVerification(
       status,
       page,
       limit,
-      adminId: authContext.userId,
-    });
-
-    const result = await OrganizationService.getOrganizationsForVerification(status, page, limit);
+    );
 
     return NextResponse.json(result);
   } catch (error) {
@@ -79,7 +94,7 @@ async function getHandler(request: NextRequest, authContext: any) {
         error: "Failed to retrieve organizations for verification",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: HttpStatus.INTERNAL_SERVER_ERROR }
+      { status: HttpStatus.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -96,7 +111,7 @@ async function postHandler(request: NextRequest, authContext: any) {
     if (!organizationId) {
       return NextResponse.json(
         { success: false, error: "Organization ID is required" },
-        { status: HttpStatus.BAD_REQUEST }
+        { status: HttpStatus.BAD_REQUEST },
       );
     }
 
@@ -105,7 +120,7 @@ async function postHandler(request: NextRequest, authContext: any) {
     if (!sanitizedOrgId) {
       return NextResponse.json(
         { success: false, error: "Invalid organization ID format" },
-        { status: HttpStatus.BAD_REQUEST }
+        { status: HttpStatus.BAD_REQUEST },
       );
     }
 
@@ -115,23 +130,28 @@ async function postHandler(request: NextRequest, authContext: any) {
       rejectionReason: "text" as any,
     });
 
-    const validatedDecision = verificationDecisionSchema.parse(sanitizedDecisionData);
+    const validatedDecision = verificationDecisionSchema.parse(
+      sanitizedDecisionData,
+    );
 
     // Log admin action for audit
-    logger.info(`Admin ${authContext.userId} processing organization verification`, {
-      organizationId: sanitizedOrgId,
-      action: validatedDecision.action,
-      adminId: authContext.userId,
-      hasNotes: !!validatedDecision.notes,
-      hasRejectionReason: !!validatedDecision.rejectionReason,
-    });
+    logger.info(
+      `Admin ${authContext.userId} processing organization verification`,
+      {
+        organizationId: sanitizedOrgId,
+        action: validatedDecision.action,
+        adminId: authContext.userId,
+        hasNotes: !!validatedDecision.notes,
+        hasRejectionReason: !!validatedDecision.rejectionReason,
+      },
+    );
 
     const result = await OrganizationService.processVerificationDecision(
       sanitizedOrgId,
       validatedDecision.action,
       authContext.userId,
       validatedDecision.notes,
-      validatedDecision.rejectionReason
+      validatedDecision.rejectionReason,
     );
 
     return NextResponse.json({
@@ -152,12 +172,15 @@ async function postHandler(request: NextRequest, authContext: any) {
           error: "Invalid verification decision data",
           details: error.errors,
         },
-        { status: HttpStatus.BAD_REQUEST }
+        { status: HttpStatus.BAD_REQUEST },
       );
     }
 
     if (error instanceof Error && error.message === "Organization not found") {
-      return NextResponse.json({ success: false, error: "Organization not found" }, { status: HttpStatus.NOT_FOUND });
+      return NextResponse.json(
+        { success: false, error: "Organization not found" },
+        { status: HttpStatus.NOT_FOUND },
+      );
     }
 
     return NextResponse.json(
@@ -166,7 +189,7 @@ async function postHandler(request: NextRequest, authContext: any) {
         error: "Failed to process verification decision",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: HttpStatus.INTERNAL_SERVER_ERROR }
+      { status: HttpStatus.INTERNAL_SERVER_ERROR },
     );
   }
 }

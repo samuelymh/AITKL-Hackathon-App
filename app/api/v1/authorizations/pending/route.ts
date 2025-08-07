@@ -24,10 +24,17 @@ async function transformPendingGrant(grant: any) {
         ? {
             id: practitioner._id.toString(),
             firstName:
-              practitioner.userId?.personalInfo?.firstName || practitioner.personalInfo?.firstName || "Unknown",
-            lastName: practitioner.userId?.personalInfo?.lastName || practitioner.personalInfo?.lastName || "User",
+              practitioner.userId?.personalInfo?.firstName ||
+              practitioner.personalInfo?.firstName ||
+              "Unknown",
+            lastName:
+              practitioner.userId?.personalInfo?.lastName ||
+              practitioner.personalInfo?.lastName ||
+              "User",
             role:
-              practitioner.professionalInfo?.practitionerType || practitioner.professionalInfo?.role || "practitioner",
+              practitioner.professionalInfo?.practitionerType ||
+              practitioner.professionalInfo?.role ||
+              "practitioner",
             specialty: practitioner.professionalInfo?.specialty || "General",
           }
         : null,
@@ -58,23 +65,34 @@ async function pendingHandler(request: NextRequest, authContext: any) {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
     }
 
     // Get pending requests for this user using optimized static method
-    const pendingRequests = await AuthorizationGrant.findPendingRequests(authContext.userId);
+    const pendingRequests = await AuthorizationGrant.findPendingRequests(
+      authContext.userId,
+    );
 
     // Transform requests with resilient error handling
-    const settledResults = await Promise.allSettled(pendingRequests.map(transformPendingGrant));
+    const settledResults = await Promise.allSettled(
+      pendingRequests.map(transformPendingGrant),
+    );
 
     const formattedRequests = settledResults
-      .filter((result) => result.status === "fulfilled" && result.value !== null)
+      .filter(
+        (result) => result.status === "fulfilled" && result.value !== null,
+      )
       .map((result) => (result as PromiseFulfilledResult<any>).value);
 
     // Log any failed transformations
     const failedCount = settledResults.length - formattedRequests.length;
     if (failedCount > 0) {
-      console.warn(`Failed to transform ${failedCount} pending grants for user ${authContext.userId}`);
+      console.warn(
+        `Failed to transform ${failedCount} pending grants for user ${authContext.userId}`,
+      );
     }
 
     return NextResponse.json({
@@ -87,8 +105,10 @@ async function pendingHandler(request: NextRequest, authContext: any) {
   } catch (error) {
     console.error("Error fetching pending authorization requests:", error);
     return NextResponse.json(
-      { error: `Failed to fetch pending requests: ${error instanceof Error ? error.message : "Unknown error"}` },
-      { status: 500 }
+      {
+        error: `Failed to fetch pending requests: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
+      { status: 500 },
     );
   }
 }

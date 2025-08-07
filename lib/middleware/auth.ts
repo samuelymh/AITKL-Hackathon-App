@@ -45,6 +45,7 @@ export function withAuth(
 /**
  * Role-specific middleware wrappers
  */
+// TODO: Consider middleware for organization as well
 export const withAdminAuth = (
   handler: (request: NextRequest, authContext: any) => Promise<NextResponse>,
 ) => withAuth(handler, { allowedRoles: [UserRole.ADMIN] });

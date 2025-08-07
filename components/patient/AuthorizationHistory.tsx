@@ -52,7 +52,10 @@ interface AuthorizationHistoryProps {
   className?: string;
 }
 
-export function AuthorizationHistory({ userId, className }: AuthorizationHistoryProps) {
+export function AuthorizationHistory({
+  userId,
+  className,
+}: AuthorizationHistoryProps) {
   const { token } = useAuth();
   const [grants, setGrants] = useState<AuthorizationGrant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,14 +74,19 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
         includeExpired: "true",
       });
 
-      const response = await fetch(`/api/patient/authorization-history?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `/api/patient/authorization-history?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch authorization history: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch authorization history: ${response.statusText}`,
+        );
       }
 
       const result = await response.json();
@@ -91,7 +99,9 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
         }));
         setGrants(formattedGrants);
       } else {
-        throw new Error(result.error || "Failed to fetch authorization history");
+        throw new Error(
+          result.error || "Failed to fetch authorization history",
+        );
       }
     } catch (err) {
       console.error("Error fetching authorization history:", err);
@@ -145,7 +155,10 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
       admin: "Administrator",
       other: "Healthcare Professional",
     };
-    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
+    return (
+      typeMap[type.toLowerCase()] ||
+      type.charAt(0).toUpperCase() + type.slice(1)
+    );
   };
 
   const filterGrants = (grants: AuthorizationGrant[], filter: string) => {
@@ -155,7 +168,12 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
       case "pending":
         return grants.filter((g) => g.status === "PENDING");
       case "expired":
-        return grants.filter((g) => g.status === "EXPIRED" || g.status === "REVOKED" || g.status === "DENIED");
+        return grants.filter(
+          (g) =>
+            g.status === "EXPIRED" ||
+            g.status === "REVOKED" ||
+            g.status === "DENIED",
+        );
       default:
         return grants;
     }
@@ -208,7 +226,9 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
         <CardContent>
           <div className="text-center py-8">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600 mb-4">Failed to load authorization history</p>
+            <p className="text-red-600 mb-4">
+              Failed to load authorization history
+            </p>
             <Button onClick={fetchAuthorizationHistory} variant="outline">
               Try Again
             </Button>
@@ -226,7 +246,12 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
             <Shield className="h-5 w-5" />
             Authorization History
           </CardTitle>
-          <Button onClick={fetchAuthorizationHistory} disabled={loading} variant="outline" size="sm">
+          <Button
+            onClick={fetchAuthorizationHistory}
+            disabled={loading}
+            variant="outline"
+            size="sm"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
@@ -235,9 +260,15 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="all">All ({grants.length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeGrants.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({pendingGrants.length})</TabsTrigger>
-            <TabsTrigger value="expired">History ({expiredGrants.length})</TabsTrigger>
+            <TabsTrigger value="active">
+              Active ({activeGrants.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending">
+              Pending ({pendingGrants.length})
+            </TabsTrigger>
+            <TabsTrigger value="expired">
+              History ({expiredGrants.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-4">
@@ -250,18 +281,27 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
               ) : (
                 <div className="space-y-4">
                   {grants.map((grant) => (
-                    <div key={grant.grantId} className="border rounded-lg p-4 space-y-3">
+                    <div
+                      key={grant.grantId}
+                      className="border rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-white rounded-lg border">
-                            {getOrgTypeIcon(grant.organization.organizationInfo.type)}
+                            {getOrgTypeIcon(
+                              grant.organization.organizationInfo.type,
+                            )}
                           </div>
                           <div>
-                            <h4 className="font-medium">{grant.organization.organizationInfo.name}</h4>
+                            <h4 className="font-medium">
+                              {grant.organization.organizationInfo.name}
+                            </h4>
                             {grant.requester && (
                               <p className="text-sm text-muted-foreground">
-                                {grant.requester.name} • {formatPractitionerType(grant.requester.type)}
-                                {grant.requester.specialty && ` • ${grant.requester.specialty}`}
+                                {grant.requester.name} •{" "}
+                                {formatPractitionerType(grant.requester.type)}
+                                {grant.requester.specialty &&
+                                  ` • ${grant.requester.specialty}`}
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
@@ -277,11 +317,14 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
 
                       <div className="pl-11">
                         <p className="text-sm text-muted-foreground mb-2">
-                          <strong>Access:</strong> {renderAccessScope(grant.accessScope)}
+                          <strong>Access:</strong>{" "}
+                          {renderAccessScope(grant.accessScope)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          <strong>Duration:</strong> {grant.timeWindowHours} hours
-                          {grant.expiresAt && ` • Expires ${grant.expiresAt.toLocaleString()}`}
+                          <strong>Duration:</strong> {grant.timeWindowHours}{" "}
+                          hours
+                          {grant.expiresAt &&
+                            ` • Expires ${grant.expiresAt.toLocaleString()}`}
                         </p>
                       </div>
                     </div>
@@ -301,17 +344,25 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
               ) : (
                 <div className="space-y-4">
                   {activeGrants.map((grant) => (
-                    <div key={grant.grantId} className="border border-green-200 bg-green-50 rounded-lg p-4 space-y-3">
+                    <div
+                      key={grant.grantId}
+                      className="border border-green-200 bg-green-50 rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-white rounded-lg">
-                            {getOrgTypeIcon(grant.organization.organizationInfo.type)}
+                            {getOrgTypeIcon(
+                              grant.organization.organizationInfo.type,
+                            )}
                           </div>
                           <div>
-                            <h4 className="font-medium">{grant.organization.organizationInfo.name}</h4>
+                            <h4 className="font-medium">
+                              {grant.organization.organizationInfo.name}
+                            </h4>
                             {grant.requester && (
                               <p className="text-sm text-muted-foreground">
-                                {grant.requester.name} • {formatPractitionerType(grant.requester.type)}
+                                {grant.requester.name} •{" "}
+                                {formatPractitionerType(grant.requester.type)}
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
@@ -341,17 +392,25 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
               ) : (
                 <div className="space-y-4">
                   {pendingGrants.map((grant) => (
-                    <div key={grant.grantId} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 space-y-3">
+                    <div
+                      key={grant.grantId}
+                      className="border border-yellow-200 bg-yellow-50 rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-white rounded-lg">
-                            {getOrgTypeIcon(grant.organization.organizationInfo.type)}
+                            {getOrgTypeIcon(
+                              grant.organization.organizationInfo.type,
+                            )}
                           </div>
                           <div>
-                            <h4 className="font-medium">{grant.organization.organizationInfo.name}</h4>
+                            <h4 className="font-medium">
+                              {grant.organization.organizationInfo.name}
+                            </h4>
                             {grant.requester && (
                               <p className="text-sm text-muted-foreground">
-                                {grant.requester.name} • {formatPractitionerType(grant.requester.type)}
+                                {grant.requester.name} •{" "}
+                                {formatPractitionerType(grant.requester.type)}
                               </p>
                             )}
                           </div>
@@ -370,22 +429,32 @@ export function AuthorizationHistory({ userId, className }: AuthorizationHistory
               {expiredGrants.length === 0 ? (
                 <div className="text-center py-8">
                   <XCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No expired or revoked authorizations</p>
+                  <p className="text-gray-500">
+                    No expired or revoked authorizations
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {expiredGrants.map((grant) => (
-                    <div key={grant.grantId} className="border border-gray-200 bg-gray-50 rounded-lg p-4 space-y-3">
+                    <div
+                      key={grant.grantId}
+                      className="border border-gray-200 bg-gray-50 rounded-lg p-4 space-y-3"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-white rounded-lg">
-                            {getOrgTypeIcon(grant.organization.organizationInfo.type)}
+                            {getOrgTypeIcon(
+                              grant.organization.organizationInfo.type,
+                            )}
                           </div>
                           <div>
-                            <h4 className="font-medium">{grant.organization.organizationInfo.name}</h4>
+                            <h4 className="font-medium">
+                              {grant.organization.organizationInfo.name}
+                            </h4>
                             {grant.requester && (
                               <p className="text-sm text-muted-foreground">
-                                {grant.requester.name} • {formatPractitionerType(grant.requester.type)}
+                                {grant.requester.name} •{" "}
+                                {formatPractitionerType(grant.requester.type)}
                               </p>
                             )}
                           </div>

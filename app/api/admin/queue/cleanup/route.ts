@@ -39,11 +39,15 @@ function authenticateCleanupRequest(request: NextRequest):
   const apiKey = request.headers.get("x-api-key");
   if (apiKey) {
     if (apiKey === ADMIN_API_KEY && ADMIN_API_KEY) {
-      console.log(`🔑 Admin API key authentication successful from IP: ${clientIP}`);
+      console.log(
+        `🔑 Admin API key authentication successful from IP: ${clientIP}`,
+      );
       return { success: true, authType: "api_key", userId: "admin-api-key" };
     }
     if (apiKey === CRON_API_KEY && CRON_API_KEY) {
-      console.log(`⏰ Cron API key authentication successful from IP: ${clientIP}`);
+      console.log(
+        `⏰ Cron API key authentication successful from IP: ${clientIP}`,
+      );
       return { success: true, authType: "cron", userId: "cron-service" };
     }
 
@@ -57,7 +61,9 @@ function authenticateCleanupRequest(request: NextRequest):
   const authResult = authCheck(authContext);
 
   if (!authResult.success) {
-    console.warn(`🚫 Admin authentication failed from IP: ${clientIP} - ${authResult.error}`);
+    console.warn(
+      `🚫 Admin authentication failed from IP: ${clientIP} - ${authResult.error}`,
+    );
     return {
       success: false,
       error: authResult.error || "Authentication required",
@@ -65,7 +71,9 @@ function authenticateCleanupRequest(request: NextRequest):
     };
   }
 
-  console.log(`👤 Admin JWT authentication successful from IP: ${clientIP} (User: ${authContext?.userId})`);
+  console.log(
+    `👤 Admin JWT authentication successful from IP: ${clientIP} (User: ${authContext?.userId})`,
+  );
   return {
     success: true,
     authType: "admin",
@@ -92,11 +100,13 @@ export async function POST(request: NextRequest) {
           error: authResult.error,
           timestamp: new Date().toISOString(),
         },
-        { status: authResult.status }
+        { status: authResult.status },
       );
     }
 
-    console.log(`✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`);
+    console.log(
+      `✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`,
+    );
 
     // Parse and validate request body
     let olderThanHours = 24; // Default: cleanup jobs older than 24 hours
@@ -111,14 +121,18 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error: "Invalid request body",
-            details: error.errors.map((e) => `${e.path.join(".")}: ${e.message}`),
+            details: error.errors.map(
+              (e) => `${e.path.join(".")}: ${e.message}`,
+            ),
             timestamp: new Date().toISOString(),
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
       // If JSON parsing fails, use default
-      console.warn("⚠️ Failed to parse request body, using default cleanup age");
+      console.warn(
+        "⚠️ Failed to parse request body, using default cleanup age",
+      );
     }
 
     // Validate olderThanHours bounds
@@ -129,14 +143,15 @@ export async function POST(request: NextRequest) {
           error: "olderThanHours must be between 1 and 168 (1 week)",
           timestamp: new Date().toISOString(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     console.log(`🗑️ Cleaning up jobs older than ${olderThanHours} hours`);
 
     // Clean up old jobs
-    const deletedCount = await PushNotificationService.cleanupOldJobs(olderThanHours);
+    const deletedCount =
+      await PushNotificationService.cleanupOldJobs(olderThanHours);
 
     console.log(`✅ Cleanup completed - Deleted ${deletedCount} old jobs`);
 
@@ -149,7 +164,10 @@ export async function POST(request: NextRequest) {
         cleanupBy: authResult.userId,
         authType: authResult.authType,
       },
-      message: deletedCount > 0 ? `Cleaned up ${deletedCount} old notification jobs` : "No old jobs to clean up",
+      message:
+        deletedCount > 0
+          ? `Cleaned up ${deletedCount} old notification jobs`
+          : "No old jobs to clean up",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -161,7 +179,7 @@ export async function POST(request: NextRequest) {
         error: "Failed to cleanup notification queue",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -185,11 +203,13 @@ export async function GET(request: NextRequest) {
           error: authResult.error,
           timestamp: new Date().toISOString(),
         },
-        { status: authResult.status }
+        { status: authResult.status },
       );
     }
 
-    console.log(`✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`);
+    console.log(
+      `✅ Authentication successful - Type: ${authResult.authType}, User: ${authResult.userId}`,
+    );
 
     // Get current queue statistics (to show what would be cleaned)
     const stats = await PushNotificationService.getQueueStats();
@@ -226,7 +246,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to get cleanup information",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

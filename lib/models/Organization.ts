@@ -56,17 +56,26 @@ export interface IOrganization extends IBaseDocument {
 // Static methods interface
 export interface IOrganizationModel extends Model<IOrganization> {
   findByType(type: OrganizationType): Promise<IOrganization[]>;
-  findByRegistrationNumber(registrationNumber: string): Promise<IOrganization | null>;
+  findByRegistrationNumber(
+    registrationNumber: string,
+  ): Promise<IOrganization | null>;
   findVerified(): Promise<IOrganization[]>;
-  findNearby(latitude: number, longitude: number, radiusKm: number): Promise<IOrganization[]>;
+  findNearby(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+  ): Promise<IOrganization[]>;
   searchOrganizations(
     query: string,
     type?: OrganizationType,
     location?: { state?: string; city?: string },
-    options?: { page?: number; limit?: number; onlyVerified?: boolean }
+    options?: { page?: number; limit?: number; onlyVerified?: boolean },
   ): Promise<IOrganization[]>;
   getOrganizationById(organizationId: string): Promise<IOrganization | null>;
-  updateMemberCount(organizationId: string, increment?: number): Promise<IOrganization | null>;
+  updateMemberCount(
+    organizationId: string,
+    increment?: number,
+  ): Promise<IOrganization | null>;
 }
 
 // Organization schema fields
@@ -161,7 +170,10 @@ const organizationSchemaFields = {
       required: true,
       lowercase: true,
       trim: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email"],
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Please enter a valid email",
+      ],
       index: true,
     },
     website: {
@@ -234,7 +246,10 @@ OrganizationSchema.index({
 OrganizationSchema.pre("save", function (next) {
   // Auto-verify based on registration number format (implement specific logic as needed)
   const doc = this as any;
-  if (doc.organizationInfo?.registrationNumber && !doc.verification?.isVerified) {
+  if (
+    doc.organizationInfo?.registrationNumber &&
+    !doc.verification?.isVerified
+  ) {
     // Could implement automatic verification logic here
   }
 
@@ -244,7 +259,10 @@ OrganizationSchema.pre("save", function (next) {
 // Instance methods
 OrganizationSchema.methods = {
   // Verify the organization
-  verify: async function (this: IOrganization, verifiedBy: string): Promise<IOrganization> {
+  verify: async function (
+    this: IOrganization,
+    verifiedBy: string,
+  ): Promise<IOrganization> {
     this.verification.isVerified = true;
     this.verification.verifiedAt = new Date();
     this.auditModifiedBy = verifiedBy;
@@ -252,7 +270,10 @@ OrganizationSchema.methods = {
   },
 
   // Unverify the organization
-  unverify: async function (this: IOrganization, unverifiedBy: string): Promise<IOrganization> {
+  unverify: async function (
+    this: IOrganization,
+    unverifiedBy: string,
+  ): Promise<IOrganization> {
     this.verification.isVerified = false;
     this.verification.verifiedAt = undefined;
     this.auditModifiedBy = unverifiedBy;
@@ -260,7 +281,11 @@ OrganizationSchema.methods = {
   },
 
   // Update contact information
-  updateContact: async function (this: IOrganization, contactInfo: any, updatedBy: string): Promise<IOrganization> {
+  updateContact: async function (
+    this: IOrganization,
+    contactInfo: any,
+    updatedBy: string,
+  ): Promise<IOrganization> {
     if (contactInfo.phone) this.contact.phone = contactInfo.phone;
     if (contactInfo.email) this.contact.email = contactInfo.email;
     if (contactInfo.website) this.contact.website = contactInfo.website;
@@ -334,7 +359,7 @@ OrganizationSchema.statics = {
     query: string,
     type?: OrganizationType,
     location?: { state?: string; city?: string },
-    options?: { page?: number; limit?: number; onlyVerified?: boolean }
+    options?: { page?: number; limit?: number; onlyVerified?: boolean },
   ) {
     const { page = 1, limit = 20, onlyVerified = false } = options || {};
     const skip = (page - 1) * limit;
@@ -348,7 +373,12 @@ OrganizationSchema.statics = {
     if (query?.trim()) {
       filters.$or = [
         { "organizationInfo.name": { $regex: query, $options: "i" } },
-        { "organizationInfo.registrationNumber": { $regex: query, $options: "i" } },
+        {
+          "organizationInfo.registrationNumber": {
+            $regex: query,
+            $options: "i",
+          },
+        },
         { "address.city": { $regex: query, $options: "i" } },
         { "address.state": { $regex: query, $options: "i" } },
       ];
@@ -372,12 +402,18 @@ OrganizationSchema.statics = {
       filters["verification.isVerified"] = true;
     }
 
-    return this.find(filters).sort({ "organizationInfo.name": 1 }).skip(skip).limit(limit);
+    return this.find(filters)
+      .sort({ "organizationInfo.name": 1 })
+      .skip(skip)
+      .limit(limit);
   },
 };
 
 // Create and export the model
 const Organization: IOrganizationModel = (mongoose.models.Organization ||
-  mongoose.model<IOrganization, IOrganizationModel>("Organization", OrganizationSchema)) as IOrganizationModel;
+  mongoose.model<IOrganization, IOrganizationModel>(
+    "Organization",
+    OrganizationSchema,
+  )) as IOrganizationModel;
 
 export default Organization;

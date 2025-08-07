@@ -6,7 +6,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, User, Settings, ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  LayoutDashboard,
+  User,
+  Settings,
+  ArrowLeft,
+  ChevronRight,
+} from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -26,7 +32,8 @@ const pharmacistNavItems: NavItem[] = [
     href: "/dashboard/pharmacist/professional-profile",
     label: "Professional Profile",
     icon: User,
-    description: "Manage your pharmacist credentials and professional information",
+    description:
+      "Manage your pharmacist credentials and professional information",
   },
 ];
 
@@ -35,13 +42,24 @@ interface PharmacistNavigationProps {
   variant?: "sidebar" | "breadcrumb" | "tabs";
 }
 
-export function PharmacistNavigation({ className, variant = "sidebar" }: PharmacistNavigationProps) {
+export function PharmacistNavigation({
+  className,
+  variant = "sidebar",
+}: PharmacistNavigationProps) {
   const pathname = usePathname();
 
   if (variant === "breadcrumb") {
     return (
-      <nav className={cn("flex items-center space-x-2 text-sm text-muted-foreground", className)}>
-        <Link href="/dashboard" className="flex items-center hover:text-foreground transition-colors">
+      <nav
+        className={cn(
+          "flex items-center space-x-2 text-sm text-muted-foreground",
+          className,
+        )}
+      >
+        <Link
+          href="/dashboard"
+          className="flex items-center hover:text-foreground transition-colors"
+        >
           <LayoutDashboard className="h-4 w-4 mr-1" />
           Dashboard
         </Link>
@@ -49,7 +67,9 @@ export function PharmacistNavigation({ className, variant = "sidebar" }: Pharmac
           <>
             <ChevronRight className="h-4 w-4" />
             <span className="text-foreground font-medium">
-              {pathname.includes("professional-profile") ? "Professional Profile" : "Dashboard"}
+              {pathname.includes("professional-profile")
+                ? "Professional Profile"
+                : "Dashboard"}
             </span>
           </>
         )}
@@ -73,7 +93,7 @@ export function PharmacistNavigation({ className, variant = "sidebar" }: Pharmac
                   "flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors",
                   isActive
                     ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -104,7 +124,10 @@ export function PharmacistNavigation({ className, variant = "sidebar" }: Pharmac
               <Link key={item.href} href={item.href}>
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
-                  className={cn("w-full justify-start", isActive && "bg-primary/10 text-primary")}
+                  className={cn(
+                    "w-full justify-start",
+                    isActive && "bg-primary/10 text-primary",
+                  )}
                 >
                   <Icon className="h-4 w-4 mr-2" />
                   {item.label}
@@ -117,7 +140,9 @@ export function PharmacistNavigation({ className, variant = "sidebar" }: Pharmac
         <Separator className="my-6" />
 
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Quick Info</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Quick Info
+          </h4>
           {pharmacistNavItems.map((item) => {
             const isActive = pathname === item.href;
             if (!isActive || !item.description) return null;
@@ -170,14 +195,18 @@ export function PharmacistLayout({
           {title && (
             <div className="space-y-2">
               <h1 className="text-3xl font-bold">{title}</h1>
-              {description && <p className="text-muted-foreground">{description}</p>}
+              {description && (
+                <p className="text-muted-foreground">{description}</p>
+              )}
             </div>
           )}
         </div>
 
         {/* Main Content */}
         <div className="flex gap-6">
-          {navigationVariant === "sidebar" && <PharmacistNavigation variant="sidebar" className="flex-shrink-0" />}
+          {navigationVariant === "sidebar" && (
+            <PharmacistNavigation variant="sidebar" className="flex-shrink-0" />
+          )}
 
           <main className="flex-1">{children}</main>
         </div>

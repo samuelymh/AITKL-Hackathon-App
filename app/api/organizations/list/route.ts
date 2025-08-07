@@ -10,8 +10,13 @@ import { InputSanitizer } from "@/lib/utils/input-sanitizer";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const verified = InputSanitizer.sanitizeText(searchParams.get("verified") || "true"); // Default to verified organizations only
-    const limit = Math.min(Math.max(1, parseInt(searchParams.get("limit") || "50")), 100); // Max 100 results
+    const verified = InputSanitizer.sanitizeText(
+      searchParams.get("verified") || "true",
+    ); // Default to verified organizations only
+    const limit = Math.min(
+      Math.max(1, parseInt(searchParams.get("limit") || "50")),
+      100,
+    ); // Max 100 results
 
     // Search organizations with basic filters
     const organizations = await OrganizationService.searchOrganizations(
@@ -22,7 +27,7 @@ export async function GET(request: NextRequest) {
         page: 1,
         limit: limit,
         onlyVerified: verified === "true",
-      }
+      },
     );
 
     // Return simplified organization data for dropdown
@@ -50,7 +55,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to retrieve organizations",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -8,9 +8,14 @@ import { logger } from "@/lib/logger";
  * GET /api/admin/organizations
  * Get all organizations for admin dashboard
  */
-async function getAllOrganizationsHandler(request: NextRequest, authContext: any) {
+async function getAllOrganizationsHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
-    logger.info(`Admin ${authContext.userId} requesting all organizations list`);
+    logger.info(
+      `Admin ${authContext.userId} requesting all organizations list`,
+    );
 
     await connectToDatabase();
 
@@ -19,13 +24,14 @@ async function getAllOrganizationsHandler(request: NextRequest, authContext: any
       auditDeletedDateTime: { $exists: false },
     })
       .select(
-        "organizationInfo.name organizationInfo.type verification.isVerified verification.verifiedAt contact.email contact.phone address createdAt auditCreatedDateTime"
+        "organizationInfo.name organizationInfo.type verification.isVerified verification.verifiedAt contact.email contact.phone address createdAt auditCreatedDateTime",
       )
       .sort({ auditCreatedDateTime: -1 });
 
     const mappedOrganizations = organizations.map((org) => {
       // Determine status based on verification.isVerified
-      const verificationStatus = org.verification?.isVerified === true ? "verified" : "pending";
+      const verificationStatus =
+        org.verification?.isVerified === true ? "verified" : "pending";
 
       return {
         id: org._id.toString(),
@@ -33,14 +39,18 @@ async function getAllOrganizationsHandler(request: NextRequest, authContext: any
         type: org.organizationInfo?.type || "N/A",
         email: org.contact?.email || "N/A",
         phone: org.contact?.phone || "N/A",
-        address: org.address ? `${org.address.street}, ${org.address.city}, ${org.address.state}` : "N/A",
+        address: org.address
+          ? `${org.address.street}, ${org.address.city}, ${org.address.state}`
+          : "N/A",
         verificationStatus,
         verifiedAt: org.verification?.verifiedAt,
         createdAt: org.auditCreatedDateTime,
       };
     });
 
-    logger.info(`Retrieved ${mappedOrganizations.length} organizations for admin dashboard`);
+    logger.info(
+      `Retrieved ${mappedOrganizations.length} organizations for admin dashboard`,
+    );
 
     return NextResponse.json({
       success: true,
@@ -49,9 +59,15 @@ async function getAllOrganizationsHandler(request: NextRequest, authContext: any
         count: mappedOrganizations.length,
         stats: {
           total: mappedOrganizations.length,
-          verified: mappedOrganizations.filter((org) => org.verificationStatus === "verified").length,
-          pending: mappedOrganizations.filter((org) => org.verificationStatus === "pending").length,
-          rejected: mappedOrganizations.filter((org) => org.verificationStatus === "rejected").length,
+          verified: mappedOrganizations.filter(
+            (org) => org.verificationStatus === "verified",
+          ).length,
+          pending: mappedOrganizations.filter(
+            (org) => org.verificationStatus === "pending",
+          ).length,
+          rejected: mappedOrganizations.filter(
+            (org) => org.verificationStatus === "rejected",
+          ).length,
         },
       },
     });
@@ -63,7 +79,7 @@ async function getAllOrganizationsHandler(request: NextRequest, authContext: any
         error: "Failed to retrieve organizations",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

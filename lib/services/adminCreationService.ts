@@ -15,7 +15,13 @@ export class AdminCreationService {
   /**
    * Create an admin user directly in the database
    */
-  static async createAdmin({ email, password, firstName, lastName, phone = "+1-000-000-0000" }: CreateAdminParams) {
+  static async createAdmin({
+    email,
+    password,
+    firstName,
+    lastName,
+    phone = "+1-000-000-0000",
+  }: CreateAdminParams) {
     try {
       await connectToDatabase();
 
@@ -106,7 +112,9 @@ export class AdminCreationService {
         },
       };
     } catch (error) {
-      throw new Error(`Failed to create admin: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(
+        `Failed to create admin: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -121,7 +129,7 @@ export class AdminCreationService {
         "auth.role": "admin",
         auditDeletedDateTime: { $exists: false },
       }).select(
-        "digitalIdentifier personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.emailVerified auth.lastLogin auditCreatedDateTime"
+        "digitalIdentifier personalInfo.firstName personalInfo.lastName personalInfo.contact.email auth.emailVerified auth.lastLogin auditCreatedDateTime",
       );
 
       return admins.map((admin) => ({
@@ -134,7 +142,9 @@ export class AdminCreationService {
         createdAt: admin.auditCreatedDateTime,
       }));
     } catch (error) {
-      throw new Error(`Failed to list admins: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(
+        `Failed to list admins: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -166,7 +176,9 @@ export class AdminCreationService {
         message: "Admin user deactivated successfully",
       };
     } catch (error) {
-      throw new Error(`Failed to deactivate admin: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(
+        `Failed to deactivate admin: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 }

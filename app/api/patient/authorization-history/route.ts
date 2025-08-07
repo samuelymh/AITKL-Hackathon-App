@@ -8,7 +8,10 @@ import { getAuthorizationGrantsForPatient } from "@/lib/services/authorization-s
  * Get authorization grant history for the authenticated patient
  * Query params: status (optional), limit (optional, default 20), page (optional, default 1), includeExpired (optional, default true)
  */
-async function getAuthorizationHistoryHandler(request: NextRequest, authContext: any) {
+async function getAuthorizationHistoryHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     await connectToDatabase();
 
@@ -24,17 +27,24 @@ async function getAuthorizationHistoryHandler(request: NextRequest, authContext:
 
     // Validate pagination parameters
     if (limit < 1 || limit > 100) {
-      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Limit must be between 1 and 100" },
+        { status: 400 },
+      );
     }
 
     if (page < 1) {
-      return NextResponse.json({ error: "Page must be greater than 0" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Page must be greater than 0" },
+        { status: 400 },
+      );
     }
 
     const offset = (page - 1) * limit;
 
     // Extract patient identifier logic into a single variable
-    const patientIdentifier = authContext.digitalIdentifier || authContext.userId;
+    const patientIdentifier =
+      authContext.digitalIdentifier || authContext.userId;
 
     // Get the patient's authorization grant history with pagination
     const result = await getAuthorizationGrantsForPatient(patientIdentifier, {
@@ -66,7 +76,7 @@ async function getAuthorizationHistoryHandler(request: NextRequest, authContext:
         error: "Failed to fetch authorization history",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

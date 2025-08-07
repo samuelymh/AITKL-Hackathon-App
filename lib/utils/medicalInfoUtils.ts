@@ -25,7 +25,9 @@ export interface MedicalInformation {
  * @param data - Raw data from API
  * @returns Normalized MedicalInformation object
  */
-export const validateAndNormalizeMedicalInfo = (data: any): MedicalInformation => {
+export const validateAndNormalizeMedicalInfo = (
+  data: any,
+): MedicalInformation => {
   return {
     bloodType: typeof data?.bloodType === "string" ? data.bloodType : "",
     foodAllergies: Array.isArray(data?.foodAllergies)
@@ -35,7 +37,9 @@ export const validateAndNormalizeMedicalInfo = (data: any): MedicalInformation =
       ? data.drugAllergies.filter((item: any) => typeof item === "string")
       : [],
     knownMedicalConditions: Array.isArray(data?.knownMedicalConditions)
-      ? data.knownMedicalConditions.filter((item: any) => typeof item === "string")
+      ? data.knownMedicalConditions.filter(
+          (item: any) => typeof item === "string",
+        )
       : [],
     currentMedications: Array.isArray(data?.currentMedications)
       ? data.currentMedications.filter((item: any) => typeof item === "string")
@@ -43,13 +47,25 @@ export const validateAndNormalizeMedicalInfo = (data: any): MedicalInformation =
     pastSurgicalHistory: Array.isArray(data?.pastSurgicalHistory)
       ? data.pastSurgicalHistory.filter((item: any) => typeof item === "string")
       : [],
-    smokingStatus: ["never", "current", "former"].includes(data?.smokingStatus) ? data.smokingStatus : "never",
+    smokingStatus: ["never", "current", "former"].includes(data?.smokingStatus)
+      ? data.smokingStatus
+      : "never",
     emergencyContact: {
-      name: typeof data?.emergencyContact?.name === "string" ? data.emergencyContact.name : "",
-      phone: typeof data?.emergencyContact?.phone === "string" ? data.emergencyContact.phone : "",
-      relationship: typeof data?.emergencyContact?.relationship === "string" ? data.emergencyContact.relationship : "",
+      name:
+        typeof data?.emergencyContact?.name === "string"
+          ? data.emergencyContact.name
+          : "",
+      phone:
+        typeof data?.emergencyContact?.phone === "string"
+          ? data.emergencyContact.phone
+          : "",
+      relationship:
+        typeof data?.emergencyContact?.relationship === "string"
+          ? data.emergencyContact.relationship
+          : "",
     },
-    additionalNotes: typeof data?.additionalNotes === "string" ? data.additionalNotes : "",
+    additionalNotes:
+      typeof data?.additionalNotes === "string" ? data.additionalNotes : "",
     lastUpdated: data?.lastUpdated ? new Date(data.lastUpdated) : undefined,
   };
 };
@@ -60,7 +76,9 @@ export const validateAndNormalizeMedicalInfo = (data: any): MedicalInformation =
  * @returns True if the value is an array of strings
  */
 export const isStringArray = (value: any): value is string[] => {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
 };
 
 /**
@@ -83,7 +101,9 @@ export const safeRenderValue = (value: any): string => {
  * @param info - Medical information object
  * @returns Completion percentage (0-100)
  */
-export const calculateCompletionPercentage = (info: MedicalInformation): number => {
+export const calculateCompletionPercentage = (
+  info: MedicalInformation,
+): number => {
   const requiredFields = [
     info.bloodType,
     info.emergencyContact.name,
@@ -98,12 +118,17 @@ export const calculateCompletionPercentage = (info: MedicalInformation): number 
     info.currentMedications.length > 0,
   ];
 
-  const filledRequiredFields = requiredFields.filter((field) => field && field.trim() !== "").length;
-  const filledOptionalFields = optionalArrayFields.filter((hasItems) => hasItems).length;
+  const filledRequiredFields = requiredFields.filter(
+    (field) => field && field.trim() !== "",
+  ).length;
+  const filledOptionalFields = optionalArrayFields.filter(
+    (hasItems) => hasItems,
+  ).length;
   const smokingProvided = info.smokingStatus !== "never" ? 1 : 0;
 
   const totalFields = requiredFields.length + optionalArrayFields.length + 1; // +1 for smoking status
-  const completedFields = filledRequiredFields + filledOptionalFields + smokingProvided;
+  const completedFields =
+    filledRequiredFields + filledOptionalFields + smokingProvided;
 
   return Math.round((completedFields / totalFields) * 100);
 };

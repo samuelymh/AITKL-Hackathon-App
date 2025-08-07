@@ -10,7 +10,10 @@ import { getAuthorizationGrantsForPractitioner } from "@/lib/services/authorizat
  * Get notifications for practitioners - authorization requests they created
  * Query params: organizationId (optional), status (optional), limit (optional, default 20)
  */
-async function getPractitionerNotificationsHandler(request: NextRequest, authContext: any) {
+async function getPractitionerNotificationsHandler(
+  request: NextRequest,
+  authContext: any,
+) {
   try {
     await connectToDatabase();
 
@@ -25,18 +28,32 @@ async function getPractitionerNotificationsHandler(request: NextRequest, authCon
 
     // Validate limit parameter
     if (limit < 1 || limit > 100) {
-      return NextResponse.json({ error: "Limit must be between 1 and 100" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Limit must be between 1 and 100" },
+        { status: 400 },
+      );
     }
 
     // Validate status parameter
-    if (status && !["PENDING", "ACTIVE", "EXPIRED", "REVOKED"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status parameter" }, { status: 400 });
+    if (
+      status &&
+      !["PENDING", "ACTIVE", "EXPIRED", "REVOKED"].includes(status)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid status parameter" },
+        { status: 400 },
+      );
     }
 
     // Find the practitioner record for the authenticated user
-    const practitioner = await Practitioner.findOne({ userId: authContext.userId });
+    const practitioner = await Practitioner.findOne({
+      userId: authContext.userId,
+    });
     if (!practitioner) {
-      return NextResponse.json({ error: "Practitioner not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Practitioner not found" },
+        { status: 404 },
+      );
     }
 
     // Use the optimized service function to get grants
@@ -56,7 +73,8 @@ async function getPractitionerNotificationsHandler(request: NextRequest, authCon
       grantIds.length > 0
         ? await NotificationJob.find({
             "payload.data.grantId": { $in: grantIds },
-            "payload.data.requestingPractitionerId": practitioner._id.toString(),
+            "payload.data.requestingPractitionerId":
+              practitioner._id.toString(),
           })
             .sort({ scheduledAt: -1 })
             .lean()
@@ -84,7 +102,10 @@ async function getPractitionerNotificationsHandler(request: NextRequest, authCon
     });
   } catch (error) {
     console.error("Error fetching practitioner notifications:", error);
-    return NextResponse.json({ error: "Failed to fetch practitioner notifications" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch practitioner notifications" },
+      { status: 500 },
+    );
   }
 }
 

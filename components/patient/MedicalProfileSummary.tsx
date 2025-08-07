@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Heart, AlertCircle, CheckCircle, ArrowRight, Edit, Shield } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Heart,
+  AlertCircle,
+  CheckCircle,
+  ArrowRight,
+  Edit,
+  Shield,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -23,7 +36,10 @@ interface MedicalProfileStatus {
   lastUpdated?: Date;
 }
 
-export function MedicalProfileSummary({ userId, className }: MedicalProfileSummaryProps) {
+export function MedicalProfileSummary({
+  userId,
+  className,
+}: MedicalProfileSummaryProps) {
   const [profileStatus, setProfileStatus] = useState<MedicalProfileStatus>({
     completionPercentage: 0,
     hasBloodType: false,
@@ -92,10 +108,15 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
 
             return response;
           } catch (error) {
-            if (error instanceof Error && error.message.includes("Session expired")) {
+            if (
+              error instanceof Error &&
+              error.message.includes("Session expired")
+            ) {
               throw error;
             }
-            throw new Error(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+            throw new Error(
+              `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
           }
         };
 
@@ -105,14 +126,23 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
         if (medicalInfo) {
           // Calculate completion based on actual data
           const hasBloodType = !!medicalInfo.bloodType;
-          const hasEmergencyContact = !!(medicalInfo.emergencyContact?.name && medicalInfo.emergencyContact?.phone);
-          const hasAllergies = medicalInfo.foodAllergies?.length > 0 || medicalInfo.drugAllergies?.length > 0;
+          const hasEmergencyContact = !!(
+            medicalInfo.emergencyContact?.name &&
+            medicalInfo.emergencyContact?.phone
+          );
+          const hasAllergies =
+            medicalInfo.foodAllergies?.length > 0 ||
+            medicalInfo.drugAllergies?.length > 0;
           const hasMedicalConditions =
-            medicalInfo.knownMedicalConditions?.length > 0 || medicalInfo.currentMedications?.length > 0;
+            medicalInfo.knownMedicalConditions?.length > 0 ||
+            medicalInfo.currentMedications?.length > 0;
 
-          const completedFields = [hasBloodType, hasEmergencyContact, hasAllergies, hasMedicalConditions].filter(
-            Boolean
-          ).length;
+          const completedFields = [
+            hasBloodType,
+            hasEmergencyContact,
+            hasAllergies,
+            hasMedicalConditions,
+          ].filter(Boolean).length;
           const completionPercentage = Math.round((completedFields / 4) * 100);
 
           setProfileStatus({
@@ -121,7 +151,9 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
             hasEmergencyContact,
             hasAllergies,
             hasMedicalConditions,
-            lastUpdated: medicalInfo.lastUpdated ? new Date(medicalInfo.lastUpdated) : undefined,
+            lastUpdated: medicalInfo.lastUpdated
+              ? new Date(medicalInfo.lastUpdated)
+              : undefined,
           });
         }
       } catch (error) {
@@ -148,7 +180,9 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
         <CardContent className="flex items-center justify-center p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading profile...</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Loading profile...
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -170,7 +204,10 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
             {(() => {
               if (isComplete) {
                 return (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-50 text-green-700 border-green-200"
+                  >
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Complete
                   </Badge>
@@ -178,14 +215,20 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
               }
               if (needsAttention) {
                 return (
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-red-50 text-red-700 border-red-200"
+                  >
                     <AlertCircle className="h-3 w-3 mr-1" />
                     Urgent
                   </Badge>
                 );
               }
               return (
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                <Badge
+                  variant="outline"
+                  className="bg-orange-50 text-orange-700 border-orange-200"
+                >
                   <AlertCircle className="h-3 w-3 mr-1" />
                   In Progress
                 </Badge>
@@ -205,37 +248,70 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Profile Completion</span>
-            <span className="font-medium">{profileStatus.completionPercentage}%</span>
+            <span className="font-medium">
+              {profileStatus.completionPercentage}%
+            </span>
           </div>
-          <Progress value={profileStatus.completionPercentage} className="h-2" />
+          <Progress
+            value={profileStatus.completionPercentage}
+            className="h-2"
+          />
         </div>
 
         {/* Key Information Status */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${profileStatus.hasBloodType ? "bg-green-500" : "bg-gray-300"}`} />
-            <span className={profileStatus.hasBloodType ? "text-green-700" : "text-gray-600"}>Blood Type</span>
+            <div
+              className={`w-2 h-2 rounded-full ${profileStatus.hasBloodType ? "bg-green-500" : "bg-gray-300"}`}
+            />
+            <span
+              className={
+                profileStatus.hasBloodType ? "text-green-700" : "text-gray-600"
+              }
+            >
+              Blood Type
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
             <div
               className={`w-2 h-2 rounded-full ${profileStatus.hasEmergencyContact ? "bg-green-500" : "bg-gray-300"}`}
             />
-            <span className={profileStatus.hasEmergencyContact ? "text-green-700" : "text-gray-600"}>
+            <span
+              className={
+                profileStatus.hasEmergencyContact
+                  ? "text-green-700"
+                  : "text-gray-600"
+              }
+            >
               Emergency Contact
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${profileStatus.hasAllergies ? "bg-green-500" : "bg-gray-300"}`} />
-            <span className={profileStatus.hasAllergies ? "text-green-700" : "text-gray-600"}>Allergies</span>
+            <div
+              className={`w-2 h-2 rounded-full ${profileStatus.hasAllergies ? "bg-green-500" : "bg-gray-300"}`}
+            />
+            <span
+              className={
+                profileStatus.hasAllergies ? "text-green-700" : "text-gray-600"
+              }
+            >
+              Allergies
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
             <div
               className={`w-2 h-2 rounded-full ${profileStatus.hasMedicalConditions ? "bg-green-500" : "bg-gray-300"}`}
             />
-            <span className={profileStatus.hasMedicalConditions ? "text-green-700" : "text-gray-600"}>
+            <span
+              className={
+                profileStatus.hasMedicalConditions
+                  ? "text-green-700"
+                  : "text-gray-600"
+              }
+            >
               Medical History
             </span>
           </div>
@@ -244,7 +320,10 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           <Link href="/dashboard/medical-profile" className="flex-1">
-            <Button className="w-full flex items-center gap-2" variant={isComplete ? "outline" : "default"}>
+            <Button
+              className="w-full flex items-center gap-2"
+              variant={isComplete ? "outline" : "default"}
+            >
               {isComplete ? (
                 <>
                   <Edit className="h-4 w-4" />
@@ -269,8 +348,8 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
               <div className="text-sm">
                 <p className="font-medium text-red-800">Action Required</p>
                 <p className="text-red-700">
-                  Your medical profile is incomplete. Healthcare providers need this information to provide safe and
-                  effective care.
+                  Your medical profile is incomplete. Healthcare providers need
+                  this information to provide safe and effective care.
                 </p>
               </div>
             </div>
@@ -284,11 +363,15 @@ export function MedicalProfileSummary({ userId, className }: MedicalProfileSumma
               <div className="text-sm">
                 <p className="font-medium text-green-800">Profile Complete</p>
                 <p className="text-green-700">
-                  Your medical information is complete and secure. Healthcare providers can access this information when
-                  you grant them permission.
+                  Your medical information is complete and secure. Healthcare
+                  providers can access this information when you grant them
+                  permission.
                 </p>
                 {profileStatus.lastUpdated && (
-                  <p className="text-green-600 mt-1">Last updated: {profileStatus.lastUpdated.toLocaleDateString()}</p>
+                  <p className="text-green-600 mt-1">
+                    Last updated:{" "}
+                    {profileStatus.lastUpdated.toLocaleDateString()}
+                  </p>
                 )}
               </div>
             </div>

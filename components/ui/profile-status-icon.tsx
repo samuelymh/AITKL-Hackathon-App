@@ -5,7 +5,10 @@ interface ProfileStatusIconProps {
   className?: string;
 }
 
-export function ProfileStatusIcon({ isComplete, className = "h-5 w-5" }: Readonly<ProfileStatusIconProps>) {
+export function ProfileStatusIcon({
+  isComplete,
+  className = "h-5 w-5",
+}: Readonly<ProfileStatusIconProps>) {
   if (isComplete) {
     return <CheckCircle className={`${className} text-green-600`} />;
   }

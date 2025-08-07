@@ -5,7 +5,13 @@ import PrescriptionQueue, {
   createDoctorActions,
   type PrescriptionRequest,
 } from "@/components/healthcare/PrescriptionQueue";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Example of how a doctor would use the PrescriptionQueue component
@@ -30,7 +36,10 @@ const DoctorPrescriptionsView: React.FC = () => {
         const result = await response.json();
         setPrescriptions(result.data);
       } else {
-        console.error("Failed to fetch doctor prescriptions:", response.statusText);
+        console.error(
+          "Failed to fetch doctor prescriptions:",
+          response.statusText,
+        );
       }
     } catch (error) {
       console.error("Error fetching doctor prescriptions:", error);
@@ -46,18 +55,25 @@ const DoctorPrescriptionsView: React.FC = () => {
 
   const handleCancelPrescription = async (prescriptionId: string) => {
     try {
-      const response = await fetch(`/api/doctor/prescriptions/${prescriptionId}/cancel`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `/api/doctor/prescriptions/${prescriptionId}/cancel`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (response.ok) {
         // Update the prescription in the local state
         setPrescriptions((prev) =>
-          prev.map((p) => (p.id === prescriptionId ? { ...p, status: "CANCELLED" as const } : p))
+          prev.map((p) =>
+            p.id === prescriptionId
+              ? { ...p, status: "CANCELLED" as const }
+              : p,
+          ),
         );
       } else {
         console.error("Failed to cancel prescription:", response.statusText);
@@ -84,7 +100,9 @@ const DoctorPrescriptionsView: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>Doctor Dashboard - Prescription Management</CardTitle>
-          <CardDescription>Manage your prescribed medications and patient treatments</CardDescription>
+          <CardDescription>
+            Manage your prescribed medications and patient treatments
+          </CardDescription>
         </CardHeader>
       </Card>
 

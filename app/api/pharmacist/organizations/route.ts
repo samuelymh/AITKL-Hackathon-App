@@ -46,7 +46,13 @@ async function getOrganizations(request: NextRequest, authContext: any) {
     } else {
       // Default to pharmacy-related organizations
       filter["organizationInfo.type"] = {
-        $in: ["pharmacy", "hospital", "clinic", "healthcare_network", "pharmaceutical_company"],
+        $in: [
+          "pharmacy",
+          "hospital",
+          "clinic",
+          "healthcare_network",
+          "pharmaceutical_company",
+        ],
       };
     }
 
@@ -69,7 +75,7 @@ async function getOrganizations(request: NextRequest, authContext: any) {
     // Get organizations with pagination
     const organizations = await Organization.find(filter)
       .select(
-        "organizationInfo.name organizationInfo.type organizationInfo.description address verification.isVerified _id"
+        "organizationInfo.name organizationInfo.type organizationInfo.description address verification.isVerified _id",
       )
       .sort({ "organizationInfo.name": 1 })
       .skip(offset)
@@ -95,7 +101,9 @@ async function getOrganizations(request: NextRequest, authContext: any) {
       isVerified: org.verification?.isVerified || false,
     }));
 
-    logger.info(`Retrieved ${organizations.length} organizations for user ${authContext.userId}`);
+    logger.info(
+      `Retrieved ${organizations.length} organizations for user ${authContext.userId}`,
+    );
 
     return NextResponse.json({
       success: true,
@@ -117,7 +125,7 @@ async function getOrganizations(request: NextRequest, authContext: any) {
         error: "Failed to retrieve organizations",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

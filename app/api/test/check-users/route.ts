@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking users:", error);
-    return NextResponse.json({ success: false, error: "Failed to check users" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to check users" },
+      { status: 500 },
+    );
   }
 }

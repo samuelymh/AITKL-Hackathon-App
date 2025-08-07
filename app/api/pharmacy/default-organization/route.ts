@@ -66,16 +66,16 @@ export async function GET(request: NextRequest) {
           verified: pharmacy.verification.isVerified,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error getting default pharmacy organization:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Failed to get default pharmacy organization",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

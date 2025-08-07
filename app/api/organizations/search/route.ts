@@ -27,11 +27,19 @@ export async function GET(request: NextRequest) {
           error: "Invalid search parameters",
           details: validation.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { query, type, city, state, verified, limit = "20", page = "1" } = validation.data;
+    const {
+      query,
+      type,
+      city,
+      state,
+      verified,
+      limit = "20",
+      page = "1",
+    } = validation.data;
 
     // Calculate pagination
     const limitNum = Math.min(parseInt(limit), 50); // Max 50 results
@@ -55,7 +63,7 @@ export async function GET(request: NextRequest) {
       query,
       type,
       Object.keys(location).length > 0 ? location : undefined,
-      options
+      options,
     );
 
     // Get total count using service (eliminates code duplication)
@@ -63,7 +71,7 @@ export async function GET(request: NextRequest) {
       query,
       type,
       Object.keys(location).length > 0 ? location : undefined,
-      verified === "true"
+      verified === "true",
     );
 
     // Calculate pagination metadata
@@ -92,7 +100,7 @@ export async function GET(request: NextRequest) {
         error: "Failed to search organizations",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

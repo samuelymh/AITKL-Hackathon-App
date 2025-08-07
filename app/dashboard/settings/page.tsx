@@ -7,7 +7,13 @@ import { PatientOnly } from "@/components/auth/PermissionGuard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -18,7 +24,11 @@ export default function SettingsPage() {
         {/* Header with back navigation */}
         <div className="flex items-center gap-4">
           <Link href="/dashboard">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
               <ArrowLeft className="h-4 w-4" />
               Back to Dashboard
             </Button>
@@ -28,7 +38,9 @@ export default function SettingsPage() {
               <Settings className="h-8 w-8" />
               Settings
             </h1>
-            <p className="mt-2 text-gray-600">Manage your account preferences and privacy settings</p>
+            <p className="mt-2 text-gray-600">
+              Manage your account preferences and privacy settings
+            </p>
           </div>
         </div>
 
@@ -39,31 +51,45 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Settings Categories</CardTitle>
-                <CardDescription>Configure your account and privacy preferences</CardDescription>
+                <CardDescription>
+                  Configure your account and privacy preferences
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <nav className="space-y-2">
                   <PatientOnly>
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h3 className="font-medium text-blue-900">Access Control</h3>
-                      <p className="text-sm text-blue-700 mt-1">Manage who can access your medical records</p>
+                      <h3 className="font-medium text-blue-900">
+                        Access Control
+                      </h3>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Manage who can access your medical records
+                      </p>
                     </div>
                   </PatientOnly>
 
                   {/* Future settings categories can be added here */}
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-60">
-                    <h3 className="font-medium text-gray-600">Profile Settings</h3>
-                    <p className="text-sm text-gray-500 mt-1">Update your personal information (Coming Soon)</p>
+                    <h3 className="font-medium text-gray-600">
+                      Profile Settings
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Update your personal information (Coming Soon)
+                    </p>
                   </div>
 
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-60">
                     <h3 className="font-medium text-gray-600">Notifications</h3>
-                    <p className="text-sm text-gray-500 mt-1">Configure email and SMS preferences (Coming Soon)</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Configure email and SMS preferences (Coming Soon)
+                    </p>
                   </div>
 
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-60">
                     <h3 className="font-medium text-gray-600">Security</h3>
-                    <p className="text-sm text-gray-500 mt-1">Password and authentication settings (Coming Soon)</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Password and authentication settings (Coming Soon)
+                    </p>
                   </div>
                 </nav>
               </CardContent>
@@ -73,7 +99,12 @@ export default function SettingsPage() {
           {/* Main Settings Content */}
           <div className="lg:col-span-2">
             <PatientOnly>
-              {user && <AccessControl userId={user.digitalIdentifier || user.id} className="w-full" />}
+              {user && (
+                <AccessControl
+                  userId={user.digitalIdentifier || user.id}
+                  className="w-full"
+                />
+              )}
             </PatientOnly>
           </div>
         </div>

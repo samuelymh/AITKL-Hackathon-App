@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Building, Users, Shield, Settings, Menu, LogOut, ChevronLeft, User } from "lucide-react";
+import {
+  Home,
+  Building,
+  Users,
+  Shield,
+  Settings,
+  Menu,
+  LogOut,
+  ChevronLeft,
+  User,
+} from "lucide-react";
 
 interface NavItem {
   title: string;
@@ -67,9 +77,13 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
   };
 
   const NavContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <div className={`flex ${isMobile ? "flex-col h-full" : "items-center justify-between w-full"}`}>
+    <div
+      className={`flex ${isMobile ? "flex-col h-full" : "items-center justify-between w-full"}`}
+    >
       {/* Logo and User Info */}
-      <div className={`flex ${isMobile ? "flex-col space-y-4" : "items-center space-x-6"}`}>
+      <div
+        className={`flex ${isMobile ? "flex-col space-y-4" : "items-center space-x-6"}`}
+      >
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">H</span>
@@ -78,7 +92,9 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
         </div>
 
         {user && (
-          <div className={`flex items-center space-x-3 ${isMobile ? "p-4 bg-gray-50 rounded-lg" : ""}`}>
+          <div
+            className={`flex items-center space-x-3 ${isMobile ? "p-4 bg-gray-50 rounded-lg" : ""}`}
+          >
             <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
               <User className="h-4 w-4 text-gray-600" />
             </div>
@@ -101,11 +117,16 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
       <nav className={`${isMobile ? "flex-1 py-6" : "flex space-x-1"}`}>
         <div className={`${isMobile ? "space-y-2" : "flex space-x-1"}`}>
           {adminNavItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
 
             return (
-              <Link key={item.href} href={item.href} onClick={() => isMobile && setIsOpen(false)}>
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => isMobile && setIsOpen(false)}
+              >
                 <div
                   className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive
@@ -121,7 +142,11 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
                     </Badge>
                   )}
                 </div>
-                {isMobile && item.description && <p className="text-xs text-gray-500 ml-7 mb-2">{item.description}</p>}
+                {isMobile && item.description && (
+                  <p className="text-xs text-gray-500 ml-7 mb-2">
+                    {item.description}
+                  </p>
+                )}
               </Link>
             );
           })}
@@ -129,8 +154,15 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
       </nav>
 
       {/* Actions */}
-      <div className={`flex ${isMobile ? "flex-col space-y-2 pt-6 border-t" : "items-center space-x-2"}`}>
-        <Button variant="outline" size="sm" onClick={handleLogout} className={isMobile ? "w-full justify-start" : ""}>
+      <div
+        className={`flex ${isMobile ? "flex-col space-y-2 pt-6 border-t" : "items-center space-x-2"}`}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLogout}
+          className={isMobile ? "w-full justify-start" : ""}
+        >
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
         </Button>
@@ -141,7 +173,9 @@ export function AdminNavBar({ className }: AdminNavBarProps) {
   return (
     <>
       {/* Desktop Navigation */}
-      <div className={`hidden md:block bg-white border-b border-gray-200 ${className}`}>
+      <div
+        className={`hidden md:block bg-white border-b border-gray-200 ${className}`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16">
             <NavContent />
@@ -187,7 +221,12 @@ export function AdminBreadcrumb({ items }: AdminBreadcrumbProps) {
 
   return (
     <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-      <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-1 h-auto">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.back()}
+        className="p-1 h-auto"
+      >
         <ChevronLeft className="h-4 w-4" />
       </Button>
       {items.map((item, index) => (

@@ -5,7 +5,10 @@
 
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
-import { NotificationHelpers, NotificationQueueProcessor } from "./notification-queue-processor";
+import {
+  NotificationHelpers,
+  NotificationQueueProcessor,
+} from "./notification-queue-processor";
 
 export interface NotificationPayload {
   title: string;
@@ -24,7 +27,10 @@ export class PushNotificationService {
   /**
    * Send authorization request notification to patient (now uses queue)
    */
-  static async sendAuthorizationRequest(userId: string, grantId: string): Promise<boolean> {
+  static async sendAuthorizationRequest(
+    userId: string,
+    grantId: string,
+  ): Promise<boolean> {
     try {
       const user = await User.findById(userId);
       const grant = await AuthorizationGrant.findById(grantId)
@@ -34,7 +40,8 @@ export class PushNotificationService {
         })
         .populate({
           path: "requestingPractitionerId",
-          select: "userId professionalInfo.specialty professionalInfo.practitionerType",
+          select:
+            "userId professionalInfo.specialty professionalInfo.practitionerType",
           populate: {
             path: "userId",
             select: "personalInfo.firstName personalInfo.lastName",
@@ -51,7 +58,9 @@ export class PushNotificationService {
 
       // Extract practitioner name with fallbacks
       const practitionerLastName =
-        practitioner?.userId?.personalInfo?.lastName || practitioner?.personalInfo?.lastName || "Unknown";
+        practitioner?.userId?.personalInfo?.lastName ||
+        practitioner?.personalInfo?.lastName ||
+        "Unknown";
 
       const isUrgent = grant.grantDetails.timeWindowHours <= 2;
 
@@ -61,13 +70,16 @@ export class PushNotificationService {
         grantId,
         organization.organizationInfo.name,
         practitionerLastName,
-        isUrgent
+        isUrgent,
       );
 
       console.log(`🔔 Authorization request notification enqueued: ${jobId}`);
       return true;
     } catch (error) {
-      console.error("Failed to enqueue authorization request notification:", error);
+      console.error(
+        "Failed to enqueue authorization request notification:",
+        error,
+      );
       return false;
     }
   }
@@ -78,11 +90,15 @@ export class PushNotificationService {
   static async sendAuthorizationStatusUpdate(
     userId: string,
     grantId: string,
-    status: "approved" | "denied" | "revoked" | "expired"
+    status: "approved" | "denied" | "revoked" | "expired",
   ): Promise<boolean> {
     try {
       // Enqueue the status update notification
-      const jobId = await NotificationHelpers.enqueueStatusUpdate(userId, grantId, status);
+      const jobId = await NotificationHelpers.enqueueStatusUpdate(
+        userId,
+        grantId,
+        status,
+      );
 
       console.log(`🔔 Status update notification enqueued: ${jobId}`);
       return true;
@@ -98,7 +114,7 @@ export class PushNotificationService {
   static async registerDevice(
     userId: string,
     deviceToken: string,
-    platform: "web" | "ios" | "android"
+    platform: "web" | "ios" | "android",
   ): Promise<boolean> {
     try {
       // TODO: Store device registration in database
@@ -107,7 +123,11 @@ export class PushNotificationService {
       // 2. Storing it in a UserDevice model
       // 3. Managing token refresh and cleanup
 
-      console.log("📱 Device registration:", { userId, platform, tokenLength: deviceToken.length });
+      console.log("📱 Device registration:", {
+        userId,
+        platform,
+        tokenLength: deviceToken.length,
+      });
       return true;
     } catch (error) {
       console.error("Failed to register device:", error);
@@ -118,10 +138,16 @@ export class PushNotificationService {
   /**
    * Unregister device from push notifications
    */
-  static async unregisterDevice(userId: string, deviceToken: string): Promise<boolean> {
+  static async unregisterDevice(
+    userId: string,
+    deviceToken: string,
+  ): Promise<boolean> {
     try {
       // TODO: Remove device registration from database
-      console.log("📱 Device unregistration:", { userId, tokenLength: deviceToken.length });
+      console.log("📱 Device unregistration:", {
+        userId,
+        tokenLength: deviceToken.length,
+      });
       return true;
     } catch (error) {
       console.error("Failed to unregister device:", error);

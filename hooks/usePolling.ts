@@ -17,7 +17,7 @@ export interface PollingOptions {
  */
 export function usePolling<T>(
   fetchData: () => Promise<T>,
-  options: PollingOptions = {}
+  options: PollingOptions = {},
 ): [T | null, boolean, Error | null, () => void] {
   const { enabled = true, onError } = options; // Removed interval as it's no longer used
 
@@ -39,7 +39,8 @@ export function usePolling<T>(
         setData(result);
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error("Unknown error occurred");
+      const error =
+        err instanceof Error ? err : new Error("Unknown error occurred");
 
       if (mountedRef.current) {
         setError(error);
@@ -98,7 +99,9 @@ export function usePolling<T>(
  */
 export function useNotificationPolling(
   token: string | null,
-  options: Omit<PollingOptions, "enabled" | "interval"> & { limit?: number } = {}
+  options: Omit<PollingOptions, "enabled" | "interval"> & {
+    limit?: number;
+  } = {},
 ) {
   const { limit = 20, ...pollingOptions } = options;
 
@@ -107,7 +110,9 @@ export function useNotificationPolling(
       throw new Error("No authentication token available");
     }
 
-    console.log("🔍 Fetching notifications - this should only happen on mount/manual refresh");
+    console.log(
+      "🔍 Fetching notifications - this should only happen on mount/manual refresh",
+    );
 
     const response = await fetch(`/api/notifications?limit=${limit}`, {
       headers: {
@@ -142,7 +147,9 @@ export function useNotificationPolling(
 export function usePractitionerNotificationPolling(
   token: string | null,
   organizationId: string | null,
-  options: Omit<PollingOptions, "enabled" | "interval"> & { limit?: number } = {}
+  options: Omit<PollingOptions, "enabled" | "interval"> & {
+    limit?: number;
+  } = {},
 ) {
   const { limit = 20, ...pollingOptions } = options;
 
@@ -162,12 +169,16 @@ export function usePractitionerNotificationPolling(
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch practitioner notifications: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch practitioner notifications: ${response.statusText}`,
+      );
     }
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error(result.error || "Failed to fetch practitioner notifications");
+      throw new Error(
+        result.error || "Failed to fetch practitioner notifications",
+      );
     }
 
     return result.data;

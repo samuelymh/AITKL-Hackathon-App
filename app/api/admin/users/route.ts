@@ -7,7 +7,10 @@ import { logger } from "@/lib/logger";
 
 const createAdminSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128),
   firstName: z.string().min(1, "First name is required").max(100),
   lastName: z.string().min(1, "Last name is required").max(100),
   phone: z.string().optional(),
@@ -31,12 +34,16 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
 
     const validatedData = createAdminSchema.parse(sanitizedBody);
 
-    logger.info(`Admin ${authContext.userId} attempting to create new admin user for ${validatedData.email}`);
+    logger.info(
+      `Admin ${authContext.userId} attempting to create new admin user for ${validatedData.email}`,
+    );
 
     const result = await AdminCreationService.createAdmin(validatedData);
 
     if (result.success) {
-      logger.info(`New admin user created: ${result.admin.id} by ${authContext.userId}`);
+      logger.info(
+        `New admin user created: ${result.admin.id} by ${authContext.userId}`,
+      );
 
       return NextResponse.json({
         success: true,
@@ -56,7 +63,7 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
           error: "Failed to create admin user",
           message: "Unknown error",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   } catch (error) {
@@ -69,14 +76,17 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
           error: "Invalid admin data",
           details: error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (error instanceof Error) {
       // Handle specific business logic errors
       if (error.message.includes("already exists")) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 409 },
+        );
       }
     }
 
@@ -86,7 +96,7 @@ async function createAdminHandler(request: NextRequest, authContext: any) {
         error: "Failed to create admin user",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -116,7 +126,7 @@ async function listAdminsHandler(request: NextRequest, authContext: any) {
         error: "Failed to retrieve admin users",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -131,26 +141,42 @@ async function deactivateAdminHandler(request: NextRequest, authContext: any) {
     const adminId = url.pathname.split("/").pop();
 
     if (!adminId) {
-      return NextResponse.json({ success: false, error: "Admin ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Admin ID is required" },
+        { status: 400 },
+      );
     }
 
     // Sanitize admin ID
     const sanitizedAdminId = InputSanitizer.sanitizeObjectId(adminId);
     if (!sanitizedAdminId) {
-      return NextResponse.json({ success: false, error: "Invalid admin ID format" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Invalid admin ID format" },
+        { status: 400 },
+      );
     }
 
     // Prevent self-deactivation
     if (sanitizedAdminId === authContext.userId) {
-      return NextResponse.json({ success: false, error: "Cannot deactivate your own admin account" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Cannot deactivate your own admin account" },
+        { status: 400 },
+      );
     }
 
-    logger.info(`Admin ${authContext.userId} attempting to deactivate admin ${sanitizedAdminId}`);
+    logger.info(
+      `Admin ${authContext.userId} attempting to deactivate admin ${sanitizedAdminId}`,
+    );
 
-    const result = await AdminCreationService.deactivateAdmin(sanitizedAdminId, authContext.userId);
+    const result = await AdminCreationService.deactivateAdmin(
+      sanitizedAdminId,
+      authContext.userId,
+    );
 
     if (result.success) {
-      logger.info(`Admin user ${sanitizedAdminId} deactivated by ${authContext.userId}`);
+      logger.info(
+        `Admin user ${sanitizedAdminId} deactivated by ${authContext.userId}`,
+      );
 
       return NextResponse.json({
         success: true,
@@ -163,14 +189,17 @@ async function deactivateAdminHandler(request: NextRequest, authContext: any) {
           error: "Failed to deactivate admin user",
           message: "Unknown error",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   } catch (error) {
     logger.error("Admin deactivation error:", error);
 
     if (error instanceof Error && error.message.includes("not found")) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(
@@ -179,7 +208,7 @@ async function deactivateAdminHandler(request: NextRequest, authContext: any) {
         error: "Failed to deactivate admin user",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -69,7 +69,10 @@ export async function getPractitionerWithUserInfo(userId: string) {
  * @param limit - Optional limit for results
  * @returns Array of practitioners
  */
-export async function getPractitionersByType(practitionerType: string, limit?: number) {
+export async function getPractitionersByType(
+  practitionerType: string,
+  limit?: number,
+) {
   await connectToDatabase();
 
   try {

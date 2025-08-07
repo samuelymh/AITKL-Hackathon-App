@@ -14,28 +14,40 @@ async function createIndexes() {
     console.log("Creating indexes for Organization collection...");
 
     // Index for organization search by name
-    await Organization.collection.createIndex({ "organizationInfo.name": "text" }, { name: "organization_name_text" });
+    await Organization.collection.createIndex(
+      { "organizationInfo.name": "text" },
+      { name: "organization_name_text" },
+    );
 
     // Index for organization search by registration number
     await Organization.collection.createIndex(
       { "organizationInfo.registrationNumber": 1 },
-      { name: "organization_registration_number", sparse: true }
+      { name: "organization_registration_number", sparse: true },
     );
 
     // Index for location-based searches
     await Organization.collection.createIndex(
       { "address.city": 1, "address.state": 1 },
-      { name: "organization_location" }
+      { name: "organization_location" },
     );
 
     // Index for organization type filtering
-    await Organization.collection.createIndex({ "organizationInfo.type": 1 }, { name: "organization_type" });
+    await Organization.collection.createIndex(
+      { "organizationInfo.type": 1 },
+      { name: "organization_type" },
+    );
 
     // Index for verification status
-    await Organization.collection.createIndex({ "verification.isVerified": 1 }, { name: "organization_verification" });
+    await Organization.collection.createIndex(
+      { "verification.isVerified": 1 },
+      { name: "organization_verification" },
+    );
 
     // Index for audit fields (soft delete)
-    await Organization.collection.createIndex({ auditDeletedDateTime: 1 }, { name: "organization_audit_deleted" });
+    await Organization.collection.createIndex(
+      { auditDeletedDateTime: 1 },
+      { name: "organization_audit_deleted" },
+    );
 
     // Compound index for common search queries
     await Organization.collection.createIndex(
@@ -45,13 +57,13 @@ async function createIndexes() {
         "verification.isVerified": 1,
         auditDeletedDateTime: 1,
       },
-      { name: "organization_search_compound" }
+      { name: "organization_search_compound" },
     );
 
     // Index for geospatial queries (if coordinates are used)
     await Organization.collection.createIndex(
       { "address.coordinates": "2dsphere" },
-      { name: "organization_geospatial", sparse: true }
+      { name: "organization_geospatial", sparse: true },
     );
 
     console.log("✅ All indexes created successfully!");
