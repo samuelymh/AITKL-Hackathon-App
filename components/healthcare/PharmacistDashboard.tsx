@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,10 +23,11 @@ import {
   Eye,
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
-import PrescriptionQueue, {
-  createPharmacistActions,
-  type PrescriptionRequest,
-} from "@/components/healthcare/PrescriptionQueue";
+import { type PrescriptionRequest } from "@/components/healthcare/PrescriptionQueue";
+import AuthorizationQueue, {
+  createPharmacistAuthActions,
+  type AuthorizationGrant,
+} from "@/components/healthcare/AuthorizationQueue";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 
@@ -90,15 +85,15 @@ export function PharmacistDashboard() {
     prescriptionsThisMonth: 0,
     mostCommonMedications: [],
   });
-  const [pharmacyOrg, setPharmacyOrg] = useState<PharmacyOrganization | null>(
-    null,
-  );
+  const [pharmacyOrg, setPharmacyOrg] = useState<PharmacyOrganization | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [prescriptionQueue, setPrescriptionQueue] = useState<
-    PrescriptionRequest[]
-  >([]);
+  const [prescriptionQueue, setPrescriptionQueue] = useState<PrescriptionRequest[]>([]);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(true);
+
+  // Authorization Queue State
+  const [authorizationQueue, setAuthorizationQueue] = useState<AuthorizationGrant[]>([]);
+  const [loadingAuthorizations, setLoadingAuthorizations] = useState(true);
 
   // Remove mock data - will fetch real data from API
 
@@ -187,10 +182,7 @@ export function PharmacistDashboard() {
           }
         } else {
           const errorData = await response.json();
-          console.error(
-            "Failed to fetch pharmacist organization:",
-            errorData.error,
-          );
+          console.error("Failed to fetch pharmacist organization:", errorData.error);
           setPharmacyOrg(null);
         }
       } catch (error) {
@@ -238,14 +230,11 @@ export function PharmacistDashboard() {
 
     const fetchPrescriptionQueue = async () => {
       try {
-        const response = await fetch(
-          `/api/pharmacist/prescriptions?status=pending&limit=20`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const response = await fetch(`/api/pharmacist/prescriptions?status=pending&limit=20`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
 
         if (response.ok) {
           const result = await response.json();
@@ -253,10 +242,7 @@ export function PharmacistDashboard() {
             setPrescriptionQueue(result.data);
           }
         } else {
-          console.error(
-            "Failed to fetch prescription queue:",
-            response.statusText,
-          );
+          console.error("Failed to fetch prescription queue:", response.statusText);
         }
       } catch (error) {
         console.error("Error fetching prescription queue:", error);
@@ -270,10 +256,40 @@ export function PharmacistDashboard() {
     // No automatic polling - data refreshes only on page reload or manual action
   }, [token]);
 
-  const handlePrescriptionAction = async (
-    prescriptionId: string,
-    action: "dispense" | "cancel",
-  ) => {
+  // Fetch authorization grants
+  useEffect(() => {
+    if (!token) {
+      setLoadingAuthorizations(false);
+      return;
+    }
+
+    const fetchAuthorizationQueue = async () => {
+      try {
+        const response = await fetch(`/api/pharmacist/authorizations?status=ACTIVE&limit=20`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setAuthorizationQueue(result.data);
+          }
+        } else {
+          console.error("Failed to fetch authorization queue:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching authorization queue:", error);
+      } finally {
+        setLoadingAuthorizations(false);
+      }
+    };
+
+    fetchAuthorizationQueue();
+  }, [token]);
+
+  const handlePrescriptionAction = async (prescriptionId: string, action: "dispense" | "cancel") => {
     if (!token) return;
 
     try {
@@ -281,20 +297,15 @@ export function PharmacistDashboard() {
       // In a real implementation, this would call an API to update prescription status
       setPrescriptionQueue((prev) =>
         prev.map((p) =>
-          p.id === prescriptionId
-            ? { ...p, status: action === "dispense" ? "FILLED" : "CANCELLED" }
-            : p,
-        ),
+          p.id === prescriptionId ? { ...p, status: action === "dispense" ? "FILLED" : "CANCELLED" } : p
+        )
       );
 
       // Update stats
       setStats((prev) => ({
         ...prev,
         pendingVerifications: prev.pendingVerifications - 1,
-        prescriptionsToday:
-          action === "dispense"
-            ? prev.prescriptionsToday + 1
-            : prev.prescriptionsToday,
+        prescriptionsToday: action === "dispense" ? prev.prescriptionsToday + 1 : prev.prescriptionsToday,
       }));
 
       console.log(`Prescription ${action}d successfully`);
@@ -307,6 +318,28 @@ export function PharmacistDashboard() {
     console.log("Viewing patient record for:", patientId);
     // This would typically open a modal or navigate to a patient record view
     // For now, we'll just log it
+  };
+
+  // Authorization Queue Handlers
+  const handleViewPatientRecordFromAuth = (patientId: string, grantId: string) => {
+    console.log("Viewing patient record from authorization:", { patientId, grantId });
+    // Navigate to patient record view with the authorization context
+    // This ensures the access is properly tracked and authorized
+    window.open(`/pharmacist/patient/${patientId}?grantId=${grantId}`, "_blank");
+  };
+
+  const handleViewMedications = (grantId: string) => {
+    console.log("Viewing medications for grant:", grantId);
+    // Navigate to medication view for this specific authorization grant
+    const grant = authorizationQueue.find((g) => g.id === grantId);
+    if (grant) {
+      window.open(`/pharmacist/medications/${grant.patient.digitalIdentifier}?grantId=${grantId}`, "_blank");
+    }
+  };
+
+  const handleRequestAccess = (grantId: string) => {
+    console.log("Requesting additional access for grant:", grantId);
+    // Handle requesting additional access permissions
   };
 
   const getSeverityColor = (severity: string) => {
@@ -354,12 +387,8 @@ export function PharmacistDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Prescriptions Today
-                </p>
-                <p className="text-3xl font-bold text-green-600">
-                  {loadingStats ? "..." : stats.prescriptionsToday}
-                </p>
+                <p className="text-sm font-medium text-gray-600">Prescriptions Today</p>
+                <p className="text-3xl font-bold text-green-600">{loadingStats ? "..." : stats.prescriptionsToday}</p>
               </div>
               <Pill className="w-8 h-8 text-green-600" />
             </div>
@@ -370,9 +399,7 @@ export function PharmacistDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Pending Verifications
-                </p>
+                <p className="text-sm font-medium text-gray-600">Pending Verifications</p>
                 <p className="text-3xl font-bold text-orange-600">
                   {loadingStats ? "..." : stats.pendingVerifications}
                 </p>
@@ -387,9 +414,7 @@ export function PharmacistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">This Week</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {loadingStats ? "..." : stats.prescriptionsThisWeek}
-                </p>
+                <p className="text-3xl font-bold text-blue-600">{loadingStats ? "..." : stats.prescriptionsThisWeek}</p>
               </div>
               <MessageSquare className="w-8 h-8 text-blue-600" />
             </div>
@@ -412,16 +437,9 @@ export function PharmacistDashboard() {
       </div>
 
       {/* Main Dashboard Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger
-            value="prescriptions"
-            className="flex items-center gap-2"
-          >
+          <TabsTrigger value="prescriptions" className="flex items-center gap-2">
             <QrCode className="w-4 h-4" />
             Prescriptions
           </TabsTrigger>
@@ -429,10 +447,7 @@ export function PharmacistDashboard() {
             <Package className="w-4 h-4" />
             Inventory
           </TabsTrigger>
-          <TabsTrigger
-            value="consultations"
-            className="flex items-center gap-2"
-          >
+          <TabsTrigger value="consultations" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />
             Consultations
           </TabsTrigger>
@@ -456,28 +471,21 @@ export function PharmacistDashboard() {
                   <QrCode className="w-5 h-5" />
                   Prescription Scanner
                 </CardTitle>
-                <CardDescription>
-                  Scan prescription QR codes to verify and process medications
-                </CardDescription>
+                <CardDescription>Scan prescription QR codes to verify and process medications</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingOrg && (
                   <div className="flex items-center justify-center p-8">
-                    <div className="text-sm text-muted-foreground">
-                      Loading scanner...
-                    </div>
+                    <div className="text-sm text-muted-foreground">Loading scanner...</div>
                   </div>
                 )}
                 {!loadingOrg && !pharmacyOrg && (
                   <div className="flex flex-col items-center justify-center p-8 text-center space-y-3">
                     <AlertTriangle className="w-8 h-8 text-orange-500" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        No pharmacy organization found
-                      </p>
+                      <p className="text-sm font-medium text-gray-900">No pharmacy organization found</p>
                       <p className="text-xs text-gray-600 mt-1">
-                        Please contact your administrator to add you to a
-                        pharmacy organization.
+                        Please contact your administrator to add you to a pharmacy organization.
                       </p>
                     </div>
                   </div>
@@ -490,13 +498,10 @@ export function PharmacistDashboard() {
                         <div className="flex items-center gap-2 text-yellow-800">
                           <AlertTriangle className="w-4 h-4" />
                           <div className="text-sm">
-                            <p className="font-medium">
-                              Membership Pending Verification
-                            </p>
+                            <p className="font-medium">Membership Pending Verification</p>
                             <p className="text-xs mt-1">
-                              Your pharmacy membership is pending administrative
-                              approval. You can scan QR codes, but some features
-                              may be limited until verification is complete.
+                              Your pharmacy membership is pending administrative approval. You can scan QR codes, but
+                              some features may be limited until verification is complete.
                             </p>
                           </div>
                         </div>
@@ -531,20 +536,18 @@ export function PharmacistDashboard() {
               </CardContent>
             </Card>
 
-            {/* Prescription Queue */}
-            <PrescriptionQueue
-              prescriptions={prescriptionQueue}
-              loading={loadingPrescriptions}
-              emptyMessage="No pending prescriptions"
-              title="Prescription Queue"
-              description="Pending prescriptions requiring attention"
-              actions={createPharmacistActions({
-                onDispense: (prescriptionId: string) =>
-                  handlePrescriptionAction(prescriptionId, "dispense"),
-                onCancel: (prescriptionId: string) =>
-                  handlePrescriptionAction(prescriptionId, "cancel"),
+            {/* Authorization Queue - Shows approved patient access grants */}
+            <AuthorizationQueue
+              grants={authorizationQueue}
+              loading={loadingAuthorizations}
+              emptyMessage="No active patient authorizations"
+              title="Patient Access Authorizations"
+              description="Patients who have granted you access to their records"
+              actions={createPharmacistAuthActions({
+                onViewMedications: handleViewMedications,
+                onRequestAccess: handleRequestAccess,
               })}
-              onViewPatientRecord={handleViewPatientRecord}
+              onViewPatientRecord={handleViewPatientRecordFromAuth}
             />
           </div>
         </TabsContent>
@@ -569,14 +572,10 @@ export function PharmacistDashboard() {
                     <div>
                       <p className="font-medium">{alert.medicationName}</p>
                       <p className="text-sm text-gray-600">
-                        Current: {alert.currentStock} | Minimum:{" "}
-                        {alert.minimumThreshold}
+                        Current: {alert.currentStock} | Minimum: {alert.minimumThreshold}
                       </p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={getSeverityColor(alert.severity)}
-                    >
+                    <Badge variant="outline" className={getSeverityColor(alert.severity)}>
                       {alert.severity.replace("_", " ").toUpperCase()}
                     </Badge>
                   </div>
@@ -599,21 +598,14 @@ export function PharmacistDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {mockConsultations.map((consultation) => (
-                  <div
-                    key={consultation.id}
-                    className="flex items-center justify-between border rounded-lg p-3"
-                  >
+                  <div key={consultation.id} className="flex items-center justify-between border rounded-lg p-3">
                     <div>
                       <p className="font-medium">{consultation.patientName}</p>
                       <p className="text-sm text-gray-600">
-                        {consultation.time} •{" "}
-                        {consultation.type.replace("_", " ")}
+                        {consultation.time} • {consultation.type.replace("_", " ")}
                       </p>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="text-blue-600 border-blue-300"
-                    >
+                    <Badge variant="outline" className="text-blue-600 border-blue-300">
                       {consultation.status}
                     </Badge>
                   </div>
@@ -644,56 +636,35 @@ export function PharmacistDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h4 className="font-medium text-blue-900">This Week</h4>
-                      <p className="text-2xl font-bold text-blue-700">
-                        {stats.prescriptionsThisWeek}
-                      </p>
-                      <p className="text-sm text-blue-600">
-                        Prescriptions processed
-                      </p>
+                      <p className="text-2xl font-bold text-blue-700">{stats.prescriptionsThisWeek}</p>
+                      <p className="text-sm text-blue-600">Prescriptions processed</p>
                     </div>
                     <div className="bg-green-50 p-4 rounded-lg">
                       <h4 className="font-medium text-green-900">This Month</h4>
-                      <p className="text-2xl font-bold text-green-700">
-                        {stats.prescriptionsThisMonth}
-                      </p>
-                      <p className="text-sm text-green-600">
-                        Total prescriptions
-                      </p>
+                      <p className="text-2xl font-bold text-green-700">{stats.prescriptionsThisMonth}</p>
+                      <p className="text-sm text-green-600">Total prescriptions</p>
                     </div>
                     <div className="bg-purple-50 p-4 rounded-lg">
                       <h4 className="font-medium text-purple-900">Active</h4>
-                      <p className="text-2xl font-bold text-purple-700">
-                        {stats.pendingVerifications}
-                      </p>
-                      <p className="text-sm text-purple-600">
-                        Pending verifications
-                      </p>
+                      <p className="text-2xl font-bold text-purple-700">{stats.pendingVerifications}</p>
+                      <p className="text-sm text-purple-600">Pending verifications</p>
                     </div>
                   </div>
 
                   {/* Most Common Medications */}
                   {stats.mostCommonMedications.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-3">
-                        Most Prescribed Medications This Month
-                      </h4>
+                      <h4 className="font-medium mb-3">Most Prescribed Medications This Month</h4>
                       <div className="space-y-2">
                         {stats.mostCommonMedications.map((med, index) => (
-                          <div
-                            key={med.name}
-                            className="flex items-center justify-between bg-gray-50 p-3 rounded"
-                          >
+                          <div key={med.name} className="flex items-center justify-between bg-gray-50 p-3 rounded">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-sm font-medium text-blue-700">
-                                  {index + 1}
-                                </span>
+                                <span className="text-sm font-medium text-blue-700">{index + 1}</span>
                               </div>
                               <span className="font-medium">{med.name}</span>
                             </div>
-                            <Badge variant="secondary">
-                              {med.count} prescriptions
-                            </Badge>
+                            <Badge variant="secondary">{med.count} prescriptions</Badge>
                           </div>
                         ))}
                       </div>
@@ -708,12 +679,9 @@ export function PharmacistDashboard() {
                         <CheckCircle className="w-4 h-4 text-green-600" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">
-                          System ready for prescription processing
-                        </p>
+                        <p className="font-medium">System ready for prescription processing</p>
                         <p className="text-sm text-gray-600">
-                          Ready to serve patients •{" "}
-                          {new Date().toLocaleTimeString()}
+                          Ready to serve patients • {new Date().toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
@@ -732,23 +700,16 @@ export function PharmacistDashboard() {
                 <Settings className="w-5 h-5" />
                 Pharmacy Settings
               </CardTitle>
-              <CardDescription>
-                Configure your pharmacy dashboard preferences
-              </CardDescription>
+              <CardDescription>Configure your pharmacy dashboard preferences</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Drug Interaction Alerts</p>
-                    <p className="text-sm text-gray-600">
-                      Show warnings for potential drug interactions
-                    </p>
+                    <p className="text-sm text-gray-600">Show warnings for potential drug interactions</p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-300"
-                  >
+                  <Badge variant="outline" className="text-green-600 border-green-300">
                     Enabled
                   </Badge>
                 </div>
@@ -758,14 +719,9 @@ export function PharmacistDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Inventory Notifications</p>
-                    <p className="text-sm text-gray-600">
-                      Alert when medication stock is low
-                    </p>
+                    <p className="text-sm text-gray-600">Alert when medication stock is low</p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-300"
-                  >
+                  <Badge variant="outline" className="text-green-600 border-green-300">
                     Enabled
                   </Badge>
                 </div>
@@ -775,16 +731,10 @@ export function PharmacistDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Professional Profile</p>
-                    <p className="text-sm text-gray-600">
-                      Complete your pharmacist credentials
-                    </p>
+                    <p className="text-sm text-gray-600">Complete your pharmacist credentials</p>
                   </div>
                   <Link href="/dashboard/pharmacist/professional-profile">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       Manage Profile
                       <ArrowRight className="w-4 h-4" />
