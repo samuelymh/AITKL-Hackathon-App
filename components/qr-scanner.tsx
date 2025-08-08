@@ -1,23 +1,9 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import {
-  Camera,
-  StopCircle,
-  RotateCcw,
-  Scan,
-  CheckCircle,
-  XCircle,
-  Loader2,
-} from "lucide-react";
+import { Camera, StopCircle, RotateCcw, Scan, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -33,24 +19,24 @@ interface QRCodeData {
 }
 
 interface AuthorizationRequestData {
-  grantId: string;
-  status: string;
-  expiresAt: string;
-  patient: {
+  grantId?: string;
+  status?: string;
+  expiresAt?: string;
+  patient?: {
     name: string;
     digitalIdentifier: string;
   };
-  organization: {
+  organization?: {
     name: string;
     type: string;
   };
-  accessScope: {
+  accessScope?: {
     canViewMedicalHistory: boolean;
     canViewPrescriptions: boolean;
     canCreateEncounters: boolean;
     canViewAuditLogs: boolean;
   };
-  timeWindowHours: number;
+  timeWindowHours?: number;
 }
 
 interface QRScannerProps {
@@ -72,13 +58,10 @@ export function QRScanner({
 }: Readonly<QRScannerProps>) {
   const [scanState, setScanState] = useState<ScanState>("idle");
   const [scannedData, setScannedData] = useState<QRCodeData | null>(null);
-  const [authRequestData, setAuthRequestData] =
-    useState<AuthorizationRequestData | null>(null);
+  const [authRequestData, setAuthRequestData] = useState<AuthorizationRequestData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isCameraReady, setIsCameraReady] = useState(false);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">(
-    "environment",
-  );
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const scannerRef = useRef<any>(null);
 
@@ -101,13 +84,8 @@ export function QRScanner({
       const qrData = JSON.parse(data) as QRCodeData;
 
       // Validate QR code structure
-      if (
-        qrData.type !== "health_access_request" ||
-        !qrData.digitalIdentifier
-      ) {
-        throw new Error(
-          "Invalid QR code format. Please scan a valid patient QR code.",
-        );
+      if (qrData.type !== "health_access_request" || !qrData.digitalIdentifier) {
+        throw new Error("Invalid QR code format. Please scan a valid patient QR code.");
       }
 
       setScannedData(qrData);
@@ -139,9 +117,7 @@ export function QRScanner({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.error || "Failed to create authorization request",
-        );
+        throw new Error(result.error || "Failed to create authorization request");
       }
 
       if (result.success) {
@@ -153,8 +129,7 @@ export function QRScanner({
       }
     } catch (error) {
       console.error("QR Scan Error:", error);
-      const errorMsg =
-        error instanceof Error ? error.message : "Failed to process QR code";
+      const errorMsg = error instanceof Error ? error.message : "Failed to process QR code";
       setErrorMessage(errorMsg);
       setScanState("error");
       onError?.(errorMsg);
@@ -163,9 +138,7 @@ export function QRScanner({
 
   const handleError = (error: any) => {
     console.error("Camera Error:", error);
-    setErrorMessage(
-      "Camera access failed. Please check permissions and try again.",
-    );
+    setErrorMessage("Camera access failed. Please check permissions and try again.");
     setScanState("error");
   };
 
@@ -201,9 +174,7 @@ export function QRScanner({
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <Scan className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Ready to Scan</h3>
-            <p className="text-muted-foreground mb-6">
-              Scan the patient's QR code to request access authorization
-            </p>
+            <p className="text-muted-foreground mb-6">Scan the patient's QR code to request access authorization</p>
             <Button onClick={startScanning} size="lg" className="gap-2">
               <Camera className="h-4 w-4" />
               Start Camera
@@ -276,9 +247,7 @@ export function QRScanner({
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
             <h3 className="text-lg font-semibold mb-2">Processing QR Code</h3>
-            <p className="text-muted-foreground">
-              Creating authorization request...
-            </p>
+            <p className="text-muted-foreground">Creating authorization request...</p>
           </div>
         );
 
@@ -287,12 +256,8 @@ export function QRScanner({
           <div className="space-y-6">
             <div className="flex flex-col items-center justify-center p-6 text-center">
               <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-              <h3 className="text-lg font-semibold text-green-700 mb-2">
-                Authorization Request Created
-              </h3>
-              <p className="text-muted-foreground">
-                Notification sent to patient for approval
-              </p>
+              <h3 className="text-lg font-semibold text-green-700 mb-2">Authorization Request Created</h3>
+              <p className="text-muted-foreground">Notification sent to patient for approval</p>
             </div>
 
             {authRequestData && (
@@ -303,11 +268,9 @@ export function QRScanner({
                 <div>
                   <h4 className="font-semibold mb-2">Patient Information</h4>
                   <div className="bg-muted p-3 rounded-lg">
-                    <p className="font-medium">
-                      {authRequestData.patient.name}
-                    </p>
+                    <p className="font-medium">{authRequestData.patient?.name || "Unknown Patient"}</p>
                     <p className="text-sm text-muted-foreground">
-                      ID: {authRequestData.patient.digitalIdentifier}
+                      ID: {authRequestData.patient?.digitalIdentifier || "Unknown ID"}
                     </p>
                   </div>
                 </div>
@@ -318,24 +281,20 @@ export function QRScanner({
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Grant ID:</span>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">
-                        {authRequestData.grantId}
-                      </code>
+                      <code className="text-sm bg-muted px-2 py-1 rounded">{authRequestData.grantId || "Unknown"}</code>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Status:</span>
-                      <Badge variant="outline">{authRequestData.status}</Badge>
+                      <Badge variant="outline">{authRequestData.status || "Unknown"}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Duration:</span>
-                      <span className="text-sm">
-                        {authRequestData.timeWindowHours}h
-                      </span>
+                      <span className="text-sm">{authRequestData.timeWindowHours || "Unknown"}h</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Expires:</span>
                       <span className="text-sm">
-                        {new Date(authRequestData.expiresAt).toLocaleString()}
+                        {authRequestData.expiresAt ? new Date(authRequestData.expiresAt).toLocaleString() : "Unknown"}
                       </span>
                     </div>
                   </div>
@@ -345,8 +304,8 @@ export function QRScanner({
                 <div>
                   <h4 className="font-semibold mb-2">Requested Permissions</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(authRequestData.accessScope).map(
-                      ([key, value]) => (
+                    {authRequestData.accessScope && typeof authRequestData.accessScope === "object" ? (
+                      Object.entries(authRequestData.accessScope).map(([key, value]) => (
                         <div
                           key={key}
                           className={`text-xs p-2 rounded-lg border ${
@@ -360,7 +319,9 @@ export function QRScanner({
                             .replace(/([A-Z])/g, " $1")
                             .trim()}
                         </div>
-                      ),
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No permissions specified</div>
                     )}
                   </div>
                 </div>
@@ -377,9 +338,7 @@ export function QRScanner({
         return (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <XCircle className="h-16 w-16 text-red-500 mb-4" />
-            <h3 className="text-lg font-semibold text-red-700 mb-2">
-              Scan Failed
-            </h3>
+            <h3 className="text-lg font-semibold text-red-700 mb-2">Scan Failed</h3>
             <Alert className="mb-4">
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
@@ -407,9 +366,7 @@ export function QRScanner({
           <Scan className="h-5 w-5" />
           Patient QR Scanner
         </CardTitle>
-        <CardDescription>
-          Scan patient QR codes to create authorization requests
-        </CardDescription>
+        <CardDescription>Scan patient QR codes to create authorization requests</CardDescription>
       </CardHeader>
       <CardContent>{renderScannerContent()}</CardContent>
     </Card>
