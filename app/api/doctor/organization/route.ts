@@ -27,9 +27,10 @@ async function getDoctorOrganizationHandler(request: NextRequest, authContext: a
     const Organization = (await import("@/lib/models/Organization")).default;
 
     // Try both schema structures for compatibility
+    // Look for active or pending memberships (exclude only rejected/revoked)
     let organizationMember = await OrganizationMember.findOne({
       practitionerId: practitioner._id,
-      status: "active",
+      status: { $in: ["active", "pending"] },
     }).populate("organizationId");
 
     // If not found with new schema, try old schema
@@ -37,6 +38,13 @@ async function getDoctorOrganizationHandler(request: NextRequest, authContext: a
       organizationMember = await OrganizationMember.findOne({
         practitionerId: practitioner._id,
         "membership.isActive": true,
+      }).populate("organizationId");
+    }
+
+    // If still not found, try any membership (for backwards compatibility)
+    if (!organizationMember) {
+      organizationMember = await OrganizationMember.findOne({
+        practitionerId: practitioner._id,
       }).populate("organizationId");
     }
 
