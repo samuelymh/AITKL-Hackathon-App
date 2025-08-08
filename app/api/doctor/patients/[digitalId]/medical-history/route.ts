@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
 import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
+import { auditLogger } from "@/lib/services/audit-logger";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
 import Encounter from "@/lib/models/Encounter";
-import { AuditHelper } from "@/lib/models/SchemaUtils";
+import Organization from "@/lib/models/Organization";
+import Practitioner from "@/lib/models/Practitioner";
 
 /**
  * GET /api/doctor/patients/{digitalId}/medical-history
@@ -105,7 +107,7 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
       .limit(50); // Limit to last 50 encounters
 
     // Get current medications (from latest prescriptions)
-    const currentMedications = [];
+    const currentMedications: any[] = [];
     const recentEncounters = encounters.slice(0, 10); // Check last 10 encounters
 
     for (const encounter of recentEncounters) {
@@ -131,7 +133,7 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
     }
 
     // Get chronic conditions
-    const chronicConditions = [];
+    const chronicConditions: any[] = [];
     for (const encounter of encounters) {
       for (const diagnosis of encounter.diagnoses) {
         if (diagnosis.isChronic) {
@@ -155,11 +157,11 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
       date: encounter.encounter.encounterDate,
       type: encounter.encounter.encounterType,
       chiefComplaint: encounter.encounter.chiefComplaint,
-      organization: encounter.organizationId?.organizationInfo?.name || "Unknown",
-      attendingPhysician: encounter.attendingPractitionerId?.personalInfo
-        ? `${encounter.attendingPractitionerId.personalInfo.firstName} ${encounter.attendingPractitionerId.personalInfo.lastName}`
+      organization: (encounter.organizationId as any)?.organizationInfo?.name || "Unknown",
+      attendingPhysician: (encounter.attendingPractitionerId as any)?.personalInfo
+        ? `${(encounter.attendingPractitionerId as any).personalInfo.firstName} ${(encounter.attendingPractitionerId as any).personalInfo.lastName}`
         : "Unknown",
-      specialty: encounter.attendingPractitionerId?.professionalInfo?.specialty,
+      specialty: (encounter.attendingPractitionerId as any)?.professionalInfo?.specialty,
       diagnoses: encounter.diagnoses.map((d) => ({
         code: d.code,
         description: d.description,
@@ -190,19 +192,21 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
     };
 
     // Log access for audit trail
-    AuditHelper.logAccess({
-      userId: patient._id.toString(),
-      accessedBy: authContext.userId,
-      action: "VIEW_MEDICAL_HISTORY",
-      resource: "patient_medical_history",
-      authorizationGrantId: activeGrant._id.toString(),
-      organizationId: organizationMember.organizationId.toString(),
-      details: {
+    try {
+      await auditLogger.logSecurityEvent("DATA_ACCESS", request, authContext.userId, {
+        action: "VIEW_MEDICAL_HISTORY",
+        resource: "patient_medical_history",
+        patientId: patient._id.toString(),
         patientDigitalId: digitalId,
         encountersAccessed: encounters.length,
         practitionerId: practitioner._id.toString(),
-      },
-    });
+        authorizationGrantId: activeGrant._id.toString(),
+        organizationId: organizationMember.organizationId.toString(),
+      });
+    } catch (auditError) {
+      console.error("Failed to log audit event:", auditError);
+      // Don't fail the request if audit logging fails
+    }
 
     return NextResponse.json({
       success: true,
@@ -216,8 +220,8 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
           lastVisit: encounters.length > 0 ? encounters[0].encounter.encounterDate : null,
           activeGrant: {
             id: activeGrant._id,
-            expiresAt: activeGrant.grantDetails?.expiresAt || activeGrant.expiresAt,
-            accessScope: activeGrant.accessScope || activeGrant.permissions,
+            expiresAt: activeGrant.grantDetails?.expiresAt || (activeGrant as any).expiresAt,
+            accessScope: activeGrant.accessScope || (activeGrant as any).permissions,
           },
         },
       },
