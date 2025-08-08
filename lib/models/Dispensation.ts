@@ -37,6 +37,10 @@ const DispensationSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
+      daysSupply: {
+        type: Number,
+        required: true,
+      },
       lotNumber: String,
       expirationDate: Date,
       substitutions: [
