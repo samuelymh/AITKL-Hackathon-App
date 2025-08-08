@@ -65,60 +65,28 @@ async function getDispensationsHandler(request: NextRequest, authContext: any) {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Enrich with encounter and patient data
-    const enrichedDispensations = await Promise.all(
-      dispensations.map(async (dispensation) => {
-        try {
-          const encounter = await Encounter.findById(dispensation.prescriptionRef.encounterId)
-            .populate({
-              path: "userId",
-              select: "personalInfo digitalIdentifier",
-            })
-            .populate({
-              path: "attendingPractitionerId",
-              select: "personalInfo professionalInfo",
-            });
+    // Batch fetch all encounters to avoid N+1 query problem
+    const encounterIds = dispensations.map((d) => d.prescriptionRef.encounterId);
+    const encounters = await Encounter.find({ _id: { $in: encounterIds } })
+      .populate({
+        path: "userId",
+        select: "personalInfo digitalIdentifier",
+      })
+      .populate({
+        path: "attendingPractitionerId",
+        select: "personalInfo professionalInfo",
+      })
+      .exec();
 
-          if (!encounter) {
-            return {
-              ...dispensation.toObject(),
-              encounter: null,
-              patient: null,
-              prescription: null,
-            };
-          }
+    // Create a map for O(1) encounter lookup
+    const encounterMap = new Map(encounters.map((encounter) => [encounter._id.toString(), encounter]));
 
-          const prescription = encounter.prescriptions[dispensation.prescriptionRef.prescriptionIndex];
+    // Enrich dispensations with encounter data
+    const enrichedDispensations = dispensations.map((dispensation) => {
+      try {
+        const encounter = encounterMap.get(dispensation.prescriptionRef.encounterId.toString());
 
-          return {
-            ...dispensation.toObject(),
-            encounter: {
-              date: encounter.encounter.encounterDate,
-              type: encounter.encounter.encounterType,
-              chiefComplaint: encounter.encounter.chiefComplaint,
-            },
-            patient: {
-              name: encounter.userId?.personalInfo
-                ? `${encounter.userId.personalInfo.firstName} ${encounter.userId.personalInfo.lastName}`
-                : `Patient ${encounter.userId?.digitalIdentifier}`,
-              digitalIdentifier: encounter.userId?.digitalIdentifier,
-            },
-            prescription: {
-              medicationName: prescription?.medicationName,
-              dosage: prescription?.dosage,
-              frequency: prescription?.frequency,
-              status: prescription?.status,
-              issuedAt: prescription?.issuedAt,
-            },
-            prescribingDoctor: encounter.attendingPractitionerId?.personalInfo
-              ? {
-                  name: `${encounter.attendingPractitionerId.personalInfo.firstName} ${encounter.attendingPractitionerId.personalInfo.lastName}`,
-                  specialty: encounter.attendingPractitionerId.professionalInfo?.specialty,
-                }
-              : null,
-          };
-        } catch (error) {
-          console.error("Error enriching dispensation:", error);
+        if (!encounter) {
           return {
             ...dispensation.toObject(),
             encounter: null,
@@ -126,8 +94,46 @@ async function getDispensationsHandler(request: NextRequest, authContext: any) {
             prescription: null,
           };
         }
-      })
-    );
+
+        const prescription = encounter.prescriptions[dispensation.prescriptionRef.prescriptionIndex];
+
+        return {
+          ...dispensation.toObject(),
+          encounter: {
+            date: encounter.encounter.encounterDate,
+            type: encounter.encounter.encounterType,
+            chiefComplaint: encounter.encounter.chiefComplaint,
+          },
+          patient: {
+            name: encounter.userId?.personalInfo
+              ? `${encounter.userId.personalInfo.firstName} ${encounter.userId.personalInfo.lastName}`
+              : `Patient ${encounter.userId?.digitalIdentifier}`,
+            digitalIdentifier: encounter.userId?.digitalIdentifier,
+          },
+          prescription: {
+            medicationName: prescription?.medicationName,
+            dosage: prescription?.dosage,
+            frequency: prescription?.frequency,
+            status: prescription?.status,
+            issuedAt: prescription?.issuedAt,
+          },
+          prescribingDoctor: encounter.attendingPractitionerId?.personalInfo
+            ? {
+                name: `${encounter.attendingPractitionerId.personalInfo.firstName} ${encounter.attendingPractitionerId.personalInfo.lastName}`,
+                specialty: encounter.attendingPractitionerId.professionalInfo?.specialty,
+              }
+            : null,
+        };
+      } catch (error) {
+        console.error("Error enriching dispensation:", error);
+        return {
+          ...dispensation.toObject(),
+          encounter: null,
+          patient: null,
+          prescription: null,
+        };
+      }
+    });
 
     return NextResponse.json({
       success: true,

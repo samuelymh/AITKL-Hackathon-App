@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { QrCode, Download, Printer, Share2, CheckCircle, AlertTriangle, Copy, RefreshCw } from "lucide-react";
-import QRCode from "qrcode";
+import { QrCode, Download, Printer, Share2, CheckCircle, AlertTriangle, Copy, RefreshCw, Shield } from "lucide-react";
+import { QRCodeService, PrescriptionData } from "@/lib/services/qr-code-service";
 
 interface PrescriptionQRProps {
   prescriptionData: {
@@ -17,15 +16,19 @@ interface PrescriptionQRProps {
     frequency: string;
     patientName: string;
     patientDigitalId: string;
+    doctorId: string;
     doctorName: string;
+    doctorLicenseNumber?: string;
+    organizationId: string;
     organizationName: string;
     issuedAt: string;
+    expiresAt?: string;
   };
   onClose?: () => void;
   className?: string;
 }
 
-export function PrescriptionQRGenerator({ prescriptionData, onClose, className = "" }: PrescriptionQRProps) {
+export function PrescriptionQRGenerator({ prescriptionData, onClose, className = "" }: Readonly<PrescriptionQRProps>) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeData, setQrCodeData] = useState<string>("");
   const [generating, setGenerating] = useState(false);
@@ -41,11 +44,8 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
     setError(null);
 
     try {
-      // Create prescription QR data
-      const qrData = {
-        type: "prescription",
-        version: "1.0",
-        timestamp: new Date().toISOString(),
+      // Create secure prescription data
+      const prescriptionQRData: PrescriptionData = {
         encounterId: prescriptionData.encounterId,
         prescriptionIndex: prescriptionData.prescriptionIndex,
         medication: {
@@ -54,38 +54,32 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
           frequency: prescriptionData.frequency,
         },
         patient: {
-          name: prescriptionData.patientName,
           digitalId: prescriptionData.patientDigitalId,
         },
         prescriber: {
-          name: prescriptionData.doctorName,
-          organization: prescriptionData.organizationName,
+          id: prescriptionData.doctorId,
+          licenseNumber: prescriptionData.doctorLicenseNumber,
+        },
+        organization: {
+          id: prescriptionData.organizationId,
+          name: prescriptionData.organizationName,
         },
         issuedAt: prescriptionData.issuedAt,
-        // Add security hash or signature here in production
-        hash: btoa(
-          `${prescriptionData.encounterId}-${prescriptionData.prescriptionIndex}-${prescriptionData.issuedAt}`
-        ),
+        expiresAt: prescriptionData.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days default
       };
 
-      // Convert to base64 encoded string
-      const encodedData = btoa(JSON.stringify(qrData));
-      setQrCodeData(encodedData);
-
-      // Generate QR code image
-      const qrCodeDataURL = await QRCode.toDataURL(encodedData, {
+      // Generate secure QR code using the QRCodeService
+      const qrCodeDataURL = await QRCodeService.generatePrescriptionQR(prescriptionQRData, {
         width: 256,
         margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#FFFFFF",
-        },
       });
 
       setQrCodeUrl(qrCodeDataURL);
+      // Store encrypted data for potential copying (though not recommended for security)
+      setQrCodeData("secure-prescription-qr-data");
     } catch (err) {
       console.error("Error generating QR code:", err);
-      setError("Failed to generate QR code. Please try again.");
+      setError("Failed to generate secure QR code. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -105,7 +99,7 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
 
     const printWindow = window.open("", "_blank");
     if (printWindow) {
-      printWindow.document.write(`
+      const htmlContent = `
         <html>
           <head>
             <title>Prescription QR Code</title>
@@ -165,7 +159,11 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
             </div>
           </body>
         </html>
-      `);
+      `;
+
+      printWindow.document.open();
+      // eslint-disable-next-line deprecation/deprecation
+      printWindow.document.write(htmlContent);
       printWindow.document.close();
       printWindow.focus();
       printWindow.print();
@@ -174,7 +172,10 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
 
   const copyQRData = async () => {
     try {
-      await navigator.clipboard.writeText(qrCodeData);
+      // For security reasons, we don't copy the actual encrypted QR data
+      // Instead, provide a secure reference or instruction
+      const copyText = `Secure Prescription QR Code - ${prescriptionData.medicationName}\nGenerated: ${new Date().toLocaleString()}\nPresent this QR code to your pharmacy for verification.`;
+      await navigator.clipboard.writeText(copyText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -263,12 +264,14 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
 
         {/* QR Code Display */}
         <div className="text-center">
-          {generating ? (
+          {generating && (
             <div className="flex flex-col items-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
               <p className="text-gray-600">Generating QR code...</p>
             </div>
-          ) : qrCodeUrl ? (
+          )}
+
+          {!generating && qrCodeUrl && (
             <div className="space-y-4">
               <div className="inline-block p-4 bg-white border-2 border-gray-200 rounded-lg">
                 <img src={qrCodeUrl} alt="Prescription QR Code" className="w-64 h-64 mx-auto" />
@@ -279,7 +282,9 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
                 <p className="text-xs mt-1">Generated: {new Date().toLocaleString()}</p>
               </div>
             </div>
-          ) : (
+          )}
+
+          {!generating && !qrCodeUrl && (
             <div className="py-8 text-gray-500">
               <QrCode className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>QR code not available</p>
@@ -320,15 +325,21 @@ export function PrescriptionQRGenerator({ prescriptionData, onClose, className =
         )}
 
         {/* Security Info */}
-        <div className="bg-blue-50 p-3 rounded-lg">
+        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
           <div className="flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+            <Shield className="h-4 w-4 text-green-600 mt-0.5" />
             <div className="text-sm">
-              <p className="text-blue-800 font-medium">Secure Digital Prescription</p>
-              <p className="text-blue-600 mt-1">
-                This QR code contains encrypted prescription data that can only be verified by authorized pharmacies.
-                The code includes a security hash to prevent tampering.
+              <p className="text-green-800 font-medium">Digitally Signed Prescription</p>
+              <p className="text-green-600 mt-1">
+                This QR code contains a cryptographically signed prescription with tamper detection. Only authorized
+                pharmacies can verify and dispense this prescription. The digital signature ensures authenticity and
+                prevents forgery.
               </p>
+              <div className="mt-2 text-xs text-green-700">
+                <p>🔒 JWT + HMAC-SHA256 Digital Signature</p>
+                <p>⏰ Time-limited validity (30 days)</p>
+                <p>🏥 Organization verified</p>
+              </div>
             </div>
           </div>
         </div>
