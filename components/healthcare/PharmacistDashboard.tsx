@@ -5,11 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Pill,
-  Clock,
   QrCode,
   CheckCircle,
   AlertTriangle,
@@ -19,8 +17,6 @@ import {
   History,
   Settings,
   User,
-  XCircle,
-  Eye,
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import { type PrescriptionRequest } from "@/components/healthcare/PrescriptionQueue";
@@ -29,6 +25,7 @@ import AuthorizationQueue, {
   type AuthorizationGrant,
 } from "@/components/healthcare/AuthorizationQueue";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface PharmacistStats {
@@ -75,6 +72,7 @@ interface PharmacyOrganization {
 
 export function PharmacistDashboard() {
   const { user, token } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("prescriptions");
   const [stats, setStats] = useState<PharmacistStats>({
     prescriptionsToday: 0,
@@ -135,6 +133,84 @@ export function PharmacistDashboard() {
     },
   ];
 
+  // Fetch pharmacist's organization from membership
+  const fetchPharmacyOrg = async () => {
+    if (!token) return;
+
+    try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      // Add Authorization header if token is available
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch("/api/pharmacist/organization", {
+        method: "GET",
+        headers,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.organization) {
+          setPharmacyOrg({
+            id: data.organization.id,
+            name: data.organization.name,
+            type: data.organization.type,
+            registrationNumber: data.organization.registrationNumber || "",
+            verified: data.organization.isVerified || false,
+            status: data.organization.status,
+            isPending: data.organization.isPending || false,
+            isVerified: data.organization.isVerified || false,
+            department: data.organization.department,
+            position: data.organization.position,
+            role: data.organization.role,
+          });
+        } else {
+          console.error("No organization found for pharmacist");
+          setPharmacyOrg(null);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to fetch pharmacist organization:", errorData.error);
+        setPharmacyOrg(null);
+      }
+    } catch (error) {
+      console.error("Error fetching pharmacist organization:", error);
+      setPharmacyOrg(null);
+    } finally {
+      setLoadingOrg(false);
+    }
+  };
+
+  // Fetch pharmacy statistics
+  const fetchPharmacyStats = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch("/api/pharmacist/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setStats(result.data);
+        }
+      } else {
+        console.error("Failed to fetch pharmacy stats:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching pharmacy stats:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   useEffect(() => {
     // Only fetch if user is authenticated and we have a token
     if (!user || !token) {
@@ -143,83 +219,24 @@ export function PharmacistDashboard() {
       return;
     }
 
-    // Fetch pharmacist's organization from membership
-    const fetchPharmacyOrg = async () => {
-      try {
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-        };
-
-        // Add Authorization header if token is available
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        const response = await fetch("/api/pharmacist/organization", {
-          method: "GET",
-          headers,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.organization) {
-            setPharmacyOrg({
-              id: data.organization.id,
-              name: data.organization.name,
-              type: data.organization.type,
-              registrationNumber: data.organization.registrationNumber || "",
-              verified: data.organization.isVerified || false,
-              status: data.organization.status,
-              isPending: data.organization.isPending || false,
-              isVerified: data.organization.isVerified || false,
-              department: data.organization.department,
-              position: data.organization.position,
-              role: data.organization.role,
-            });
-          } else {
-            console.error("No organization found for pharmacist");
-            setPharmacyOrg(null);
-          }
-        } else {
-          const errorData = await response.json();
-          console.error("Failed to fetch pharmacist organization:", errorData.error);
-          setPharmacyOrg(null);
-        }
-      } catch (error) {
-        console.error("Error fetching pharmacist organization:", error);
-        setPharmacyOrg(null);
-      } finally {
-        setLoadingOrg(false);
-      }
-    };
-
-    // Fetch pharmacy statistics
-    const fetchPharmacyStats = async () => {
-      try {
-        const response = await fetch("/api/pharmacist/stats", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            setStats(result.data);
-          }
-        } else {
-          console.error("Failed to fetch pharmacy stats:", response.statusText);
-        }
-      } catch (error) {
-        console.error("Error fetching pharmacy stats:", error);
-      } finally {
-        setLoadingStats(false);
-      }
-    };
-
     fetchPharmacyOrg();
     fetchPharmacyStats();
   }, [user, token]);
+
+  // Listen for dispensation success events to refresh stats
+  useEffect(() => {
+    const handleDispensationSuccess = (event: CustomEvent) => {
+      console.log("Dispensation successful, refreshing stats:", event.detail);
+      // Refresh stats without showing loading state
+      fetchPharmacyStats();
+    };
+
+    window.addEventListener("pharmacist-dispensation-success", handleDispensationSuccess as EventListener);
+
+    return () => {
+      window.removeEventListener("pharmacist-dispensation-success", handleDispensationSuccess as EventListener);
+    };
+  }, [token]); // Depend on token so fetchPharmacyStats closure has the latest token
 
   // Fetch prescription queue (real prescription data for this pharmacist)
   useEffect(() => {
@@ -323,17 +340,14 @@ export function PharmacistDashboard() {
   // Authorization Queue Handlers
   const handleViewPatientRecordFromAuth = (patientId: string, grantId: string) => {
     console.log("Viewing patient record from authorization:", { patientId, grantId });
-    // Navigate to patient record view with the authorization context
-    // This ensures the access is properly tracked and authorized
-    window.open(`/pharmacist/patient/${patientId}?grantId=${grantId}`, "_blank");
+    router.push(`/pharmacist/patient/${patientId}/records?grantId=${grantId}`);
   };
 
   const handleViewMedications = (grantId: string) => {
     console.log("Viewing medications for grant:", grantId);
-    // Navigate to medication view for this specific authorization grant
     const grant = authorizationQueue.find((g) => g.id === grantId);
     if (grant) {
-      window.open(`/pharmacist/medications/${grant.patient.digitalIdentifier}?grantId=${grantId}`, "_blank");
+      router.push(`/pharmacist/patient/${grant.patient.digitalIdentifier}/medications?grantId=${grantId}`);
     }
   };
 
