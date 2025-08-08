@@ -227,4 +227,44 @@ export const createPharmacistAuthActions = (handlers: {
   },
 ];
 
+export const createDoctorAuthActions = (handlers: {
+  onViewMedicalHistory?: (grantId: string) => void;
+  onCreateEncounter?: (grantId: string) => void;
+  onViewAuditLogs?: (grantId: string) => void;
+  onWritePrescription?: (grantId: string) => void;
+}): AuthorizationAction[] => [
+  {
+    id: "view_medical_history",
+    label: "Medical History",
+    icon: <FileText className="w-4 h-4 mr-1" />,
+    variant: "outline",
+    onClick: handlers.onViewMedicalHistory || (() => {}),
+    showForStatus: ["ACTIVE"],
+  },
+  {
+    id: "create_encounter",
+    label: "New Encounter",
+    icon: <CheckCircle className="w-4 h-4 mr-1" />,
+    variant: "default",
+    onClick: handlers.onCreateEncounter || (() => {}),
+    showForStatus: ["ACTIVE"],
+  },
+  {
+    id: "write_prescription",
+    label: "Write Prescription",
+    icon: <FileText className="w-4 h-4 mr-1" />,
+    variant: "secondary",
+    onClick: handlers.onWritePrescription || (() => {}),
+    showForStatus: ["ACTIVE"],
+  },
+  {
+    id: "view_audit_logs",
+    label: "Audit Logs",
+    icon: <Eye className="w-4 h-4 mr-1" />,
+    variant: "outline",
+    onClick: handlers.onViewAuditLogs || (() => {}),
+    showForStatus: ["ACTIVE"],
+  },
+];
+
 export default AuthorizationQueue;
