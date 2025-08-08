@@ -99,7 +99,6 @@ async function getDoctorOrganizationHandler(request: NextRequest, authContext: a
       // Membership details
       status: membershipStatus,
       isPending,
-      isVerified,
       department: organizationMember.membershipDetails?.department || organizationMember.membership?.department,
       position: organizationMember.membershipDetails?.position || organizationMember.membership?.roleInOrg,
       role: organizationMember.membershipDetails?.role || practitioner.professionalInfo?.practitionerType || "doctor",
