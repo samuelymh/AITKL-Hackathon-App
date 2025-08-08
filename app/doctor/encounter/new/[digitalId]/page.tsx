@@ -299,7 +299,7 @@ export default function NewEncounterPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => router.back()}>
+            <Button variant="ghost" onClick={() => router.push("/dashboard")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -748,7 +748,7 @@ export default function NewEncounterPage() {
 
         {/* Save Button */}
         <div className="flex justify-end gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.push("/dashboard")}>
             Cancel
           </Button>
           <Button onClick={handleSaveEncounter} disabled={saving || success} className="min-w-32">
