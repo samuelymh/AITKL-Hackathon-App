@@ -1,35 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
-import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
+import { validatePharmacistAccess } from "@/lib/utils/auth-utils";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response-utils";
+import { PrescriptionStatus, DispensationStatus } from "@/lib/constants";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
-import User from "@/lib/models/User";
 import Encounter from "@/lib/models/Encounter";
-
-// Helper function to validate pharmacist authorization
-async function validatePharmacistAccess(authContext: any, digitalId: string) {
-  const pharmacist = await getPractitionerByUserId(authContext.userId);
-  if (!pharmacist) {
-    throw new Error("Pharmacist not found");
-  }
-
-  const OrganizationMember = (await import("@/lib/models/OrganizationMember")).default;
-  const organizationMember = await OrganizationMember.findOne({
-    practitionerId: pharmacist._id,
-    status: "active",
-  });
-
-  if (!organizationMember) {
-    throw new Error("No active organization membership found");
-  }
-
-  const patient = await User.findOne({ digitalIdentifier: digitalId });
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-
-  return { pharmacist, organizationMember, patient };
-}
 
 // Helper function to check authorization grant
 async function verifyAuthorizationGrant(patient: any, organizationId: any) {
@@ -82,9 +58,25 @@ async function getPatientName(patient: any): Promise<string> {
   }
 }
 
-// Helper function to transform prescriptions
+// Helper function to transform prescriptions - Fixed N+1 query issue
 async function transformPrescriptions(encounters: any[]) {
   const Dispensation = (await import("@/lib/models/Dispensation")).default;
+
+  // Collect all encounter IDs for batch query
+  const encounterIds = encounters.map((encounter) => encounter._id);
+
+  // Batch query all dispensations at once to avoid N+1
+  const allDispensations = await Dispensation.find({
+    "prescriptionRef.encounterId": { $in: encounterIds },
+  });
+
+  // Create a map for quick lookup
+  const dispensationMap = new Map();
+  allDispensations.forEach((dispensation) => {
+    const key = `${dispensation.prescriptionRef.encounterId}_${dispensation.prescriptionRef.prescriptionIndex}`;
+    dispensationMap.set(key, dispensation);
+  });
+
   const medications = [];
 
   for (const encounter of encounters) {
@@ -92,11 +84,8 @@ async function transformPrescriptions(encounters: any[]) {
 
     for (let i = 0; i < encounter.prescriptions.length; i++) {
       const prescription = encounter.prescriptions[i];
-
-      const existingDispensation = await Dispensation.findOne({
-        "prescriptionRef.encounterId": encounter._id,
-        "prescriptionRef.prescriptionIndex": i,
-      });
+      const dispensationKey = `${encounter._id}_${i}`;
+      const existingDispensation = dispensationMap.get(dispensationKey);
 
       medications.push({
         id: `${encounter._id}_${i}`,
@@ -116,9 +105,9 @@ async function transformPrescriptions(encounters: any[]) {
           chiefComplaint: encounter.encounter.chiefComplaint,
           encounterType: encounter.encounter.encounterType,
         },
-        dispensationStatus: existingDispensation ? "DISPENSED" : "PENDING",
+        dispensationStatus: existingDispensation ? DispensationStatus.DISPENSED : DispensationStatus.PENDING,
         dispensedAt: existingDispensation?.dispensationDetails?.fillDate,
-        canDispense: !existingDispensation && prescription.status === "ISSUED",
+        canDispense: !existingDispensation && prescription.status === PrescriptionStatus.ISSUED,
       });
     }
   }
@@ -136,7 +125,7 @@ async function getPatientMedicationsHandler(request: NextRequest, authContext: a
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createErrorResponse("Unauthorized", 401);
     }
 
     // Extract digitalId from URL path
@@ -145,10 +134,10 @@ async function getPatientMedicationsHandler(request: NextRequest, authContext: a
     const digitalId = pathSegments[pathSegments.indexOf("patient") + 1];
 
     if (!digitalId) {
-      return NextResponse.json({ error: "Patient digital ID is required" }, { status: 400 });
+      return createErrorResponse("Patient digital ID is required", 400);
     }
 
-    // Validate pharmacist access
+    // Validate pharmacist access using shared utility
     const { patient, organizationMember } = await validatePharmacistAccess(authContext, digitalId);
 
     // Verify authorization grant
@@ -171,16 +160,13 @@ async function getPatientMedicationsHandler(request: NextRequest, authContext: a
       dateOfBirth: patient.personalInfo?.dateOfBirth,
     };
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        patient: patientInfo,
-        medications,
-        authorizationGrant: {
-          id: activeGrant._id,
-          expiresAt: activeGrant.grantDetails.expiresAt,
-          accessScope: activeGrant.accessScope,
-        },
+    return createSuccessResponse({
+      patient: patientInfo,
+      medications,
+      authorizationGrant: {
+        id: activeGrant._id,
+        expiresAt: activeGrant.grantDetails.expiresAt,
+        accessScope: activeGrant.accessScope,
       },
     });
   } catch (error) {
@@ -188,14 +174,14 @@ async function getPatientMedicationsHandler(request: NextRequest, authContext: a
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return createErrorResponse(error.message, 404);
       }
       if (error.message.includes("Authorization")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return createErrorResponse(error.message, 403);
       }
     }
 
-    return NextResponse.json({ error: "Failed to fetch patient medications" }, { status: 500 });
+    return createErrorResponse("Failed to fetch patient medications", 500);
   }
 }
 

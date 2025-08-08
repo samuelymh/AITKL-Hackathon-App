@@ -1,35 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
-import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
+import { validatePharmacistAccess } from "@/lib/utils/auth-utils";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response-utils";
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
-import User from "@/lib/models/User";
 import Encounter from "@/lib/models/Encounter";
 
-// Helper function to validate pharmacist authorization
-async function validatePharmacistAccess(authContext: any, digitalId: string) {
-  const pharmacist = await getPractitionerByUserId(authContext.userId);
-  if (!pharmacist) {
-    throw new Error("Pharmacist not found");
-  }
-
-  const OrganizationMember = (await import("@/lib/models/OrganizationMember")).default;
-  const organizationMember = await OrganizationMember.findOne({
-    practitionerId: pharmacist._id,
-    status: "active",
-  });
-
-  if (!organizationMember) {
-    throw new Error("No active organization membership found");
-  }
-
-  const patient = await User.findOne({ digitalIdentifier: digitalId });
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-
-  return { pharmacist, organizationMember, patient };
-}
+// Remove duplicate validatePharmacistAccess function since we're using the shared one
 
 // Helper function to check authorization grant
 async function verifyAuthorizationGrant(patient: any, organizationId: any) {
@@ -197,7 +174,7 @@ async function getPatientRecordsHandler(request: NextRequest, authContext: any) 
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createErrorResponse("Unauthorized", 401);
     }
 
     // Extract digitalId from URL path
@@ -206,10 +183,10 @@ async function getPatientRecordsHandler(request: NextRequest, authContext: any) 
     const digitalId = pathSegments[pathSegments.indexOf("patient") + 1];
 
     if (!digitalId) {
-      return NextResponse.json({ error: "Patient digital ID is required" }, { status: 400 });
+      return createErrorResponse("Patient digital ID is required", 400);
     }
 
-    // Validate pharmacist access
+    // Validate pharmacist access using shared utility
     const { patient, organizationMember } = await validatePharmacistAccess(authContext, digitalId);
 
     // Verify authorization grant
@@ -256,23 +233,20 @@ async function getPatientRecordsHandler(request: NextRequest, authContext: any) 
       },
     };
 
-    return NextResponse.json({
-      success: true,
-      data: patientRecords,
-    });
+    return createSuccessResponse(patientRecords);
   } catch (error) {
     console.error("Error fetching patient records:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("not found")) {
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return createErrorResponse(error.message, 404);
       }
       if (error.message.includes("Authorization")) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+        return createErrorResponse(error.message, 403);
       }
     }
 
-    return NextResponse.json({ error: "Failed to fetch patient records" }, { status: 500 });
+    return createErrorResponse("Failed to fetch patient records", 500);
   }
 }
 

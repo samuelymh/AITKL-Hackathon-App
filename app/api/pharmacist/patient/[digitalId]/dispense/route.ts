@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
-import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
+import { validatePharmacistAccess } from "@/lib/utils/auth-utils";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response-utils";
+import { PrescriptionStatus, DispensationStatus, EncounterStatus, HttpStatus, ErrorMessages } from "@/lib/constants";
+import { dispenseMedicationSchema } from "@/lib/validation/pharmacist-schemas";
 import Encounter from "@/lib/models/Encounter";
 import { z } from "zod";
 
@@ -33,7 +36,7 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
     await connectToDatabase();
 
     if (!authContext?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createErrorResponse(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
 
     // Extract digitalId from URL path
@@ -42,49 +45,33 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
     const digitalId = pathSegments[pathSegments.indexOf("patient") + 1];
 
     if (!digitalId) {
-      return NextResponse.json({ error: "Patient digital ID is required" }, { status: 400 });
+      return createErrorResponse("Patient digital ID is required", HttpStatus.BAD_REQUEST);
     }
 
     // Parse and validate request body
     const body = await request.json();
     const validatedData = DispenseRequestSchema.parse(body);
 
-    // Find the pharmacist practitioner
-    const pharmacist = await getPractitionerByUserId(authContext.userId);
-    if (!pharmacist) {
-      return NextResponse.json({ error: "Pharmacist not found" }, { status: 404 });
-    }
-
-    // Get the pharmacist's organization
-    const OrganizationMember = (await import("@/lib/models/OrganizationMember")).default;
-    const organizationMember = await OrganizationMember.findOne({
-      practitionerId: pharmacist._id,
-      status: "active",
-    });
-
-    if (!organizationMember) {
-      return NextResponse.json({ error: "No active organization membership found" }, { status: 404 });
-    }
+    // Validate pharmacist access (using shared utility)
+    const { pharmacist, organizationMember } = await validatePharmacistAccess(authContext, digitalId);
 
     // Find the encounter and verify the prescription exists
     const encounter = await Encounter.findById(validatedData.encounterId);
     if (!encounter) {
-      return NextResponse.json({ error: "Encounter not found" }, { status: 404 });
+      return createErrorResponse("Encounter not found", HttpStatus.NOT_FOUND);
     }
 
     if (!encounter.prescriptions || validatedData.prescriptionIndex >= encounter.prescriptions.length) {
-      return NextResponse.json({ error: "Prescription not found in encounter" }, { status: 404 });
+      return createErrorResponse(ErrorMessages.PRESCRIPTION_NOT_FOUND, HttpStatus.NOT_FOUND);
     }
 
     const prescription = encounter.prescriptions[validatedData.prescriptionIndex];
 
-    // Check if prescription can be dispensed
-    if (prescription.status !== "ISSUED") {
-      return NextResponse.json(
-        {
-          error: `Prescription cannot be dispensed. Current status: ${prescription.status}`,
-        },
-        { status: 400 }
+    // Check if prescription can be dispensed (using constant)
+    if (prescription.status !== PrescriptionStatus.ISSUED) {
+      return createErrorResponse(
+        ErrorMessages.CANNOT_DISPENSE + ` Current status: ${prescription.status}`,
+        HttpStatus.BAD_REQUEST
       );
     }
 
@@ -96,15 +83,10 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
     });
 
     if (existingDispensation) {
-      return NextResponse.json(
-        {
-          error: "Prescription has already been dispensed",
-        },
-        { status: 400 }
-      );
+      return createErrorResponse(ErrorMessages.ALREADY_DISPENSED, HttpStatus.CONFLICT);
     }
 
-    // Create dispensation record
+    // Create dispensation record (using constant)
     const dispensation = new Dispensation({
       prescriptionRef: {
         encounterId: encounter._id,
@@ -119,15 +101,15 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
         counselingNotes: validatedData.notes || "",
         substitutions: validatedData.substitutions || [],
       },
-      status: "DISPENSED",
+      status: DispensationStatus.DISPENSED,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
     await dispensation.save();
 
-    // Update prescription status to FILLED and add dispensation metadata
-    prescription.status = "FILLED";
+    // Update prescription status to FILLED and add dispensation metadata (using constant)
+    prescription.status = PrescriptionStatus.FILLED;
     prescription.dispensedAt = new Date();
     prescription.dispensingPractitionerId = pharmacist._id;
     prescription.dispensingOrganizationId = organizationMember.organizationId;
@@ -167,30 +149,26 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
       createdAt: new Date(),
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        dispensationId: dispensation._id,
-        prescriptionStatus: "FILLED",
-        dispensedAt: dispensation.dispensationDetails.fillDate,
-        encounterCycleCompleted: true,
-        message: "Prescription dispensed successfully - Encounter cycle completed",
-      },
+    return createSuccessResponse({
+      dispensationId: dispensation._id,
+      prescriptionStatus: PrescriptionStatus.FILLED,
+      dispensedAt: dispensation.dispensationDetails.fillDate,
+      encounterCycleCompleted: true,
+      message: "Prescription dispensed successfully - Encounter cycle completed",
     });
   } catch (error) {
     console.error("Error dispensing prescription:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid dispensation data",
-          details: error.errors,
-        },
-        { status: 400 }
-      );
+      return createErrorResponse("Invalid dispensation data", 400);
     }
 
-    return NextResponse.json({ error: "Failed to dispense prescription" }, { status: 500 });
+    // Handle validation errors from shared utilities
+    if (error instanceof Error) {
+      return createErrorResponse(error.message, 404);
+    }
+
+    return createErrorResponse("Failed to dispense prescription", 500);
   }
 }
 
