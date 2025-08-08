@@ -47,9 +47,10 @@ async function getPharmacistAuthorizationsHandler(request: NextRequest, authCont
     const OrganizationMember = (await import("@/lib/models/OrganizationMember")).default;
 
     // Try both schema structures for compatibility
+    // Look for active or pending memberships (exclude only rejected/revoked)
     let organizationMember = await OrganizationMember.findOne({
       practitionerId: practitioner._id,
-      status: "active", // New schema
+      status: { $in: ["active", "pending", "pending_verification"] }, // New schema
     });
 
     // If not found with new schema, try old schema
