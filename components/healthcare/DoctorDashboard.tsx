@@ -248,6 +248,11 @@ export function DoctorDashboard() {
     }
   };
 
+  const handleRequestAccess = (grantId: string) => {
+    console.log("Requesting additional access for grant:", grantId);
+    // Handle requesting additional access permissions
+  };
+
   const handleCreateEncounter = (grantId: string) => {
     console.log("Creating encounter for grant:", grantId);
     const grant = authorizationQueue.find((g) => g.id === grantId);
@@ -474,7 +479,7 @@ export function DoctorDashboard() {
               grants={authorizationQueue}
               loading={loadingAuthorizations}
               emptyMessage="No active patient authorizations"
-              title="Active Patient Access"
+              title="Patient Access Authorizations"
               description="Patients who have granted you access to their records"
               actions={createDoctorAuthActions({
                 onViewMedicalHistory: handleViewMedicalHistory,
