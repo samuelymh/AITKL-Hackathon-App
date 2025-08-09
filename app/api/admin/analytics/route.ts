@@ -23,11 +23,11 @@ async function getAdvancedAnalyticsHandler(request: NextRequest, authContext: an
     logger.info(`Admin ${authContext.userId} requesting advanced analytics`);
 
     // Check cache first
-    const cacheKey = 'admin-analytics';
+    const cacheKey = "admin-analytics";
     const cached = analyticsCache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      logger.info('Serving analytics from cache');
+      logger.info("Serving analytics from cache");
       return NextResponse.json({
         success: true,
         data: { ...cached.data, fromCache: true },
@@ -168,9 +168,9 @@ async function getAdvancedAnalyticsHandler(request: NextRequest, authContext: an
 
     const connection = await connectToDatabase();
     const db = connection.connection.db;
-    
+
     if (!db) {
-      throw new Error('Database connection failed');
+      throw new Error("Database connection failed");
     }
 
     const healthcareMetrics = await Promise.all([

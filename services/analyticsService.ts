@@ -68,8 +68,8 @@ export interface AnalyticsData {
 
 export interface AlertData {
   id: string;
-  type: 'security' | 'system' | 'compliance' | 'performance';
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  type: "security" | "system" | "compliance" | "performance";
+  severity: "critical" | "high" | "medium" | "low";
   title: string;
   description: string;
   timestamp: string;
@@ -120,18 +120,18 @@ class ApiClient {
   private readonly baseUrl: string;
   private readonly getAuthToken: () => string | null;
 
-  constructor(getAuthToken: () => string | null, baseUrl: string = '') {
+  constructor(getAuthToken: () => string | null, baseUrl: string = "") {
     this.baseUrl = baseUrl;
     this.getAuthToken = getAuthToken;
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const token = this.getAuthToken();
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
@@ -139,7 +139,7 @@ class ApiClient {
 
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, config);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP ${response.status}: ${errorText}`);
@@ -154,12 +154,12 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, { method: 'GET' });
+    return this.makeRequest<T>(endpoint, { method: "GET" });
   }
 
   async post<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
@@ -172,16 +172,16 @@ export class AnalyticsService {
   private readonly apiClient: ApiClient;
 
   constructor(getAuthToken: () => string | null) {
-    this.apiClient = new ApiClient(getAuthToken, '/api');
+    this.apiClient = new ApiClient(getAuthToken, "/api");
   }
 
   /**
    * Fetch comprehensive analytics data
    */
   async getAnalytics(): Promise<AnalyticsData> {
-    const response = await this.apiClient.get<AnalyticsData>('/admin/analytics');
+    const response = await this.apiClient.get<AnalyticsData>("/admin/analytics");
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to fetch analytics');
+      throw new Error(response.error || "Failed to fetch analytics");
     }
     return response.data;
   }
@@ -190,13 +190,13 @@ export class AnalyticsService {
    * Fetch admin alerts with optional filtering
    */
   async getAlerts(filters?: { type?: string; severity?: string }): Promise<AlertData[]> {
-    let endpoint = '/admin/alerts';
-    
+    let endpoint = "/admin/alerts";
+
     if (filters) {
       const params = new URLSearchParams();
-      if (filters.type && filters.type !== 'all') params.append('type', filters.type);
-      if (filters.severity && filters.severity !== 'all') params.append('severity', filters.severity);
-      
+      if (filters.type && filters.type !== "all") params.append("type", filters.type);
+      if (filters.severity && filters.severity !== "all") params.append("severity", filters.severity);
+
       const queryString = params.toString();
       if (queryString) {
         endpoint += `?${queryString}`;
@@ -205,7 +205,7 @@ export class AnalyticsService {
 
     const response = await this.apiClient.get<AlertData[]>(endpoint);
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to fetch alerts');
+      throw new Error(response.error || "Failed to fetch alerts");
     }
     return response.data;
   }
@@ -214,9 +214,9 @@ export class AnalyticsService {
    * Fetch user statistics
    */
   async getUserStats(): Promise<UserStats> {
-    const response = await this.apiClient.get<UserStats>('/admin/users/stats');
+    const response = await this.apiClient.get<UserStats>("/admin/users/stats");
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to fetch user statistics');
+      throw new Error(response.error || "Failed to fetch user statistics");
     }
     return response.data;
   }
@@ -224,7 +224,10 @@ export class AnalyticsService {
   /**
    * Fetch recent users with pagination
    */
-  async getRecentUsers(limit: number = 10, page: number = 1): Promise<{
+  async getRecentUsers(
+    limit: number = 10,
+    page: number = 1
+  ): Promise<{
     users: RecentUser[];
     pagination: {
       page: number;
@@ -239,9 +242,9 @@ export class AnalyticsService {
       users: RecentUser[];
       pagination: any;
     }>(`/admin/users/recent?limit=${limit}&page=${page}`);
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to fetch recent users');
+      throw new Error(response.error || "Failed to fetch recent users");
     }
     return response.data;
   }

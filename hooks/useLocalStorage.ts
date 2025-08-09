@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 /**
  * Custom hook for localStorage access with error handling
@@ -8,7 +8,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
     if (typeof window === "undefined") {
       return initialValue;
     }
-    
+
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;

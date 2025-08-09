@@ -70,7 +70,7 @@ export default function EnhancedAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [authToken] = useLocalStorage<string | null>('auth-token', null);
+  const [authToken] = useLocalStorage<string | null>("auth-token", null);
 
   // Create analytics service instance with proper auth token getter
   const analyticsService = useMemo(() => {
@@ -81,21 +81,21 @@ export default function EnhancedAdminDashboard() {
     try {
       setRefreshing(true);
       setError(null);
-      
-      console.log('🔍 Fetching analytics with token:', authToken ? 'Present' : 'Missing');
-      
+
+      console.log("🔍 Fetching analytics with token:", authToken ? "Present" : "Missing");
+
       const data = await analyticsService.getAnalytics();
-      
-      console.log('✅ Analytics data received:', {
+
+      console.log("✅ Analytics data received:", {
         totalUsers: data.userAnalytics.activity.totalUsers,
         activeUsers: data.userAnalytics.activity.activeUsers,
-        generatedAt: data.generatedAt
+        generatedAt: data.generatedAt,
       });
-      
+
       setAnalytics(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
-      console.error('❌ Analytics fetch failed:', errorMessage);
+      console.error("❌ Analytics fetch failed:", errorMessage);
       setError(errorMessage);
     } finally {
       setLoading(false);
