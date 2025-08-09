@@ -291,7 +291,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
               <div className="space-y-6">
-                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+                {/* <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} /> */}
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}
