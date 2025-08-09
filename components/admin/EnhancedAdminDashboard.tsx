@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,69 +40,8 @@ import {
   Download,
   RefreshCw,
 } from "lucide-react";
-
-interface AnalyticsData {
-  userAnalytics: {
-    growth: Array<{ _id: string; count: number }>;
-    trends: Array<{ _id: { date: string; role: string }; count: number }>;
-    activity: {
-      totalUsers: number;
-      activeUsers: number;
-      verifiedEmails: number;
-      verifiedPhones: number;
-      lockedAccounts: number;
-    };
-  };
-  organizationAnalytics: {
-    byType: Array<{ _id: { type: string; verified: boolean }; count: number }>;
-    trends: Array<{ _id: { date: string; type: string }; count: number }>;
-    geography: Array<{ _id: { state: string; city: string }; count: number; types: string[] }>;
-  };
-  healthcareWorkflow: {
-    encounters: Array<{ _id: { date: string; type: string }; count: number; totalPrescriptions: number }>;
-    prescriptions: Array<{ _id: { medication: string; status: string }; count: number; avgDosage: number }>;
-    dispensations: Array<{ _id: { date: string; status: string }; count: number; avgDaysSupply: number }>;
-    authorizations: Array<{ _id: { date: string; status: string }; count: number; avgTimeWindow: number }>;
-  };
-  performance: {
-    topOrganizations: Array<{ _id: string; memberCount: number; roles: string[] }>;
-    systemHealth: {
-      avgLoginAttempts: number;
-      maxLoginAttempts: number;
-      usersWithFailedLogins: number;
-    };
-    dataQuality: {
-      totalUsers: number;
-      usersWithProfilePictures: number;
-      usersWithEmergencyContact: number;
-      usersWithMedicalInfo: number;
-    };
-  };
-  security: {
-    failedLogins: Array<{ _id: { date: string }; failedAttempts: number; uniqueUsers: number }>;
-    accountSecurity: {
-      totalUsers: number;
-      lockedAccounts: number;
-      unverifiedEmails: number;
-      recentPasswordResets: number;
-    };
-  };
-  compliance: {
-    auditCompliance: { recordsWithAuditTrail: number; totalRecords: number };
-    dataRetention: { totalEncounters: number; oldRecords: number };
-    encryption: { totalUsers: number; encryptedFields: number };
-  };
-  financial: {
-    organizationMetrics: Array<{ _id: string; count: number; avgMemberCount: number }>;
-    resourceUtilization: Array<{ _id: string; encounterCount: number; avgPrescriptionsPerEncounter: number }>;
-  };
-  generatedAt: string;
-  timeRanges: {
-    last7Days: string;
-    last30Days: string;
-    last90Days: string;
-  };
-}
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { AnalyticsData, createAnalyticsService } from "@/services/analyticsService";
 
 const COLORS = {
   primary: "#3b82f6",
@@ -131,48 +70,33 @@ export default function EnhancedAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [authToken] = useLocalStorage<string | null>('auth-token', null);
+
+  // Create analytics service instance with proper auth token getter
+  const analyticsService = useMemo(() => {
+    return createAnalyticsService(() => authToken);
+  }, [authToken]);
 
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth-token") : null;
-
-      console.log("🔍 Debug: Fetching analytics...");
-      console.log("🔑 Token found:", !!token);
-
-      const response = await fetch("/api/admin/analytics", {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      setError(null);
+      
+      console.log('🔍 Fetching analytics with token:', authToken ? 'Present' : 'Missing');
+      
+      const data = await analyticsService.getAnalytics();
+      
+      console.log('✅ Analytics data received:', {
+        totalUsers: data.userAnalytics.activity.totalUsers,
+        activeUsers: data.userAnalytics.activity.activeUsers,
+        generatedAt: data.generatedAt
       });
-
-      console.log("📡 Response status:", response.status);
-      console.log("📡 Response ok:", response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ API Error:", errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log("📊 API Response:", result);
-
-      if (result.success) {
-        console.log("✅ Analytics data loaded:", {
-          totalUsers: result.data?.userAnalytics?.activity?.totalUsers,
-          hasData: !!result.data,
-        });
-        setAnalytics(result.data);
-        setError(null);
-      } else {
-        console.error("❌ API returned error:", result.error);
-        throw new Error(result.error || "Failed to fetch analytics");
-      }
+      
+      setAnalytics(data);
     } catch (err) {
-      console.error("💥 Fetch error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      console.error('❌ Analytics fetch failed:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);

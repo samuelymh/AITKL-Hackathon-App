@@ -5,20 +5,34 @@ import User from "@/lib/models/User";
 import Organization from "@/lib/models/Organization";
 import { logger } from "@/lib/logger";
 
+// In-memory cache for analytics data (use Redis in production)
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const analyticsCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 /**
  * GET /api/admin/analytics
- * Advanced analytics and reporting for admin dashboard
+ * Advanced analytics and reporting for admin dashboard with caching
  */
 async function getAdvancedAnalyticsHandler(request: NextRequest, authContext: any) {
   try {
-    console.log("Analytics API - Auth Context:", {
-      userId: authContext?.userId,
-      role: authContext?.role,
-      isAuthenticated: authContext?.isAuthenticated,
-      hasAuthContext: !!authContext,
-    });
-
     logger.info(`Admin ${authContext.userId} requesting advanced analytics`);
+
+    // Check cache first
+    const cacheKey = 'admin-analytics';
+    const cached = analyticsCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      logger.info('Serving analytics from cache');
+      return NextResponse.json({
+        success: true,
+        data: { ...cached.data, fromCache: true },
+      });
+    }
 
     await connectToDatabase();
 
@@ -152,7 +166,12 @@ async function getAdvancedAnalyticsHandler(request: NextRequest, authContext: an
     // HEALTHCARE WORKFLOW ANALYTICS
     // ===============================
 
-    const db = (await connectToDatabase()).db;
+    const connection = await connectToDatabase();
+    const db = connection.connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
 
     const healthcareMetrics = await Promise.all([
       // Encounter analytics
@@ -495,7 +514,13 @@ async function getAdvancedAnalyticsHandler(request: NextRequest, authContext: an
       },
     };
 
-    logger.info(`Advanced analytics compiled successfully`);
+    // Cache the result
+    analyticsCache.set(cacheKey, {
+      data: analytics,
+      timestamp: Date.now(),
+    });
+
+    logger.info(`Advanced analytics compiled successfully for ${authContext.userId}`);
 
     return NextResponse.json({
       success: true,
