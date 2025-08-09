@@ -60,8 +60,10 @@ const mockPatientContext = {
   latestVitals: {
     bloodPressure: "135/85",
     heartRate: 78,
+    temperature: "98.6", // Normal temperature in Fahrenheit
     weight: 82,
     height: 175,
+    oxygenSaturation: 96,
   },
   riskFactors: ["Type 2 Diabetes", "Hypertension", "Family history of cardiovascular disease"],
 };
@@ -131,6 +133,8 @@ ${
   patientContext.latestVitals
     ? `• Blood Pressure: ${patientContext.latestVitals.bloodPressure || "Not recorded"}
 • Heart Rate: ${patientContext.latestVitals.heartRate || "Not recorded"} bpm
+• Temperature: ${patientContext.latestVitals.temperature || "Not recorded"}°F
+• Oxygen Saturation: ${patientContext.latestVitals.oxygenSaturation || "Not recorded"}%
 • Weight: ${patientContext.latestVitals.weight || "Not recorded"} kg
 • Height: ${patientContext.latestVitals.height || "Not recorded"} cm`
     : "• No recent vitals available"

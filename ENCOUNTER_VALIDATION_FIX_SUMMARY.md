@@ -21,8 +21,8 @@ The frontend (`/app/doctor/encounter/new/[digitalId]/page.tsx`) sends:
     physicalExamination: "...", // Separate field  
     assessmentAndPlan: "...", // Separate field
     vitals: {
-      temperature: "98.6", // String, not number
-      heartRate: "72", // String, not number
+      temperature: "101.3", // Fahrenheit - will be converted to 38.5°C
+      heartRate: "72", // String, will be converted to number
       // ... other vitals as strings
     }
   }
@@ -37,7 +37,7 @@ The API validation schema expected:
     encounterType: "CONSULTATION", // Specific enum values
     notes: "Required combined notes", // Single combined field
     vitals: {
-      temperature: 98.6, // Number, not string
+      temperature: 38.5, // Celsius (converted from 101.3°F)
       heartRate: 72, // Number, not string
     }
   }
@@ -71,8 +71,11 @@ encounterType: z.string().transform((type) => {
 vitals: z.object({
   temperature: z.string().optional().transform((val) => {
     if (!val || val === '') return undefined;
-    const num = Number(val);
-    return !isNaN(num) ? num : undefined;
+    const fahrenheit = Number(val);
+    if (isNaN(fahrenheit)) return undefined;
+    // Convert Fahrenheit to Celsius: (°F - 32) × 5/9
+    const celsius = ((fahrenheit - 32) * 5) / 9;
+    return parseFloat(celsius.toFixed(1)); // Round to 1 decimal place
   }),
   // ... similar for other vitals
 })

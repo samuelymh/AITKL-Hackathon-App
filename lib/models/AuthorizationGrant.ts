@@ -160,7 +160,7 @@ const authorizationGrantSchemaFields = {
     },
     canCreateEncounters: {
       type: Boolean,
-      default: false,
+      default: true, // Changed from false to true - doctors should be able to create encounters by default
       required: true,
     },
     canViewAuditLogs: {
