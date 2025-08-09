@@ -38,7 +38,7 @@ export default function FloatingAIChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -80,6 +80,18 @@ export default function FloatingAIChat({
   const handleSendMessage = async () => {
     if (!message.trim() || isLoading) return;
 
+    // Check if user is authenticated
+    if (!user || !token) {
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Please log in to chat with the AI assistant.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -96,6 +108,7 @@ export default function FloatingAIChat({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           sessionId: `floating-chat-${Date.now()}`,
@@ -107,7 +120,15 @@ export default function FloatingAIChat({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get AI response");
+        if (response.status === 401) {
+          throw new Error("Authentication required. Please log in again.");
+        } else if (response.status === 403) {
+          throw new Error("Access denied. You don't have permission to use the AI chat.");
+        } else if (response.status >= 500) {
+          throw new Error("Server error. Please try again later.");
+        } else {
+          throw new Error("Failed to get AI response");
+        }
       }
 
       const data = await response.json();
@@ -116,9 +137,9 @@ export default function FloatingAIChat({
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.data.response,
+          content: data.response,
           timestamp: new Date(),
-          emergencyDetected: data.data.emergencyDetected,
+          emergencyDetected: data.emergencyDetected,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
@@ -133,7 +154,10 @@ export default function FloatingAIChat({
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        content:
+          error instanceof Error
+            ? error.message
+            : "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
         timestamp: new Date(),
       };
 
