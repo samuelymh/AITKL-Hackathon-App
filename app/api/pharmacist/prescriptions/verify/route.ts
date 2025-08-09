@@ -5,6 +5,7 @@ import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
 import Encounter from "@/lib/models/Encounter";
 import User from "@/lib/models/User";
 import { AuditHelper } from "@/lib/models/SchemaUtils";
+import { PrescriptionStatus } from "@/lib/constants";
 import { z } from "zod";
 import mongoose from "mongoose";
 
@@ -290,7 +291,7 @@ async function dispensePrescriptionHandler(request: NextRequest, authContext: an
     }
 
     // Update prescription status
-    await encounter.updatePrescriptionStatus(prescIndex, "FILLED", authContext.userId);
+    await encounter.updatePrescriptionStatus(prescIndex, PrescriptionStatus.FILLED, authContext.userId);
 
     // Find the pharmacist
     const pharmacist = await getPractitionerByUserId(authContext.userId);

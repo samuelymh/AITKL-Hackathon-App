@@ -65,6 +65,7 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "latest",
     "geist": "latest",
+    "groq-sdk": "^0.30.0",
     "input-otp": "latest",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",

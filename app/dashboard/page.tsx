@@ -16,7 +16,8 @@ import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard
 import EnhancedAdminDashboard from "@/components/admin/EnhancedAdminDashboard";
 import AdminAlertsPanel from "@/components/admin/AdminAlertsPanel";
 import { AdminNavigation, AdminQuickActions } from "@/components/admin/AdminNavigation";
-import { Settings, ArrowRight } from "lucide-react";
+import ChatTriggerButton from "@/components/ai/ChatTriggerButton";
+import { Settings, ArrowRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 function WelcomeCard() {
@@ -277,9 +278,65 @@ export default function DashboardPage() {
             <MedicalProfileSummary userId={user.digitalIdentifier || user.id} />
 
             {/* QR Code and Authorization Management */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
-              <div className="space-y-6">
+
+              {/* AI Health Assistant */}
+              <div className="xl:col-span-1">
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-blue-800">
+                      <MessageCircle className="h-5 w-5" />
+                      AI Health Assistant
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-sm text-blue-700">
+                      Get instant health guidance powered by Groq + Llama 3.3 70B
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <ChatTriggerButton
+                        sessionType="general"
+                        variant="outline"
+                        className="justify-start border-blue-200 hover:bg-blue-100"
+                      >
+                        General Health Questions
+                      </ChatTriggerButton>
+
+                      <ChatTriggerButton
+                        sessionType="consultation_prep"
+                        variant="outline"
+                        className="justify-start border-green-200 hover:bg-green-100"
+                      >
+                        Prepare for Doctor Visit
+                      </ChatTriggerButton>
+
+                      <ChatTriggerButton
+                        sessionType="medication_education"
+                        variant="outline"
+                        className="justify-start border-purple-200 hover:bg-purple-100"
+                      >
+                        Medication Information
+                      </ChatTriggerButton>
+
+                      <ChatTriggerButton
+                        sessionType="emergency_triage"
+                        variant="outline"
+                        className="justify-start border-red-200 hover:bg-red-100 text-red-700"
+                      >
+                        Emergency Guidance
+                      </ChatTriggerButton>
+                    </div>
+
+                    <div className="text-xs text-gray-600 mt-4">
+                      💡 Click any option to start a conversation with our AI assistant
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6 xl:col-span-1">
                 <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
 

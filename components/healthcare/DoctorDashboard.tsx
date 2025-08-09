@@ -29,6 +29,7 @@ import {
   MessageSquare,
   Settings,
   Eye,
+  Bot,
 } from "lucide-react";
 import { QRScannerWidget } from "@/components/healthcare/QRScannerWidget";
 import AuthorizationQueue, {
@@ -39,6 +40,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ProfileStatusIcon } from "@/components/ui/profile-status-icon";
+import AIChat from "@/components/ai/AIChat";
 
 interface DoctorStats {
   activeAuthorizations: number;
@@ -376,7 +378,7 @@ export function DoctorDashboard() {
 
       {/* Main Dashboard Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="patients" className="flex items-center gap-2">
             <QrCode className="w-4 h-4" />
             Patient Access
@@ -388,6 +390,10 @@ export function DoctorDashboard() {
           <TabsTrigger value="prescriptions" className="flex items-center gap-2">
             <Pill className="w-4 h-4" />
             Prescriptions
+          </TabsTrigger>
+          <TabsTrigger value="ai-support" className="flex items-center gap-2">
+            <Bot className="w-4 h-4" />
+            AI Assistant
           </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-2">
             <History className="w-4 h-4" />
@@ -580,6 +586,102 @@ export function DoctorDashboard() {
                     <Edit className="w-4 h-4 mr-2" />
                     Write New Prescription
                   </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Assistant Tab */}
+        <TabsContent value="ai-support" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Clinical Support Chat */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  Clinical Decision Support
+                </CardTitle>
+                <CardDescription>
+                  AI-powered assistance for clinical decision making and evidence-based recommendations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AIChat
+                  defaultSessionType="clinical_support"
+                  userRole={user.role as "doctor"}
+                  context={{
+                    practitionerId: user.digitalIdentifier || user.id,
+                    organizationId: doctorOrg?.organizationId,
+                  }}
+                  className="h-[500px]"
+                  initialMessage="Hello! I'm here to provide clinical decision support. What can I help you with today?"
+                  suggestedQuestions={[
+                    "What are the latest guidelines for hypertension management?",
+                    "Help me evaluate differential diagnoses for chest pain",
+                    "What are the contraindications for this medication?",
+                    "Recommend diagnostic workup for fatigue symptoms",
+                  ]}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Consultation Prep Chat */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Patient Consultation Prep
+                </CardTitle>
+                <CardDescription>
+                  Prepare for patient consultations with AI-guided questioning and assessment tools
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AIChat
+                  defaultSessionType="consultation_prep"
+                  userRole={user.role as "doctor"}
+                  context={{
+                    practitionerId: user.digitalIdentifier || user.id,
+                    organizationId: doctorOrg?.organizationId,
+                  }}
+                  className="h-[500px]"
+                  initialMessage="I can help you prepare for patient consultations. What type of visit are you preparing for?"
+                  suggestedQuestions={[
+                    "Help me prepare questions for a new patient visit",
+                    "What should I assess for annual physical exam?",
+                    "Guide me through diabetes follow-up questions",
+                    "Suggest screening questions for mental health",
+                  ]}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Usage Guidelines */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                AI Assistant Guidelines
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <CheckCircle className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                  <h4 className="font-medium text-blue-900">Clinical Support</h4>
+                  <p className="text-sm text-blue-700">Evidence-based recommendations and guidelines</p>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <AlertTriangle className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                  <h4 className="font-medium text-yellow-900">Professional Judgment</h4>
+                  <p className="text-sm text-yellow-700">AI supplements, never replaces clinical judgment</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <Shield className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                  <h4 className="font-medium text-green-900">Privacy Protected</h4>
+                  <p className="text-sm text-green-700">All conversations are encrypted and audited</p>
                 </div>
               </div>
             </CardContent>
