@@ -4,8 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { FloatingChatProvider } from "@/hooks/useFloatingChat";
-import GlobalFloatingChat from "@/components/ai/GlobalFloatingChat";
+import FloatingAIChat from "@/components/ai/FloatingAIChat";
 import { useState } from "react";
 import "./globals.css";
 
@@ -45,10 +44,8 @@ html {
       <body>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <FloatingChatProvider>
-              {children}
-              <GlobalFloatingChat />
-            </FloatingChatProvider>
+            {children}
+            <FloatingAIChat />
           </AuthProvider>
         </QueryClientProvider>
       </body>

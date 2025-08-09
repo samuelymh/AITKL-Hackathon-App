@@ -19,7 +19,7 @@ interface FloatingAIChatProps {
   sessionType?: "consultation_prep" | "clinical_support" | "medication_education" | "emergency_triage" | "general";
 }
 
-export default function FloatingAIChat({ sessionType = "general" }: Readonly<FloatingAIChatProps>) {
+export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatProps>) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,12 +28,50 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { user, token } = useAuth();
+  const { user, token, refreshToken, refreshAuthToken } = useAuth();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Check token validity and refresh if needed
+  useEffect(() => {
+    const checkTokenValidity = () => {
+      if (!token) return;
+
+      try {
+        // Decode JWT to check expiration (without verification for client-side check)
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = payload.exp - currentTime;
+
+        // If token expires in less than 5 minutes, refresh it
+        if (timeUntilExpiry < 300 && refreshToken) {
+          console.log("🔄 Token expires soon, refreshing...");
+          refreshAuthToken().catch((error) => {
+            console.error("❌ Proactive token refresh failed:", error);
+          });
+        }
+      } catch (error) {
+        console.error("❌ Error checking token validity:", error);
+      }
+    };
+
+    // Check token validity when component mounts and every 5 minutes
+    checkTokenValidity();
+    const interval = setInterval(checkTokenValidity, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [token, refreshToken, refreshAuthToken]);
+
+  // Determine appropriate session type based on user role and context
+  // Always use consultation_prep for patients
+  const getSessionType = () => {
+    if (user?.role === "patient") return "consultation_prep";
+    if (sessionType) return sessionType;
+    return "general";
+  };
 
   // Initial greeting message
   useEffect(() => {
@@ -51,24 +89,28 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
   }, [isOpen, sessionType, user]);
 
   const getGreetingMessage = () => {
-    const name = user?.firstName || "there";
-    return `Hi ${name}! How can I help you today?`;
+    const name = user?.firstName || user?.email || "there";
+    const currentSessionType = getSessionType();
+
+    if (currentSessionType === "consultation_prep" && user?.role === "patient") {
+      return `Hi ${name}! I'm here to help you prepare for your doctor visit. What symptoms or health concerns would you like to discuss?`;
+    }
+
+    // Role-specific greetings
+    switch (user?.role) {
+      case "doctor":
+        return `Hi Dr. ${name}! I'm here to assist with clinical decision support and patient care guidance.`;
+      case "pharmacist":
+        return `Hi ${name}! I can help with medication information, drug interactions, and pharmaceutical guidance.`;
+      case "admin":
+        return `Hi ${name}! I'm here to help with administrative and healthcare management questions.`;
+      default:
+        return `Hi ${name}! How can I help you today?`;
+    }
   };
 
   const handleSendMessage = async () => {
-    if (!message.trim() || isLoading) return;
-
-    // Check if user is authenticated
-    if (!user || !token) {
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: "Please log in to chat with the AI assistant.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      return;
-    }
+    if (!message.trim() || isLoading || !user || !token) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -82,21 +124,65 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
-          sessionId: `floating-chat-${Date.now()}`,
-          message: userMessage.content,
-          sessionType,
-          userRole: user?.role || "patient",
-          conversationHistory: messages.slice(-10), // Last 10 messages for context
-        }),
-      });
+      const currentSessionType = getSessionType();
 
+      // Always send userId in context for patients
+      const context: any = {
+        userId: user.id,
+        organizationId: (user as any).organizationId,
+      };
+      if (user.role === "patient") context.patientId = user.id;
+      if (user.role === "doctor") context.practitionerId = user.id;
+
+      // Debug log for development
+      if (typeof window !== "undefined") {
+        (window as any).__AICHAT_DEBUG__ = {
+          sessionType: currentSessionType,
+          userRole: user.role,
+          context,
+        };
+      }
+
+      // Function to make the API request
+      const makeRequest = async (authToken: string) => {
+        return await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            sessionId: `floating-chat-${user.id}-${Date.now()}`,
+            message: userMessage.content,
+            sessionType: currentSessionType,
+            context,
+            userRole: user.role || "patient",
+            conversationHistory: messages.slice(-10), // Last 10 messages for context
+          }),
+        });
+      };
+
+      // Try the request with current token
+      let response = await makeRequest(token);
+
+      // If we get a 401 (unauthorized), try to refresh the token and retry
+      if (response.status === 401 && refreshToken) {
+        console.log("🔄 Token expired, attempting to refresh...");
+        try {
+          await refreshAuthToken();
+          // Get the new token from context after refresh
+          const newToken = localStorage.getItem("auth-token");
+          if (newToken) {
+            console.log("✅ Token refreshed successfully, retrying request...");
+            response = await makeRequest(newToken);
+          }
+        } catch (refreshError) {
+          console.error("❌ Token refresh failed:", refreshError);
+          throw new Error("Session expired. Please log in again.");
+        }
+      }
+
+      // Handle other response errors
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Authentication required. Please log in again.");
@@ -190,7 +276,12 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
-                <span className="font-medium text-sm text-gray-900">AI Assistant</span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm text-gray-900">AI Assistant</span>
+                  <span className="text-xs text-gray-500 capitalize">
+                    {getSessionType().replace("_", " ")} • {user.role}
+                  </span>
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -250,7 +341,11 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Type a message..."
+                  placeholder={
+                    getSessionType() === "consultation_prep" && user?.role === "patient"
+                      ? "Describe your symptoms or health concerns..."
+                      : "Type a message..."
+                  }
                   className="flex-1 min-h-[36px] max-h-[72px] resize-none text-sm border-gray-200 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   disabled={isLoading}
                 />
@@ -264,8 +359,32 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
                 </Button>
               </div>
 
-              {sessionType === "emergency_triage" && (
+              {getSessionType() === "emergency_triage" && (
                 <div className="mt-2 text-xs text-red-600">For emergencies, call 911 immediately</div>
+              )}
+
+              {getSessionType() === "consultation_prep" && user.role === "patient" && (
+                <div className="mt-2 text-xs text-blue-600">
+                  💡 Personalized advice based on your medical history • {user.firstName || user.email}
+                </div>
+              )}
+
+              {user.role === "doctor" && (
+                <div className="mt-2 text-xs text-green-600">
+                  🩺 Clinical decision support • Authenticated as {user.firstName || user.email}
+                </div>
+              )}
+
+              {user.role === "pharmacist" && (
+                <div className="mt-2 text-xs text-purple-600">
+                  💊 Pharmaceutical guidance • Authenticated as {user.firstName || user.email}
+                </div>
+              )}
+
+              {user.role === "admin" && (
+                <div className="mt-2 text-xs text-orange-600">
+                  🏥 Administrative support • Authenticated as {user.firstName || user.email}
+                </div>
               )}
             </div>
           </CardContent>
@@ -273,6 +392,16 @@ export default function FloatingAIChat({ sessionType = "general" }: Readonly<Flo
       </div>
     </div>
   );
+
+  if (!user || !token) {
+    return null;
+  }
+
+  // DEV: Show debug info in the UI for troubleshooting
+  if (process.env.NODE_ENV !== "production" && typeof window !== "undefined" && window.__AICHAT_DEBUG__) {
+    // eslint-disable-next-line no-console
+    console.log("[FloatingAIChat] Debug context:", window.__AICHAT_DEBUG__);
+  }
 
   if (!isOpen) {
     return renderFAB();

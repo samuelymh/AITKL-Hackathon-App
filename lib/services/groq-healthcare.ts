@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import Groq from "groq-sdk";
 import NodeCache from "node-cache";
 import { AIServiceInterface, AIServiceFactory, HealthStatus } from "./ai-service-factory";
+import { PatientContextService, PatientMedicalContext } from "./patient-context-service";
 
 // Type definitions
 interface HealthcareSystemPrompts {
@@ -228,10 +229,17 @@ export class GroqHealthcareService implements AIServiceInterface {
       maxKeys: 1000, // Limit cache size
     });
 
+    console.log("🔧 Initializing GroqHealthcareService", {
+      hasApiKey: !!GROQ_CONFIG.apiKey,
+      model: GROQ_CONFIG.model,
+    });
+
     if (!GROQ_CONFIG.apiKey) {
+      console.warn("⚠️ Groq API key not provided. Using enhanced mock responses.");
       logger.warn("Groq API key not provided. Using enhanced mock responses.");
       this.groq = null as any; // Will use mock service
     } else {
+      console.log("✅ Groq API key found, initializing Groq client");
       this.groq = new Groq({
         apiKey: GROQ_CONFIG.apiKey,
       });
@@ -274,7 +282,15 @@ export class GroqHealthcareService implements AIServiceInterface {
     }
 
     try {
-      const aiResponse = await this.processGroqRequest(message, sessionType, userRole, context, requestId, startTime);
+      const aiResponse = await this.processGroqRequest(
+        message,
+        sessionType,
+        userRole,
+        context,
+        requestId,
+        startTime,
+        conversationHistory
+      );
 
       // Cache eligible responses
       if (cacheKey && !aiResponse.emergencyDetected) {
@@ -286,6 +302,54 @@ export class GroqHealthcareService implements AIServiceInterface {
     } catch (error) {
       return this.handleError(error, requestId, startTime, message);
     }
+  }
+
+  /**
+   * Build conversation messages with history for context
+   */
+  private buildConversationMessages(
+    systemPrompt: string,
+    currentMessage: string,
+    conversationHistory?: any[]
+  ): Array<{ role: "system" | "user" | "assistant"; content: string }> {
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      {
+        role: "system",
+        content: systemPrompt,
+      },
+    ];
+
+    // Add conversation history for context (last 5 exchanges to stay within token limits)
+    if (conversationHistory && conversationHistory.length > 0) {
+      console.log("📝 Adding conversation history", {
+        historyLength: conversationHistory.length,
+        lastFive: conversationHistory.slice(-10).length,
+      });
+
+      const recentHistory = conversationHistory.slice(-10); // Last 10 messages
+      recentHistory.forEach((msg: any) => {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({
+            role: msg.role,
+            content: msg.content,
+          });
+        }
+      });
+    }
+
+    // Add current message
+    messages.push({
+      role: "user",
+      content: currentMessage,
+    });
+
+    console.log("🔗 Conversation messages built", {
+      totalMessages: messages.length,
+      hasHistory: conversationHistory && conversationHistory.length > 0,
+      historyCount: conversationHistory?.length || 0,
+    });
+
+    return messages;
   }
 
   private shouldCache(message: string, context?: any): boolean {
@@ -302,36 +366,136 @@ export class GroqHealthcareService implements AIServiceInterface {
     userRole: "patient" | "doctor" | "pharmacist" | "admin",
     context: any,
     requestId: string,
-    startTime: number
+    startTime: number,
+    conversationHistory?: any[]
   ): Promise<AIResponse> {
+    console.log("🚀 Processing Groq request", {
+      requestId,
+      messageLength: message.length,
+      sessionType,
+      userRole,
+      hasContext: !!context,
+      contextKeys: context ? Object.keys(context) : [],
+      hasGroqClient: !!this.groq,
+    });
+
     // Emergency detection
     const emergencyCheck = this.detectEmergency(message);
 
     // Check if we have API key, otherwise use mock
     if (!this.groq) {
+      console.log("⚠️ No Groq client, using mock response");
       return this.generateMockResponse(message, sessionType, userRole, emergencyCheck);
     }
 
-    // Build contextual prompt with available data
-    const contextualPrompt = context ? `Context: ${JSON.stringify(context)}\n\nUser Question: ${message}` : message;
+    // Gather patient medical context for enhanced consultation preparation
+    let patientContext: PatientMedicalContext | null = null;
+    if (userRole === "patient" && sessionType === "consultation_prep") {
+      try {
+        console.log("🔍 Attempting to gather patient context", {
+          userRole,
+          sessionType,
+          userId: context?.userId,
+          hasContext: !!context,
+        });
 
-    // Get appropriate system prompt for user role
-    const systemPrompt = healthcareSystemPrompts[userRole] || healthcareSystemPrompts.patient;
+        if (context?.userId) {
+          patientContext = await PatientContextService.gatherPatientContext(context.userId);
+        } else {
+          console.log("⚠️ No userId provided, creating mock patient context for testing");
+          // Create mock patient context for testing
+          patientContext = {
+            demographics: { age: 35, bloodType: "O+", smokingStatus: "never" },
+            allergies: { drug: ["Penicillin"], food: [], environmental: [] },
+            chronicConditions: [
+              {
+                condition: "Type 2 Diabetes",
+                diagnosedDate: new Date("2020-01-01"),
+                icd10Code: "E11.9",
+                status: "active",
+              },
+            ],
+            recentEncounters: [
+              {
+                date: new Date("2024-12-01"),
+                type: "routine_checkup",
+                chiefComplaint: "Routine diabetes follow-up",
+                diagnosis: ["Type 2 Diabetes - well controlled"],
+                prescriptions: ["Metformin 500mg"],
+              },
+            ],
+            currentMedications: [
+              {
+                name: "Metformin",
+                dosage: "500mg",
+                frequency: "twice daily",
+                prescribedDate: new Date("2024-12-01"),
+              },
+            ],
+            latestVitals: {
+              bloodPressure: "130/80",
+              heartRate: 72,
+              weight: 75,
+              height: 175,
+            },
+            riskFactors: ["Type 2 Diabetes", "Hypertension risk"],
+          };
+          console.log("✅ Using mock patient context for consultation prep");
+        }
+
+        console.log("✅ Patient medical context gathered", {
+          requestId,
+          hasContext: !!patientContext,
+          userId: context?.userId,
+          contextData: patientContext
+            ? {
+                age: patientContext.demographics.age,
+                chronicConditions: patientContext.chronicConditions.length,
+                medications: patientContext.currentMedications.length,
+                encounters: patientContext.recentEncounters.length,
+              }
+            : null,
+        });
+
+        logger.info("Patient medical context gathered for consultation prep", {
+          requestId,
+          hasContext: !!patientContext,
+          userId: context?.userId,
+        });
+      } catch (error) {
+        console.error("❌ Failed to gather patient context", { requestId, error });
+        logger.warn("Failed to gather patient context, using fallback", { requestId, error });
+      }
+    } else {
+      console.log("ℹ️ Patient context not gathered", {
+        userRole,
+        sessionType,
+        hasUserId: !!context?.userId,
+        reason:
+          userRole !== "patient"
+            ? "Not a patient"
+            : sessionType !== "consultation_prep"
+              ? "Not consultation prep"
+              : !context?.userId
+                ? "No user ID"
+                : "Unknown",
+      });
+    }
+
+    // Build enhanced system prompt based on session type and context
+    const systemPrompt = await this.buildEnhancedSystemPrompt(userRole, sessionType, message, patientContext);
+
+    // Build contextual prompt
+    const contextualPrompt = this.buildContextualPrompt(message, context, patientContext);
+
+    // Build conversation messages with history
+    const conversationMessages = this.buildConversationMessages(systemPrompt, contextualPrompt, conversationHistory);
 
     const completion = await this.groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: contextualPrompt,
-        },
-      ],
+      messages: conversationMessages,
       model: this.model,
       temperature: emergencyCheck.isEmergency ? 0.1 : 0.3,
-      max_tokens: 1000,
+      max_tokens: patientContext ? 1500 : 1000, // More tokens for detailed consultation prep
       top_p: 0.9,
       stream: false,
     });
@@ -355,6 +519,7 @@ export class GroqHealthcareService implements AIServiceInterface {
       processingTime,
       responseLength: response.length,
       emergencyDetected: emergencyCheck.isEmergency,
+      hasPatientContext: !!patientContext,
     });
 
     return {
@@ -362,9 +527,128 @@ export class GroqHealthcareService implements AIServiceInterface {
       emergencyDetected: emergencyCheck.isEmergency,
       emergencyContext: emergencyCheck.context,
       tokensUsed: completion.usage?.total_tokens || 0,
-      confidence: 0.9,
+      confidence: patientContext ? 0.95 : 0.9, // Higher confidence with patient context
       modelUsed: this.model,
     };
+  }
+
+  /**
+   * Build enhanced system prompt based on session type and patient context
+   */
+  private async buildEnhancedSystemPrompt(
+    userRole: "patient" | "doctor" | "pharmacist" | "admin",
+    sessionType: string,
+    message: string,
+    patientContext: PatientMedicalContext | null
+  ): Promise<string> {
+    console.log("🎯 Building enhanced system prompt", {
+      userRole,
+      sessionType,
+      hasPatientContext: !!patientContext,
+    });
+
+    // For consultation preparation with patient context, use enhanced prompt
+    if (userRole === "patient" && sessionType === "consultation_prep" && patientContext) {
+      console.log("✅ Using personalized consultation prep prompt with patient context");
+      return this.buildConsultationPrepPrompt(patientContext, message, sessionType);
+    }
+
+    console.log("ℹ️ Using standard system prompt", {
+      reason:
+        userRole !== "patient"
+          ? "Not a patient"
+          : sessionType !== "consultation_prep"
+            ? "Not consultation prep"
+            : !patientContext
+              ? "No patient context"
+              : "Unknown",
+    });
+
+    // Default to standard system prompts for other cases
+    return healthcareSystemPrompts[userRole] || healthcareSystemPrompts.patient;
+  }
+
+  /**
+   * Build personalized consultation preparation prompt with patient medical context
+   */
+  private buildConsultationPrepPrompt(context: PatientMedicalContext, message: string, sessionType: string): string {
+    console.log("🏥 Building personalized consultation prep prompt", {
+      patientAge: context.demographics.age,
+      chronicConditions: context.chronicConditions.length,
+      currentMedications: context.currentMedications.length,
+      recentEncounters: context.recentEncounters.length,
+      message: message.substring(0, 50) + "...",
+    });
+
+    const consultationPrepPrompt = `You are Dr. AI-Assistant, a compassionate and experienced physician. Your role is to help patients prepare for their medical consultations by providing personalized, easy-to-understand guidance based on their medical history.
+
+## Your Patient's Medical Profile
+- **Age**: ${context.demographics.age} years old
+- **Medical Conditions**: ${context.chronicConditions.length > 0 ? context.chronicConditions.map((c) => c.condition).join(", ") : "None on record"}
+- **Current Medications**: ${context.currentMedications.length > 0 ? context.currentMedications.map((m) => `${m.name} (${m.dosage})`).join(", ") : "None listed"}
+- **Known Allergies**: ${[...context.allergies.drug, ...context.allergies.food].length > 0 ? [...context.allergies.drug, ...context.allergies.food].join(", ") : "None documented"}
+
+## Patient's Current Concern
+"${message}"
+
+## How to Respond
+
+**IMPORTANT FORMATTING RULES:**
+1. **Use natural, conversational language** - avoid medical jargon and formal formatting
+2. **Write in paragraphs** - not bullet points or structured sections
+3. **Be warm and empathetic** - like talking to a trusted family doctor
+4. **Ask ONE focused question** to better understand their situation
+5. **Keep responses concise** - aim for 2-3 paragraphs maximum
+6. **Use simple, clear language** that any patient can understand
+
+**Your Response Should Include:**
+1. **Acknowledge their concern** with empathy and reference their medical history when relevant
+2. **Build on previous conversation** if this is a follow-up question
+3. **Ask ONE specific question** that helps you understand their situation better (unless you have enough information)
+4. **Briefly explain why this question is important** in simple terms
+
+**Example Response Style:**
+"I understand you're concerned about [their symptom]. Given that you have [relevant medical condition] and take [relevant medication], it's important we get a clear picture of what's happening.
+
+To help me better understand your situation, I'd like to ask: [ONE specific question]?
+
+This is important because [simple explanation of why this matters for their health]."
+
+**For Follow-up Conversations:**
+"Thank you for that additional information about [reference previous response]. That helps me understand your situation better. 
+
+Based on what you've told me about [summarize key points], I think [next guidance or question]."
+
+**Key Guidelines:**
+- Never use markdown formatting (**, ##, ###, bullet points)
+- Write like you're having a face-to-face conversation
+- Reference their specific medical history naturally in the conversation
+- **Build on previous parts of our conversation** - remember what they've already told you
+- Focus on ONE key question to gather more information (unless you have enough context)
+- Keep medical explanations simple and reassuring
+- Show genuine concern for their wellbeing
+- If this is a follow-up, acknowledge their previous responses and build on them
+
+Remember: You're preparing them for a productive doctor visit by asking the right questions and helping them think through their symptoms in the context of their health history.`;
+
+    console.log("📝 Consultation prep prompt built successfully", {
+      promptLength: consultationPrepPrompt.length,
+    });
+
+    return consultationPrepPrompt;
+  }
+
+  /**
+   * Build contextual prompt with available data
+   */
+  private buildContextualPrompt(message: string, context: any, patientContext: PatientMedicalContext | null): string {
+    if (patientContext) {
+      // For consultation prep with patient context, the medical info is already in system prompt
+      return message;
+    }
+
+    // For other cases, include context if available
+    return context ? `Context: ${JSON.stringify(context)}\n\nUser Question: ${message}` : message;
   }
 
   private handleError(error: unknown, requestId: string, startTime: number, message: string): never {

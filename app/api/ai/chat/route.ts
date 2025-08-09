@@ -36,6 +36,7 @@ const ChatRequestSchema = z.object({
   sessionType: z.enum(["consultation_prep", "clinical_support", "medication_education", "emergency_triage", "general"]),
   context: z
     .object({
+      userId: z.string().optional(),
       patientId: z.string().optional(),
       practitionerId: z.string().optional(),
       organizationId: z.string().optional(),
@@ -74,9 +75,19 @@ export async function POST(request: NextRequest) {
       messageLength: body.message?.length,
       sessionType: body.sessionType,
       userRole: body.userRole,
+      context: body.context,
+      hasContext: !!body.context,
+      contextKeys: body.context ? Object.keys(body.context) : [],
     });
 
-    const { sessionId, message, sessionType, context, userRole, conversationHistory } = ChatRequestSchema.parse(body);
+    const {
+      sessionId,
+      message,
+      sessionType,
+      context,
+      userRole: requestedUserRole,
+      conversationHistory,
+    } = ChatRequestSchema.parse(body);
 
     console.log("✅ Request validation passed");
 
@@ -96,6 +107,28 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Authentication successful");
 
+    // Security check: Ensure the authenticated user matches the context
+    if (context?.userId && context.userId !== authContext.userId) {
+      console.log("❌ Security violation: User ID mismatch", {
+        authUserId: authContext.userId,
+        contextUserId: context.userId,
+      });
+      return NextResponse.json({ error: "Access denied: User ID mismatch" }, { status: 403 });
+    }
+
+    // Validate user role matches the request
+    let userRole = requestedUserRole;
+    if (requestedUserRole !== authContext.role) {
+      console.log("⚠️ Role mismatch detected", {
+        requestRole: requestedUserRole,
+        authRole: authContext.role,
+      });
+      // Use the authenticated role instead of the requested role for security
+      userRole = authContext.role as typeof userRole;
+    }
+
+    console.log("✅ Security validation passed");
+
     // Connect to database
     console.log("📡 Connecting to database...");
     await connectToDatabase();
@@ -108,6 +141,15 @@ export async function POST(request: NextRequest) {
 
     // Generate AI response using Groq
     console.log("🤖 Generating AI response...");
+    console.log("📊 AI request parameters:", {
+      message: message.substring(0, 100) + "...",
+      sessionType,
+      userRole,
+      context,
+      hasConversationHistory: !!conversationHistory,
+      authUserId: authContext.userId,
+    });
+
     const aiStartTime = Date.now();
     const aiResponse = await aiService.generateResponse(message, sessionType, userRole, context, conversationHistory);
     const aiProcessingTime = Date.now() - aiStartTime;
