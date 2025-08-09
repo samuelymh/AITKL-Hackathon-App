@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, MessageCircle, X, Minimize2, Maximize2 } from "lucide-react";
+import { Send, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Message {
@@ -18,19 +17,10 @@ interface Message {
 
 interface FloatingAIChatProps {
   sessionType?: "consultation_prep" | "clinical_support" | "medication_education" | "emergency_triage" | "general";
-  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
-  defaultOpen?: boolean;
-  onClose?: () => void;
 }
 
-export default function FloatingAIChat({
-  sessionType = "general",
-  position = "bottom-right",
-  defaultOpen = false,
-  onClose,
-}: Readonly<FloatingAIChatProps>) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [isMinimized, setIsMinimized] = useState(false);
+export default function FloatingAIChat({ sessionType = "general" }: Readonly<FloatingAIChatProps>) {
+  const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,19 +52,7 @@ export default function FloatingAIChat({
 
   const getGreetingMessage = () => {
     const name = user?.firstName || "there";
-
-    switch (sessionType) {
-      case "consultation_prep":
-        return `Hello ${name}! I'm here to help you prepare for your upcoming consultation. What would you like to discuss?`;
-      case "clinical_support":
-        return `Hello Dr. ${name}! I'm here to provide clinical decision support. How can I assist you today?`;
-      case "medication_education":
-        return `Hello ${name}! I can help you understand medications, side effects, and interactions. What would you like to know?`;
-      case "emergency_triage":
-        return `Hello ${name}! I'm here for urgent health concerns. If this is a medical emergency, please call 911 immediately. How can I help?`;
-      default:
-        return `Hello ${name}! I'm your AI health assistant. How can I help you today?`;
-    }
+    return `Hi ${name}! How can I help you today?`;
   };
 
   const handleSendMessage = async () => {
@@ -175,123 +153,85 @@ export default function FloatingAIChat({
   };
 
   const getPositionClasses = () => {
-    switch (position) {
-      case "bottom-left":
-        return "bottom-4 left-4";
-      case "top-right":
-        return "top-4 right-4";
-      case "top-left":
-        return "top-4 left-4";
-      default:
-        return "bottom-4 right-4";
-    }
+    return "bottom-6 right-6";
   };
 
-  const getSessionTypeColor = () => {
-    switch (sessionType) {
-      case "emergency_triage":
-        return "bg-red-500 text-white";
-      case "clinical_support":
-        return "bg-blue-500 text-white";
-      case "medication_education":
-        return "bg-green-500 text-white";
-      case "consultation_prep":
-        return "bg-purple-500 text-white";
-      default:
-        return "bg-gray-500 text-white";
-    }
+  const toggleChat = () => {
+    setIsOpen(!isOpen);
   };
 
-  if (!isOpen) {
-    return (
-      <div className={`fixed ${getPositionClasses()} z-50`}>
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 bg-blue-600 hover:bg-blue-700 shadow-lg"
-          size="lg"
-        >
-          <MessageCircle className="w-6 h-6 text-white" />
-        </Button>
-      </div>
-    );
-  }
+  // Minimalistic Floating Action Button
+  const renderFAB = () => (
+    <div className="fixed bottom-6 right-6 z-50">
+      <Button
+        onClick={toggleChat}
+        className="rounded-full w-14 h-14 bg-gray-900 hover:bg-gray-800 shadow-lg border-0 transition-all duration-200"
+        size="lg"
+      >
+        <MessageCircle className="w-6 h-6 text-white" />
+      </Button>
+    </div>
+  );
 
-  return (
-    <div className={`fixed ${getPositionClasses()} z-50`}>
-      <Card className={`w-80 shadow-2xl transition-all duration-300 ${isMinimized ? "h-14" : "h-96"}`}>
-        <CardHeader className="p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <MessageCircle className="w-5 h-5" />
-              <span className="font-medium text-sm">AI Health Assistant</span>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-red-400"}`} />
-            </div>
-            <div className="flex items-center space-x-1">
+  // Minimalistic Chat Modal
+  const renderChatModal = () => (
+    <div className="fixed inset-0 z-50 flex items-end justify-end p-4">
+      {/* Backdrop */}
+      <button
+        className="absolute inset-0 bg-black/10 backdrop-blur-sm cursor-default"
+        onClick={() => setIsOpen(false)}
+        aria-label="Close chat"
+      />
+
+      {/* Chat Container */}
+      <div className="relative">
+        <Card className="w-80 h-[480px] shadow-xl border border-gray-200 overflow-hidden">
+          <CardHeader className="p-3 bg-white border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+                <span className="font-medium text-sm text-gray-900">AI Assistant</span>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="p-1 h-6 w-6 text-white hover:bg-blue-800"
+                onClick={() => setIsOpen(false)}
+                className="p-1 h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               >
-                {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsOpen(false);
-                  onClose?.();
-                }}
-                className="p-1 h-6 w-6 text-white hover:bg-blue-800"
-              >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-          {!isMinimized && (
-            <Badge className={`text-xs ${getSessionTypeColor()} w-fit`}>
-              {sessionType.replace("_", " ").toUpperCase()}
-            </Badge>
-          )}
-        </CardHeader>
+          </CardHeader>
 
-        {!isMinimized && (
-          <CardContent className="p-0 flex flex-col h-80">
+          <CardContent className="p-0 flex flex-col h-[420px]">
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[80%] p-2 rounded-lg text-sm ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-none"
-                        : "bg-gray-100 text-gray-800 rounded-bl-none"
-                    } ${msg.emergencyDetected ? "border-2 border-red-500" : ""}`}
+                      msg.role === "user" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
+                    } ${msg.emergencyDetected ? "border border-red-500" : ""}`}
                   >
                     {msg.emergencyDetected && (
-                      <div className="text-red-600 font-bold text-xs mb-1">🚨 EMERGENCY DETECTED</div>
+                      <div className="text-red-600 font-medium text-xs mb-1">Emergency detected</div>
                     )}
                     <div className="whitespace-pre-wrap">{msg.content}</div>
-                    <div
-                      className={`text-xs mt-1 opacity-70 ${msg.role === "user" ? "text-blue-100" : "text-gray-500"}`}
-                    >
-                      {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </div>
                   </div>
                 </div>
               ))}
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 p-2 rounded-lg rounded-bl-none">
+                  <div className="bg-gray-100 p-2 rounded-lg">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                      <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" />
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
                         style={{ animationDelay: "0.1s" }}
                       />
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
                         style={{ animationDelay: "0.2s" }}
                       />
                     </div>
@@ -303,34 +243,45 @@ export default function FloatingAIChat({
             </div>
 
             {/* Input Area */}
-            <div className="p-3 border-t bg-gray-50">
+            <div className="p-3 border-t border-gray-100">
               <div className="flex space-x-2">
                 <Textarea
                   ref={textareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Type your message..."
-                  className="flex-1 min-h-[40px] max-h-[80px] resize-none text-sm"
+                  placeholder="Type a message..."
+                  className="flex-1 min-h-[36px] max-h-[72px] resize-none text-sm border-gray-200 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   disabled={isLoading}
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!message.trim() || isLoading}
                   size="sm"
-                  className="self-end"
+                  className="self-end h-9 w-9 bg-gray-900 hover:bg-gray-800 border-0"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
 
               {sessionType === "emergency_triage" && (
-                <div className="mt-2 text-xs text-red-600 font-medium">For emergencies, call 911 immediately</div>
+                <div className="mt-2 text-xs text-red-600">For emergencies, call 911 immediately</div>
               )}
             </div>
           </CardContent>
-        )}
-      </Card>
+        </Card>
+      </div>
     </div>
+  );
+
+  if (!isOpen) {
+    return renderFAB();
+  }
+
+  return (
+    <>
+      {renderFAB()}
+      {renderChatModal()}
+    </>
   );
 }
