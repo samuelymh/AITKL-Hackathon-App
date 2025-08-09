@@ -49,94 +49,37 @@ export interface ConsultationData {
  * Get pharmacy statistics for a pharmacist
  * @param practitionerId - The ID of the pharmacist
  */
-export async function getPharmacyStatistics(
-  practitionerId: string,
-): Promise<PharmacyStats> {
+export async function getPharmacyStatistics(practitionerId: string): Promise<PharmacyStats> {
   await connectToDatabase();
 
   const today = new Date();
-  const startOfToday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
-  const startOfWeek = new Date(
-    today.getTime() - today.getDay() * 24 * 60 * 60 * 1000,
-  );
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfWeek = new Date(today.getTime() - today.getDay() * 24 * 60 * 60 * 1000);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   try {
-    // Get prescriptions handled by this pharmacist today
-    const prescriptionsToday = await Encounter.aggregate([
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfToday },
-        },
-      },
-      {
-        $unwind: "$prescriptions",
-      },
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfToday },
-        },
-      },
-      {
-        $count: "total",
-      },
-    ]);
+    // Get dispensations handled by this pharmacist today
+    const Dispensation = (await import("@/lib/models/Dispensation")).default;
 
-    // Get prescriptions this week
-    const prescriptionsThisWeek = await Encounter.aggregate([
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfWeek },
-        },
+    const dispensationsToday = await Dispensation.countDocuments({
+      dispensingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
+      "dispensationDetails.fillDate": {
+        $gte: startOfToday,
+        $lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000),
       },
-      {
-        $unwind: "$prescriptions",
-      },
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfWeek },
-        },
-      },
-      {
-        $count: "total",
-      },
-    ]);
+    });
 
-    // Get prescriptions this month
-    const prescriptionsThisMonth = await Encounter.aggregate([
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfMonth },
-        },
-      },
-      {
-        $unwind: "$prescriptions",
-      },
-      {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfMonth },
-        },
-      },
-      {
-        $count: "total",
-      },
-    ]);
+    // Get dispensations this week
+    const dispensationsThisWeek = await Dispensation.countDocuments({
+      dispensingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
+      "dispensationDetails.fillDate": { $gte: startOfWeek },
+    });
+
+    // Get dispensations this month
+    const dispensationsThisMonth = await Dispensation.countDocuments({
+      dispensingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
+      "dispensationDetails.fillDate": { $gte: startOfMonth },
+    });
 
     // Get pending prescription verifications (prescriptions with ISSUED status needing pharmacist attention)
     const pendingPrescriptions = await Encounter.aggregate([
@@ -162,9 +105,7 @@ export async function getPharmacyStatistics(
     let allGrantsCount = 0;
     let pendingGrantsCount = 0;
     try {
-      const AuthorizationGrant = (
-        await import("@/lib/models/AuthorizationGrant")
-      ).default;
+      const AuthorizationGrant = (await import("@/lib/models/AuthorizationGrant")).default;
 
       // Count all grants for this practitioner
       allGrantsCount = await AuthorizationGrant.countDocuments({
@@ -183,31 +124,37 @@ export async function getPharmacyStatistics(
       console.error("Error fetching authorization grants:", error);
     }
 
-    const pendingVerifications =
-      (pendingPrescriptions[0]?.total || 0) + pendingGrantsCount;
+    const pendingVerifications = (pendingPrescriptions[0]?.total || 0) + pendingGrantsCount;
 
-    // Get most common medications prescribed by this pharmacist
-    const mostCommonMedications = await Encounter.aggregate([
+    // Get most common medications dispensed by this pharmacist
+    const mostCommonMedications = await Dispensation.aggregate([
       {
         $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfMonth },
+          dispensingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
+          "dispensationDetails.fillDate": { $gte: startOfMonth },
         },
       },
       {
-        $unwind: "$prescriptions",
+        $lookup: {
+          from: "encounters",
+          localField: "prescriptionRef.encounterId",
+          foreignField: "_id",
+          as: "encounter",
+        },
       },
       {
-        $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
-          "prescriptions.issuedAt": { $gte: startOfMonth },
+        $unwind: "$encounter",
+      },
+      {
+        $addFields: {
+          prescription: {
+            $arrayElemAt: ["$encounter.prescriptions", "$prescriptionRef.prescriptionIndex"],
+          },
         },
       },
       {
         $group: {
-          _id: "$prescriptions.medicationName",
+          _id: "$prescription.medicationName",
           count: { $sum: 1 },
         },
       },
@@ -227,12 +174,12 @@ export async function getPharmacyStatistics(
     ]);
 
     return {
-      prescriptionsToday: prescriptionsToday[0]?.total || 0,
+      prescriptionsToday: dispensationsToday || 0,
       pendingVerifications: pendingVerifications || 0,
       consultationsScheduled: 0, // TODO: Implement when consultation model is available
       inventoryAlerts: 0, // TODO: Implement when inventory model is available
-      prescriptionsThisWeek: prescriptionsThisWeek[0]?.total || 0,
-      prescriptionsThisMonth: prescriptionsThisMonth[0]?.total || 0,
+      prescriptionsThisWeek: dispensationsThisWeek || 0,
+      prescriptionsThisMonth: dispensationsThisMonth || 0,
       mostCommonMedications: mostCommonMedications || [],
     };
   } catch (error) {
@@ -254,18 +201,14 @@ export async function getPharmacyStatistics(
  * @param practitionerId - The ID of the pharmacist
  * @param limit - Maximum number of prescriptions to return
  */
-export async function getRecentPrescriptions(
-  practitionerId: string,
-  limit: number = 20,
-): Promise<PrescriptionData[]> {
+export async function getRecentPrescriptions(practitionerId: string, limit: number = 20): Promise<PrescriptionData[]> {
   await connectToDatabase();
 
   try {
     const prescriptions = await Encounter.aggregate([
       {
         $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
+          "prescriptions.prescribingPractitionerId": new mongoose.Types.ObjectId(practitionerId),
         },
       },
       {
@@ -273,8 +216,7 @@ export async function getRecentPrescriptions(
       },
       {
         $match: {
-          "prescriptions.prescribingPractitionerId":
-            new mongoose.Types.ObjectId(practitionerId),
+          "prescriptions.prescribingPractitionerId": new mongoose.Types.ObjectId(practitionerId),
         },
       },
       {
@@ -355,10 +297,7 @@ export async function getRecentPrescriptions(
     for (const prescription of prescriptions) {
       try {
         // Decrypt patient name if available
-        if (
-          prescription.patient?.personalInfo?.firstName &&
-          prescription.patient?.personalInfo?.lastName
-        ) {
+        if (prescription.patient?.personalInfo?.firstName && prescription.patient?.personalInfo?.lastName) {
           const firstNameData = prescription.patient.personalInfo.firstName;
           const lastNameData = prescription.patient.personalInfo.lastName;
 
@@ -377,8 +316,7 @@ export async function getRecentPrescriptions(
             lastName = "Name";
           }
 
-          prescription.patientName =
-            `${firstName} ${lastName}`.trim() || "Unknown Patient";
+          prescription.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
         }
 
         // Decrypt practitioner name if available
@@ -386,10 +324,8 @@ export async function getRecentPrescriptions(
           prescription.prescriberUser?.personalInfo?.firstName &&
           prescription.prescriberUser?.personalInfo?.lastName
         ) {
-          const firstNameData =
-            prescription.prescriberUser.personalInfo.firstName;
-          const lastNameData =
-            prescription.prescriberUser.personalInfo.lastName;
+          const firstNameData = prescription.prescriberUser.personalInfo.firstName;
+          const lastNameData = prescription.prescriberUser.personalInfo.lastName;
 
           let firstName = "";
           let lastName = "";
@@ -406,8 +342,7 @@ export async function getRecentPrescriptions(
             lastName = "Practitioner";
           }
 
-          prescription.prescribingPractitioner.name =
-            `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+          prescription.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
         }
 
         // Clean up the raw data
@@ -421,10 +356,7 @@ export async function getRecentPrescriptions(
 
     return prescriptions.map((prescription: any) => ({
       ...prescription,
-      priority: getPrescriptionPriority(
-        prescription.medicationName,
-        prescription.notes,
-      ),
+      priority: getPrescriptionPriority(prescription.medicationName, prescription.notes),
     }));
   } catch (error) {
     console.error("Error fetching recent prescriptions:", error);
@@ -437,9 +369,7 @@ export async function getRecentPrescriptions(
  * Shows all grants regardless of status, with latest granted ones at the top
  * @param practitionerId - The ID of the pharmacist
  */
-export async function getPendingPrescriptionVerifications(
-  practitionerId: string,
-): Promise<PrescriptionData[]> {
+export async function getPendingPrescriptionVerifications(practitionerId: string): Promise<PrescriptionData[]> {
   await connectToDatabase();
 
   try {
@@ -534,10 +464,7 @@ export async function getPendingPrescriptionVerifications(
     for (const prescription of pendingPrescriptions) {
       try {
         // Decrypt patient name if available
-        if (
-          prescription.patient?.personalInfo?.firstName &&
-          prescription.patient?.personalInfo?.lastName
-        ) {
+        if (prescription.patient?.personalInfo?.firstName && prescription.patient?.personalInfo?.lastName) {
           const firstNameData = prescription.patient.personalInfo.firstName;
           const lastNameData = prescription.patient.personalInfo.lastName;
 
@@ -556,8 +483,7 @@ export async function getPendingPrescriptionVerifications(
             lastName = "Name";
           }
 
-          prescription.patientName =
-            `${firstName} ${lastName}`.trim() || "Unknown Patient";
+          prescription.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
         }
 
         // Decrypt practitioner name if available
@@ -565,10 +491,8 @@ export async function getPendingPrescriptionVerifications(
           prescription.prescriberUser?.personalInfo?.firstName &&
           prescription.prescriberUser?.personalInfo?.lastName
         ) {
-          const firstNameData =
-            prescription.prescriberUser.personalInfo.firstName;
-          const lastNameData =
-            prescription.prescriberUser.personalInfo.lastName;
+          const firstNameData = prescription.prescriberUser.personalInfo.firstName;
+          const lastNameData = prescription.prescriberUser.personalInfo.lastName;
 
           let firstName = "";
           let lastName = "";
@@ -585,18 +509,14 @@ export async function getPendingPrescriptionVerifications(
             lastName = "Practitioner";
           }
 
-          prescription.prescribingPractitioner.name =
-            `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+          prescription.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
         }
 
         // Clean up the raw data
         delete prescription.patient;
         delete prescription.prescriberUser;
       } catch (decryptError) {
-        console.error(
-          "Error processing encrypted names in pending prescriptions:",
-          decryptError,
-        );
+        console.error("Error processing encrypted names in pending prescriptions:", decryptError);
         // Keep the placeholder names if decryption fails
       }
     }
@@ -604,9 +524,7 @@ export async function getPendingPrescriptionVerifications(
     // Get all authorization grants for this pharmacist
     let allGrants: any[] = [];
     try {
-      const AuthorizationGrant = (
-        await import("@/lib/models/AuthorizationGrant")
-      ).default;
+      const AuthorizationGrant = (await import("@/lib/models/AuthorizationGrant")).default;
       const User = (await import("@/lib/models/User")).default;
       const Organization = (await import("@/lib/models/Organization")).default;
       const Practitioner = (await import("@/lib/models/Practitioner")).default;
@@ -614,9 +532,7 @@ export async function getPendingPrescriptionVerifications(
       allGrants = await AuthorizationGrant.aggregate([
         {
           $match: {
-            requestingPractitionerId: new mongoose.Types.ObjectId(
-              practitionerId,
-            ),
+            requestingPractitionerId: new mongoose.Types.ObjectId(practitionerId),
             auditDeletedDateTime: { $exists: false },
           },
         },
@@ -748,10 +664,7 @@ export async function getPendingPrescriptionVerifications(
       for (const grant of allGrants) {
         try {
           // Decrypt patient name if available
-          if (
-            grant.patient?.personalInfo?.firstName &&
-            grant.patient?.personalInfo?.lastName
-          ) {
+          if (grant.patient?.personalInfo?.firstName && grant.patient?.personalInfo?.lastName) {
             const firstNameData = grant.patient.personalInfo.firstName;
             const lastNameData = grant.patient.personalInfo.lastName;
 
@@ -773,15 +686,11 @@ export async function getPendingPrescriptionVerifications(
               lastName = "Name";
             }
 
-            grant.patientName =
-              `${firstName} ${lastName}`.trim() || "Unknown Patient";
+            grant.patientName = `${firstName} ${lastName}`.trim() || "Unknown Patient";
           }
 
           // Decrypt practitioner name if available
-          if (
-            grant.practitionerUser?.personalInfo?.firstName &&
-            grant.practitionerUser?.personalInfo?.lastName
-          ) {
+          if (grant.practitionerUser?.personalInfo?.firstName && grant.practitionerUser?.personalInfo?.lastName) {
             const firstNameData = grant.practitionerUser.personalInfo.firstName;
             const lastNameData = grant.practitionerUser.personalInfo.lastName;
 
@@ -800,8 +709,7 @@ export async function getPendingPrescriptionVerifications(
               lastName = "Practitioner";
             }
 
-            grant.prescribingPractitioner.name =
-              `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
+            grant.prescribingPractitioner.name = `${firstName} ${lastName}`.trim() || "Unknown Practitioner";
           }
 
           // Clean up the raw data
@@ -820,19 +728,11 @@ export async function getPendingPrescriptionVerifications(
     const allItems = [
       ...pendingPrescriptions.map((prescription: any) => ({
         ...prescription,
-        priority: getPrescriptionPriority(
-          prescription.medicationName || "",
-          prescription.notes,
-        ),
+        priority: getPrescriptionPriority(prescription.medicationName || "", prescription.notes),
       })),
       ...allGrants.map((grant: any) => ({
         ...grant,
-        priority:
-          grant.status === "ACTIVE"
-            ? "high"
-            : grant.status === "PENDING"
-              ? "normal"
-              : "low",
+        priority: grant.status === "ACTIVE" ? "high" : grant.status === "PENDING" ? "normal" : "low",
       })),
     ];
 
@@ -840,10 +740,8 @@ export async function getPendingPrescriptionVerifications(
     return allItems.sort((a, b) => {
       // First sort by priority
       const priorityOrder = { high: 3, urgent: 3, normal: 2, low: 1, stat: 4 };
-      const aPriority =
-        priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
-      const bPriority =
-        priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1;
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1;
 
       if (aPriority !== bPriority) {
         return bPriority - aPriority;
@@ -861,36 +759,17 @@ export async function getPendingPrescriptionVerifications(
 /**
  * Helper function to determine prescription priority based on medication and notes
  */
-function getPrescriptionPriority(
-  medicationName?: string,
-  notes?: string,
-): "normal" | "urgent" | "stat" {
+function getPrescriptionPriority(medicationName?: string, notes?: string): "normal" | "urgent" | "stat" {
   if (!medicationName) return "normal";
 
-  const urgentMedications = [
-    "insulin",
-    "epinephrine",
-    "nitroglycerin",
-    "warfarin",
-    "digoxin",
-    "phenytoin",
-    "lithium",
-  ];
+  const urgentMedications = ["insulin", "epinephrine", "nitroglycerin", "warfarin", "digoxin", "phenytoin", "lithium"];
 
-  const statMedications = [
-    "epinephrine",
-    "nitroglycerin",
-    "atropine",
-    "dopamine",
-  ];
+  const statMedications = ["epinephrine", "nitroglycerin", "atropine", "dopamine"];
 
   const lowerMedName = medicationName.toLowerCase();
   const lowerNotes = notes?.toLowerCase() || "";
 
-  if (
-    statMedications.some((med) => lowerMedName.includes(med)) ||
-    lowerNotes.includes("stat")
-  ) {
+  if (statMedications.some((med) => lowerMedName.includes(med)) || lowerNotes.includes("stat")) {
     return "stat";
   }
 

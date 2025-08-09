@@ -3,11 +3,14 @@ import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
 import { getPractitionerByUserId } from "@/lib/services/practitioner-service";
 import { auditLogger } from "@/lib/services/audit-logger";
+
+// Import all models to ensure they are registered
 import AuthorizationGrant from "@/lib/models/AuthorizationGrant";
 import User from "@/lib/models/User";
 import Encounter from "@/lib/models/Encounter";
 import Organization from "@/lib/models/Organization";
 import Practitioner from "@/lib/models/Practitioner";
+import OrganizationMember from "@/lib/models/OrganizationMember";
 
 /**
  * GET /api/doctor/patients/{digitalId}/medical-history
@@ -48,7 +51,6 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
     }
 
     // Find the doctor's organization membership
-    const OrganizationMember = (await import("@/lib/models/OrganizationMember")).default;
     const organizationMember = await OrganizationMember.findOne({
       practitionerId: practitioner._id,
       status: { $in: ["active", "pending", "pending_verification"] },
@@ -89,6 +91,11 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
     }
 
     // Fetch patient's medical history (encounters)
+    // Ensure models are registered by accessing them
+    console.log("Ensuring models are registered...");
+    console.log("Organization model:", Organization.modelName);
+    console.log("Practitioner model:", Practitioner.modelName);
+
     const encounters = await Encounter.find({
       userId: patient._id,
       auditDeletedDateTime: { $exists: false },
@@ -96,10 +103,12 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
       .populate([
         {
           path: "organizationId",
+          model: "Organization", // Explicitly specify the model
           select: "organizationInfo.name organizationInfo.type address",
         },
         {
           path: "attendingPractitionerId",
+          model: "Practitioner", // Explicitly specify the model
           select: "personalInfo professionalInfo.specialty",
         },
       ])
@@ -115,10 +124,13 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
         if (prescription.status === "ISSUED" || prescription.status === "FILLED") {
           // Check if medication is not already in the list
           const exists = currentMedications.find(
-            (med) => med.medicationName.toLowerCase() === prescription.medicationName.toLowerCase()
+            (med) =>
+              med.medicationName &&
+              prescription.medicationName &&
+              med.medicationName.toLowerCase() === prescription.medicationName.toLowerCase()
           );
 
-          if (!exists) {
+          if (!exists && prescription.medicationName) {
             currentMedications.push({
               medicationName: prescription.medicationName,
               dosage: prescription.dosage,

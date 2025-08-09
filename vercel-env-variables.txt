@@ -1,0 +1,83 @@
+# Complete Environment Variables for AITKL Healthcare App - Vercel Deployment
+# Copy and paste these into Vercel's Environment Variables section
+# Production values are already secure - these are ready for deployment
+
+# =============================================================================
+# CORE DATABASE & APPLICATION SETTINGS
+# =============================================================================
+MONGODB_URI=mongodb+srv://extraordinary:9mrswpQP4adJ5e8T@cluster0.clxqg86.mongodb.net/healthapp?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_DB_NAME=healthapp
+NODE_ENV=production
+
+# MongoDB Connection Pool Settings
+MONGODB_MAX_POOL_SIZE=10
+MONGODB_SOCKET_TIMEOUT_MS=45000
+MONGODB_SERVER_SELECTION_TIMEOUT_MS=5000
+
+# =============================================================================
+# JWT & AUTHENTICATION CONFIGURATION
+# =============================================================================
+JWT_SECRET=Kx9mZ3pQ7vY2nR6sW4eT8uI5oL1cF0dG9hJ3kM6pS2vB
+JWT_REFRESH_SECRET=N8bV5cX2zA9sD7fG4hJ1kL6qW3eR5tY8uI0oP2mN6vB9
+JWT_EXPIRES_IN=7d
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_ISSUER=health-app
+JWT_AUDIENCE=health-app-users
+ROTATE_REFRESH_TOKENS=true
+
+# NextAuth Configuration
+NEXTAUTH_SECRET=A7dF3gH6jK9mP2qS5vY8bE1nR4tW7zC0dL9sF6gH3jK2
+NEXTAUTH_URL=https://your-app-name.vercel.app
+
+# =============================================================================
+# SECURITY & ENCRYPTION (CRITICAL FOR HEALTHCARE DATA)
+# =============================================================================
+# Field-Level Encryption for PHI/PII Protection
+ENCRYPTION_MASTER_KEY=B5nR8sW1eT4yU7iO0pA3dF6gH9jK2mP5
+ENCRYPTION_SALT=C6vB9nM2qP5sV8yE1rT4wQ7uI0oL3fG6
+ENCRYPTION_KEY=D7xC0vB3nM6qP9sV2yE5rT8wQ1uI4oL7
+KEY_ROTATION_ENABLED=false
+CURRENT_KEY_VERSION=1
+
+# QR Code Digital Signatures
+QR_SIGNING_KEY=E4xR7vC0nP3sY6bL9fH2gJ5kM8qS1tW4
+QR_KEY_ID=qr-prod-key-v1
+
+# CSRF Protection
+CSRF_SECRET=F3gH6jK9mP2qS5vY8bE1nR4tW7zC0dL3
+
+# =============================================================================
+# SYSTEM & ADMIN CONFIGURATION
+# =============================================================================
+SYSTEM_USER_ID=system-health-app-admin
+ADMIN_API_KEY=K8vY2mN9pQ7rX4sL6fH3dW1zE5tR9uI0oP2qA8bC6vN=
+CRON_API_KEY=M2nP5qR8sT4uY7vX1dF6gH9jK3lN0oQ5rE8wA2bC9vM=
+
+# =============================================================================
+# COMPLIANCE & AUDIT SETTINGS
+# =============================================================================
+# Healthcare Compliance (7 years retention)
+AUDIT_RETENTION_DAYS=2555
+ENABLE_AUDIT_LOGGING=true
+ENABLE_FIELD_ENCRYPTION=true
+
+# Security Features
+SECURITY_HEADERS_ENABLED=true
+ENABLE_QR_CODE_ROTATION=true
+ENABLE_GEOLOCATION_VALIDATION=false
+
+# CORS Configuration
+CORS_ORIGINS=https://your-app-name.vercel.app
+
+# =============================================================================
+# OPTIONAL/FUTURE FEATURES (Currently commented out in code)
+# =============================================================================
+# Google AI/Gemini (if enabling AI features)
+# GOOGLE_AI_API_KEY=your-google-ai-api-key
+
+# Supabase (if enabling file storage)
+# NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Public API URL (if different from Vercel URL)
+# NEXT_PUBLIC_API_URL=https://your-app-name.vercel.app/api
