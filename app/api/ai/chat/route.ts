@@ -4,7 +4,9 @@ import connectToDatabase from "@/lib/mongodb";
 import { auditLogger, SecurityEventType } from "@/lib/services/audit-logger";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
-import { GroqHealthcareService } from "@/lib/services/groq-healthcare";
+import { AIServiceFactory } from "@/lib/services/ai-service-factory";
+// Import to ensure registration
+import "@/lib/services/groq-healthcare";
 
 // Types for the AI chat system
 interface ChatMessage {
@@ -44,8 +46,8 @@ const ChatRequestSchema = z.object({
   conversationHistory: z.array(z.any()).optional(),
 });
 
-// Initialize Groq AI Service
-const aiService = new GroqHealthcareService();
+// Initialize AI Service through factory
+const aiService = AIServiceFactory.getService("groq");
 
 /**
  * POST /api/ai/chat
@@ -53,53 +55,70 @@ const aiService = new GroqHealthcareService();
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const requestId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+  console.log("🚀 AI Chat API request received", { requestId });
+  logger.info("AI Chat API request received", {
+    requestId,
+    timestamp: new Date().toISOString(),
+    userAgent: request.headers.get("user-agent"),
+    method: request.method,
+  });
 
   try {
-    await connectToDatabase();
+    console.log("📥 Starting request processing...");
 
-    // Get authenticated user context
-    const authContext = await getAuthContext(request);
-    if (!authContext) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Authentication required for AI chat",
-        },
-        { status: 401 }
-      );
-    }
-
-    // Validate request body
+    // Parse and validate request body
     const body = await request.json();
-    const validatedData = ChatRequestSchema.parse(body);
+    console.log("📋 Request body parsed:", {
+      messageLength: body.message?.length,
+      sessionType: body.sessionType,
+      userRole: body.userRole,
+    });
 
-    const { sessionId, message, sessionType, context, userRole, conversationHistory } = validatedData;
+    const { sessionId, message, sessionType, context, userRole, conversationHistory } = ChatRequestSchema.parse(body);
 
-    // Security check: Ensure user role matches authenticated user role
-    if (userRole !== authContext.role) {
-      logger.warn(`Role mismatch in AI chat: claimed ${userRole}, actual ${authContext.role}`, {
-        userId: authContext.userId,
-        sessionId,
-      });
+    console.log("✅ Request validation passed");
+
+    // Get authentication context
+    console.log("🔐 Getting auth context...");
+    const authContext = getAuthContext(request);
+    console.log("🔐 Auth context result:", {
+      userId: authContext?.userId,
+      role: authContext?.role,
+      isAuthenticated: !!authContext,
+    });
+
+    if (!authContext) {
+      console.log("❌ Authentication failed - no auth context");
+      return NextResponse.json({ error: "Authentication required for AI chat" }, { status: 401 });
     }
+
+    console.log("✅ Authentication successful");
+
+    // Connect to database
+    console.log("📡 Connecting to database...");
+    await connectToDatabase();
+    console.log("✅ Database connected");
 
     // Rate limiting check (basic implementation)
-    // In production, implement more sophisticated rate limiting
+    console.log("⏱️ Checking rate limits...");
     const userRequestKey = `ai_chat_${authContext.userId}`;
     // Rate limiting logic would go here...
 
     // Generate AI response using Groq
+    console.log("🤖 Generating AI response...");
     const aiStartTime = Date.now();
-    const aiResponse = await aiService.generateResponse(
-      message,
-      sessionType,
-      authContext.role as "patient" | "doctor" | "pharmacist" | "admin",
-      context,
-      conversationHistory
-    );
+    const aiResponse = await aiService.generateResponse(message, sessionType, userRole, context, conversationHistory);
     const aiProcessingTime = Date.now() - aiStartTime;
+    console.log("✅ AI response generated", {
+      processingTime: aiProcessingTime,
+      tokensUsed: aiResponse.tokensUsed,
+      emergencyDetected: aiResponse.emergencyDetected,
+    });
 
     // Log the AI interaction for audit purposes
+    console.log("📋 Logging audit event...");
     await auditLogger.logSecurityEvent(SecurityEventType.DATA_ACCESS, request, authContext.userId, {
       action: "AI_CHAT_INTERACTION",
       sessionId,
@@ -115,85 +134,56 @@ export async function POST(request: NextRequest) {
 
     // If emergency detected, log additional security event
     if (aiResponse.emergencyDetected) {
+      console.log("🚨 Emergency detected, logging security event...");
       await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, authContext.userId, {
-        action: "EMERGENCY_SCENARIO_DETECTED",
+        action: "EMERGENCY_DETECTED",
         sessionId,
         emergencyContext: aiResponse.emergencyContext,
-        userMessage: message,
-        responseTime: aiProcessingTime,
+        message: message.substring(0, 100), // Log first 100 chars for context
+        requiresImmediateAction: true,
+      });
+
+      logger.warn("Emergency situation detected in AI chat", {
+        requestId,
+        userId: authContext.userId,
+        sessionId,
+        emergencyContext: aiResponse.emergencyContext,
       });
     }
 
-    const totalProcessingTime = Date.now() - startTime;
+    // Successful response
+    console.log("🎉 AI Chat processing completed successfully");
+    logger.info("AI Chat interaction completed successfully", {
+      requestId,
+      userId: authContext.userId,
+      sessionId,
+      sessionType,
+      tokensUsed: aiResponse.tokensUsed,
+      processingTime: Date.now() - startTime,
+      emergencyDetected: aiResponse.emergencyDetected,
+    });
 
     return NextResponse.json({
       success: true,
-      data: {
-        response: aiResponse.response,
-        emergencyDetected: aiResponse.emergencyDetected,
-        emergencyContext: aiResponse.emergencyContext,
-      },
-      metadata: {
-        sessionId,
-        modelUsed: aiResponse.modelUsed,
-        tokensUsed: aiResponse.tokensUsed,
-        confidence: aiResponse.confidence,
-        processingTime: totalProcessingTime,
-        aiProcessingTime,
-        timestamp: new Date().toISOString(),
-      },
-      disclaimers: {
-        medical:
-          "This AI assistant provides educational information only and does not replace professional medical advice. Always consult with qualified healthcare providers for medical decisions.",
-        aiLimitations:
-          "AI responses are generated based on training data and may not always be accurate or complete. Use your judgment and seek professional advice when needed.",
-        emergencyInstructions: aiResponse.emergencyDetected
-          ? "If this is a medical emergency, call 911 immediately or go to your nearest emergency room."
-          : undefined,
-      },
+      sessionId,
+      response: aiResponse.response,
+      emergencyDetected: aiResponse.emergencyDetected,
+      emergencyContext: aiResponse.emergencyContext,
+      tokensUsed: aiResponse.tokensUsed,
+      confidence: aiResponse.confidence,
+      modelUsed: aiResponse.modelUsed,
+      requestId,
     });
   } catch (error) {
-    const processingTime = Date.now() - startTime;
-
-    logger.error("AI Chat Error:", {
-      error: error instanceof Error ? error.message : error,
-      processingTime,
+    console.error("❌ AI Chat API error:", error);
+    logger.error("AI Chat API request failed", {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      processingTime: Date.now() - startTime,
     });
 
-    // Try to log the error if we have auth context
-    try {
-      const authContext = await getAuthContext(request);
-      if (authContext) {
-        await auditLogger.logSecurityEvent(SecurityEventType.SUSPICIOUS_ACTIVITY, request, authContext.userId, {
-          action: "AI_CHAT_ERROR",
-          error: error instanceof Error ? error.message : "Unknown error",
-          processingTime,
-        });
-      }
-    } catch (logError) {
-      logger.error("Failed to log AI chat error:", {
-        logError: logError instanceof Error ? logError.message : logError,
-      });
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid request format",
-          details: error.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal server error. Please try again.",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 

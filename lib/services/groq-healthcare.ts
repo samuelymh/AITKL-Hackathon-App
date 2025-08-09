@@ -1,5 +1,7 @@
 import { logger } from "@/lib/logger";
 import Groq from "groq-sdk";
+import NodeCache from "node-cache";
+import { AIServiceInterface, AIServiceFactory, HealthStatus } from "./ai-service-factory";
 
 // Type definitions
 interface HealthcareSystemPrompts {
@@ -18,11 +20,20 @@ interface DisclaimerPrompts {
   [key: string]: string; // Index signature for dynamic access
 }
 
+interface AIResponse {
+  response: string;
+  emergencyDetected: boolean;
+  emergencyContext?: string;
+  tokensUsed: number;
+  confidence: number;
+  modelUsed: string;
+}
+
 // Groq API Configuration
 const GROQ_CONFIG = {
   apiKey: process.env.GROQ_API_KEY,
   model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
-  maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || "2000"),
+  maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || "10000"),
   temperature: parseFloat(process.env.GROQ_TEMPERATURE || "0.7"),
   healthcare: {
     emergencyWebhook: process.env.EMERGENCY_WEBHOOK_URL,
@@ -204,20 +215,19 @@ const disclaimers: DisclaimerPrompts = {
     "\n\n🏥 ADMINISTRATIVE NOTE: This guidance is for informational purposes. Verify compliance requirements with legal and regulatory experts.",
 };
 
-interface AIResponse {
-  response: string;
-  emergencyDetected: boolean;
-  emergencyContext?: string;
-  tokensUsed: number;
-  confidence: number;
-  modelUsed: string;
-}
-
-export class GroqHealthcareService {
-  private groq: Groq;
-  private model: string;
+export class GroqHealthcareService implements AIServiceInterface {
+  private readonly groq: Groq;
+  private readonly model: string;
+  private readonly responseCache: NodeCache;
 
   constructor() {
+    // Initialize cache with 5-minute TTL for frequently accessed responses
+    this.responseCache = new NodeCache({
+      stdTTL: 300, // 5 minutes
+      checkperiod: 60, // Check for expired keys every minute
+      maxKeys: 1000, // Limit cache size
+    });
+
     if (!GROQ_CONFIG.apiKey) {
       logger.warn("Groq API key not provided. Using enhanced mock responses.");
       this.groq = null as any; // Will use mock service
@@ -239,100 +249,144 @@ export class GroqHealthcareService {
     context?: any,
     conversationHistory?: any[]
   ): Promise<AIResponse> {
-    try {
-      // Check for emergency keywords first
-      const emergencyCheck = this.detectEmergency(message);
+    const startTime = Date.now();
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-      if (!this.groq) {
-        return this.generateMockResponse(message, sessionType, userRole, emergencyCheck);
+    logger.info("Groq healthcare AI request initiated", {
+      requestId,
+      messageLength: message.length,
+      sessionType,
+      userRole,
+      hasContext: !!context,
+      conversationLength: conversationHistory?.length || 0,
+      model: this.model,
+    });
+
+    // Check cache first
+    const cacheKey = this.shouldCache(message, context) ? this.generateCacheKey(message) : null;
+
+    if (cacheKey) {
+      const cachedResponse = this.responseCache.get<AIResponse>(cacheKey);
+      if (cachedResponse) {
+        logger.info("Response served from cache", { requestId, cacheKey });
+        return cachedResponse;
       }
-
-      // Build system prompt
-      let basePrompt = healthcareSystemPrompts[userRole] || healthcareSystemPrompts.patient;
-
-      // Add session-specific context
-      if (sessionType === "emergency_triage") {
-        basePrompt += "\n\nEMERGENCY TRIAGE MODE: Prioritize immediate safety and provide clear emergency guidance.";
-      } else if (sessionType === "clinical_support") {
-        basePrompt += "\n\nCLINICAL SUPPORT MODE: Focus on evidence-based clinical decision support.";
-      } else if (sessionType === "medication_education") {
-        basePrompt +=
-          "\n\nMEDICATION EDUCATION MODE: Provide comprehensive medication information and safety guidance.";
-      }
-
-      // Add context if provided
-      if (context) {
-        basePrompt += `\n\nPATIENT CONTEXT: ${JSON.stringify(context, null, 2)}`;
-      }
-
-      // Build conversation messages
-      const messages: any[] = [{ role: "system", content: basePrompt }];
-
-      // Add conversation history if provided
-      if (conversationHistory && conversationHistory.length > 0) {
-        const recentHistory = conversationHistory.slice(-6); // Last 6 messages for context
-        messages.push(...recentHistory);
-      }
-
-      // Add current user message
-      messages.push({ role: "user", content: message });
-
-      logger.info("Generating Groq response", {
-        model: this.model,
-        userRole,
-        sessionType,
-        messageLength: message.length,
-        hasContext: !!context,
-        conversationLength: conversationHistory?.length || 0,
-      });
-
-      // Call Groq API
-      const startTime = Date.now();
-      const completion = await this.groq.chat.completions.create({
-        messages,
-        model: this.model,
-        max_tokens: GROQ_CONFIG.maxTokens,
-        temperature: GROQ_CONFIG.temperature,
-        stream: false,
-      });
-
-      const processingTime = Date.now() - startTime;
-      const response = completion.choices[0]?.message?.content || "";
-
-      // Add role-specific disclaimer
-      let enhancedResponse = response;
-      if (disclaimers[userRole]) {
-        enhancedResponse += disclaimers[userRole];
-      }
-
-      // Log successful response
-      logger.info("Groq response generated successfully", {
-        model: this.model,
-        tokensUsed: completion.usage?.total_tokens || 0,
-        processingTime,
-        responseLength: response.length,
-        emergencyDetected: emergencyCheck.isEmergency,
-      });
-
-      return {
-        response: enhancedResponse,
-        emergencyDetected: emergencyCheck.isEmergency,
-        emergencyContext: emergencyCheck.context,
-        tokensUsed: completion.usage?.total_tokens || 0,
-        confidence: 0.9, // Llama 3.3 70B generally high confidence
-        modelUsed: this.model,
-      };
-    } catch (error) {
-      logger.error("Groq API error:", {
-        error: error instanceof Error ? error.message : error,
-        model: this.model,
-        userRole,
-        sessionType,
-      });
-
-      // Fallback to mock response on error
-      return this.generateMockResponse(message, sessionType, userRole, this.detectEmergency(message));
     }
+
+    try {
+      const aiResponse = await this.processGroqRequest(message, sessionType, userRole, context, requestId, startTime);
+
+      // Cache eligible responses
+      if (cacheKey && !aiResponse.emergencyDetected) {
+        this.responseCache.set(cacheKey, aiResponse);
+        logger.debug("Response cached", { cacheKey });
+      }
+
+      return aiResponse;
+    } catch (error) {
+      return this.handleError(error, requestId, startTime, message);
+    }
+  }
+
+  private shouldCache(message: string, context?: any): boolean {
+    return !context && message.length < 500;
+  }
+
+  private generateCacheKey(message: string): string {
+    return `groq_${Buffer.from(message).toString("base64").slice(0, 32)}`;
+  }
+
+  private async processGroqRequest(
+    message: string,
+    sessionType: string,
+    userRole: "patient" | "doctor" | "pharmacist" | "admin",
+    context: any,
+    requestId: string,
+    startTime: number
+  ): Promise<AIResponse> {
+    // Emergency detection
+    const emergencyCheck = this.detectEmergency(message);
+
+    // Check if we have API key, otherwise use mock
+    if (!this.groq) {
+      return this.generateMockResponse(message, sessionType, userRole, emergencyCheck);
+    }
+
+    // Build contextual prompt with available data
+    const contextualPrompt = context ? `Context: ${JSON.stringify(context)}\n\nUser Question: ${message}` : message;
+
+    // Get appropriate system prompt for user role
+    const systemPrompt = healthcareSystemPrompts[userRole] || healthcareSystemPrompts.patient;
+
+    const completion = await this.groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: contextualPrompt,
+        },
+      ],
+      model: this.model,
+      temperature: emergencyCheck.isEmergency ? 0.1 : 0.3,
+      max_tokens: 1000,
+      top_p: 0.9,
+      stream: false,
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error("No response generated from Groq");
+    }
+
+    // Add appropriate disclaimer based on user role
+    const enhancedResponse = response + (disclaimers[userRole] || disclaimers.patient);
+
+    const processingTime = Date.now() - startTime;
+
+    logger.info("Groq response generated successfully", {
+      requestId,
+      model: this.model,
+      sessionType,
+      userRole,
+      tokensUsed: completion.usage?.total_tokens || 0,
+      processingTime,
+      responseLength: response.length,
+      emergencyDetected: emergencyCheck.isEmergency,
+    });
+
+    return {
+      response: enhancedResponse,
+      emergencyDetected: emergencyCheck.isEmergency,
+      emergencyContext: emergencyCheck.context,
+      tokensUsed: completion.usage?.total_tokens || 0,
+      confidence: 0.9,
+      modelUsed: this.model,
+    };
+  }
+
+  private handleError(error: unknown, requestId: string, startTime: number, message: string): never {
+    const processingTime = Date.now() - startTime;
+
+    logger.error("Groq healthcare AI request failed", {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+      processingTime,
+      model: this.model,
+      messageLength: message.length,
+    });
+
+    if (error instanceof Error && error.message.includes("rate limit")) {
+      throw new Error("AI service is temporarily unavailable due to high demand. Please try again in a moment.");
+    }
+
+    if (error instanceof Error && (error.message.includes("401") || error.message.includes("unauthorized"))) {
+      throw new Error("AI service configuration error. Please contact support.");
+    }
+
+    throw new Error(`Failed to generate AI response: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   /**
@@ -517,18 +571,29 @@ Note: This is a mock response for development purposes. In production, current r
   /**
    * Get service health status
    */
-  getHealthStatus() {
+  getHealthStatus(): HealthStatus {
     return {
+      status: "healthy",
+      version: "2.0.0",
       provider: "Groq",
       model: this.model,
-      available: !!this.groq,
-      apiKeyConfigured: !!GROQ_CONFIG.apiKey,
+      availableModels: ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"],
+      supportedSessionTypes: [
+        "consultation_prep",
+        "clinical_support",
+        "medication_education",
+        "emergency_triage",
+        "general",
+      ],
       features: {
         emergencyDetection: true,
+        functionCalling: true,
         roleBasedResponses: true,
         auditLogging: true,
-        medicalFunctions: true,
       },
     };
   }
 }
+
+// Register the Groq healthcare service
+AIServiceFactory.register("groq", new GroqHealthcareService());
