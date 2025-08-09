@@ -4,7 +4,6 @@ import { withMedicalStaffAuth } from "@/lib/middleware/auth";
 import { validatePharmacistAccess } from "@/lib/utils/auth-utils";
 import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response-utils";
 import { PrescriptionStatus, DispensationStatus, EncounterStatus, HttpStatus, ErrorMessages } from "@/lib/constants";
-import { dispenseMedicationSchema } from "@/lib/validation/pharmacist-schemas";
 import Encounter from "@/lib/models/Encounter";
 import { z } from "zod";
 
