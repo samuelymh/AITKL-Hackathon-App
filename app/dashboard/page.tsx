@@ -13,7 +13,9 @@ import { MedicalProfileSummary } from "@/components/patient/MedicalProfileSummar
 import UploadDocs from "@/components/upload-docs";
 import { DoctorDashboard } from "@/components/healthcare/DoctorDashboard";
 import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard";
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import EnhancedAdminDashboard from "@/components/admin/EnhancedAdminDashboard";
+import AdminAlertsPanel from "@/components/admin/AdminAlertsPanel";
+import { AdminNavigation, AdminQuickActions } from "@/components/admin/AdminNavigation";
 import { Settings, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -237,7 +239,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Role-specific dashboards */}
-        {user?.role === "admin" && <AdminDashboard />}
+        {user?.role === "admin" && (
+          <div className="space-y-6">
+            {/* Admin Navigation */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Admin Panel</h2>
+                <p className="text-sm text-gray-600">System administration and management</p>
+              </div>
+              <AdminNavigation />
+            </div>
+
+            {/* Quick Actions */}
+            <AdminQuickActions />
+
+            {/* Alerts and Dashboard */}
+            <AdminAlertsPanel />
+            <EnhancedAdminDashboard />
+          </div>
+        )}
 
         {user?.role === "doctor" && <DoctorDashboard />}
 
@@ -260,7 +280,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
               <div className="space-y-6">
-              <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}
