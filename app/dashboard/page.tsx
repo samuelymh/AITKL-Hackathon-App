@@ -294,7 +294,7 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 {/* <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} /> */}
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
-                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+                {/* <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} /> */}
 
                 {/* Settings Card - Link to dedicated settings page */}
                 <Card>
