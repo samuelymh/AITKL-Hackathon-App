@@ -497,15 +497,22 @@ export default function DoctorClinicalAssistant({
 
   return (
     <>
-      {/* Floating Button */}
-      <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
-        <Button
-          onClick={() => setIsOpen(true)}
-          size="lg"
-          className="h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Brain className="h-6 w-6" />
-        </Button>
+      {/* Floating Button - Enhanced visibility */}
+      <div className={`fixed bottom-6 right-6 z-[100] ${className}`}>
+        <div className="relative">
+          <Button
+            onClick={() => setIsOpen(true)}
+            size="lg"
+            className="h-16 w-16 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white border-2 border-white hover:shadow-2xl transition-all duration-200 hover:scale-105"
+            aria-label="Open Clinical AI Assistant"
+          >
+            <Brain className="h-7 w-7" />
+          </Button>
+          {/* Indicator dot for patient context */}
+          {patientName && (
+            <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full"></div>
+          )}
+        </div>
       </div>
 
       {/* Chat Modal */}
