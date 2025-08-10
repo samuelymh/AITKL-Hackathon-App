@@ -291,8 +291,8 @@ export default function DashboardPage() {
             {/* QR Code and Authorization Management */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
-
-              <div className="space-y-6 xl:col-span-1">
+              <div className="space-y-6">
+                {/* <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} /> */}
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
                 <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
 
