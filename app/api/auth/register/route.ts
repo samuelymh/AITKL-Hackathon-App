@@ -10,74 +10,85 @@ import { generateToken, generateRefreshToken, hashPassword, UserRole, AuthErrors
 import { AuditHelper } from "@/lib/models/SchemaUtils";
 import { withRateLimit } from "@/lib/middleware/rate-limit";
 import { InputSanitizer } from "@/lib/utils/input-sanitizer";
+import { SanitizationRule } from "@/lib/types/enums";
 import { logger } from "@/lib/logger";
 
-// Validation schemas
-const RegisterSchema = z
-  .object({
-    personalInfo: z.object({
-      firstName: z.string().min(1).max(100),
-      lastName: z.string().min(1).max(100),
-      dateOfBirth: z.string().transform((str) => new Date(str)),
-      contact: z.object({
-        email: z.string().email(),
-        phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
-      }),
+// Base schema for all users
+const BaseRegistrationSchema = z.object({
+  personalInfo: z.object({
+    firstName: z.string().min(1).max(100),
+    lastName: z.string().min(1).max(100),
+    dateOfBirth: z.string().transform((str) => new Date(str)),
+    contact: z.object({
+      email: z.string().email(),
+      phone: z.string().regex(/^\+?[\d\s\-()]+$/, "Invalid phone number format"),
     }),
-    password: z.string().min(8).max(128),
-    role: z.enum(["patient", "doctor", "pharmacist", "admin"]).default("patient"),
-    organizationId: z
-      .string()
-      .optional()
-      .refine((val) => !val || mongoose.Types.ObjectId.isValid(val), {
-        message: "Invalid Organization ID",
-      }),
-    professionalInfo: z
-      .object({
-        licenseNumber: z.string().min(3).optional(),
-        specialty: z.string().min(2).optional(),
-        yearsOfExperience: z.number().min(0).max(70).optional(),
-        currentPosition: z.string().optional(),
-        department: z.string().optional(),
-      })
-      .optional(),
-    medicalInfo: z
-      .object({
-        bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
-        knownAllergies: z.array(z.string()).optional(),
-        smokingStatus: z.enum(["never", "current", "former"]).optional(),
-        additionalNotes: z.string().max(1000).optional(),
-        emergencyContact: z
-          .object({
-            name: z.string().optional(),
-            phone: z
-              .string()
-              .regex(/^\+?[\d\s\-()]+$/)
-              .optional(),
-            relationship: z.string().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
-  })
-  .refine(
-    (data) => {
-      // For doctors and pharmacists, organizationId and professional info are required
-      if (data.role === "doctor" || data.role === "pharmacist") {
-        return (
-          data.organizationId &&
-          data.professionalInfo?.licenseNumber &&
-          data.professionalInfo?.specialty &&
-          data.professionalInfo?.yearsOfExperience !== undefined
-        );
-      }
-      return true;
-    },
-    {
-      message: "Professional information and organization are required for healthcare professionals",
-      path: ["professionalInfo"],
-    }
-  );
+  }),
+  password: z.string().min(8).max(128),
+  role: z.enum(["patient", "doctor", "pharmacist", "admin"]).default("patient"),
+  medicalInfo: z
+    .object({
+      bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      knownAllergies: z.array(z.string()).optional(),
+      smokingStatus: z.enum(["never", "current", "former"]).optional(),
+      additionalNotes: z.string().max(1000).optional(),
+      emergencyContact: z
+        .object({
+          name: z.string().optional(),
+          phone: z
+            .string()
+            .regex(/^\+?[\d\s\-()]+$/)
+            .optional(),
+          relationship: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+// Professional info schema for healthcare professionals
+const ProfessionalInfoSchema = z.object({
+  licenseNumber: z.string().min(3, "License number must be at least 3 characters"),
+  specialty: z.string().min(2, "Specialty must be at least 2 characters"),
+  yearsOfExperience: z.number().min(0).max(70),
+  currentPosition: z.string().optional(),
+  department: z.string().optional(),
+});
+
+// Dynamic schema based on role
+const RegisterSchema = z.discriminatedUnion("role", [
+  // Patient registration schema
+  BaseRegistrationSchema.extend({
+    role: z.literal("patient"),
+    organizationId: z.string().optional(),
+    professionalInfo: z.undefined().optional(),
+  }),
+
+  // Doctor registration schema
+  BaseRegistrationSchema.extend({
+    role: z.literal("doctor"),
+    organizationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Valid Organization ID is required for doctors",
+    }),
+    professionalInfo: ProfessionalInfoSchema,
+  }),
+
+  // Pharmacist registration schema
+  BaseRegistrationSchema.extend({
+    role: z.literal("pharmacist"),
+    organizationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Valid Organization ID is required for pharmacists",
+    }),
+    professionalInfo: ProfessionalInfoSchema,
+  }),
+
+  // Admin registration schema
+  BaseRegistrationSchema.extend({
+    role: z.literal("admin"),
+    organizationId: z.string().optional(),
+    professionalInfo: z.undefined().optional(),
+  }),
+]);
 
 type RegisterData = z.infer<typeof RegisterSchema>;
 
@@ -95,14 +106,14 @@ async function registerHandler(request: NextRequest) {
 
     // Sanitize input data before validation
     const sanitizedBody = InputSanitizer.sanitizeObject(body, {
-      "personalInfo.contact.email": "email",
-      "personalInfo.contact.phone": "phone",
-      "personalInfo.firstName": "text",
-      "personalInfo.lastName": "text",
-      "professionalInfo.licenseNumber": "text",
-      "professionalInfo.specialty": "text",
-      "professionalInfo.currentPosition": "text",
-      "professionalInfo.department": "text",
+      "personalInfo.contact.email": SanitizationRule.EMAIL,
+      "personalInfo.contact.phone": SanitizationRule.PHONE,
+      "personalInfo.firstName": SanitizationRule.TEXT,
+      "personalInfo.lastName": SanitizationRule.TEXT,
+      "professionalInfo.licenseNumber": SanitizationRule.TEXT,
+      "professionalInfo.specialty": SanitizationRule.TEXT,
+      "professionalInfo.currentPosition": SanitizationRule.TEXT,
+      "professionalInfo.department": SanitizationRule.TEXT,
     });
 
     const validatedData: RegisterData = RegisterSchema.parse(sanitizedBody);
@@ -167,10 +178,10 @@ async function registerHandler(request: NextRequest) {
         const practitionerData = {
           userId: savedUser._id,
           professionalInfo: {
-            licenseNumber: validatedData.professionalInfo.licenseNumber!,
-            specialty: validatedData.professionalInfo.specialty!,
+            licenseNumber: validatedData.professionalInfo.licenseNumber,
+            specialty: validatedData.professionalInfo.specialty,
             practitionerType: validatedData.role,
-            yearsOfExperience: validatedData.professionalInfo.yearsOfExperience!,
+            yearsOfExperience: validatedData.professionalInfo.yearsOfExperience,
             currentPosition: validatedData.professionalInfo.currentPosition,
             department: validatedData.professionalInfo.department,
           },
@@ -187,9 +198,6 @@ async function registerHandler(request: NextRequest) {
         practitionerId = savedPractitioner._id;
 
         // Create OrganizationMember record
-        // Note: During registration, users are creating membership for themselves
-        // This is validated by the business logic and organization verification status
-        // Healthcare professionals are made active by default for seamless onboarding
         const membershipData = {
           organizationId: new mongoose.Types.ObjectId(validatedData.organizationId),
           practitionerId: savedPractitioner._id,
