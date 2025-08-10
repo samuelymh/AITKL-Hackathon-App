@@ -15,7 +15,8 @@ import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard
 import EnhancedAdminDashboard from "@/components/admin/EnhancedAdminDashboard";
 import AdminAlertsPanel from "@/components/admin/AdminAlertsPanel";
 import { AdminNavigation, AdminQuickActions } from "@/components/admin/AdminNavigation";
-import { Settings, ArrowRight } from "lucide-react";
+import ChatTriggerButton from "@/components/ai/ChatTriggerButton";
+import { Settings, ArrowRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 function WelcomeCard() {
@@ -290,9 +291,10 @@ export default function DashboardPage() {
             {/* QR Code and Authorization Management */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <QRCodeManager user={user} className="xl:col-span-1" />
-              <div className="space-y-6">
-                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
+
+              <div className="space-y-6 xl:col-span-1">
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
+                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}
                 <Card>

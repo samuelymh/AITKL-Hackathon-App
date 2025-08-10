@@ -4,8 +4,7 @@ import bcrypt from "bcryptjs";
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET || "your-super-secret-refresh-key";
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "your-super-secret-refresh-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d"; // Extended for testing (was 15m)
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d"; // Long-lived refresh token
 
@@ -49,9 +48,7 @@ export interface AuthContext {
 /**
  * Generate JWT access token for authenticated user
  */
-export function generateToken(
-  payload: Omit<JWTPayload, "iat" | "exp">,
-): string {
+export function generateToken(payload: Omit<JWTPayload, "iat" | "exp">): string {
   // Add security claims
   const securePayload = {
     ...payload,
@@ -69,10 +66,7 @@ export function generateToken(
 /**
  * Generate refresh token
  */
-export function generateRefreshToken(
-  userId: string,
-  tokenVersion: number = 1,
-): string {
+export function generateRefreshToken(userId: string, tokenVersion: number = 1): string {
   const payload: RefreshTokenPayload = {
     userId,
     tokenVersion,
@@ -89,11 +83,19 @@ export function generateRefreshToken(
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
+    console.log("Verifying token with secret:", JWT_SECRET.substring(0, 10) + "...");
+
     const payload = jwt.verify(token, JWT_SECRET, {
       algorithms: ["HS256"],
       issuer: process.env.JWT_ISSUER || "health-app",
       audience: process.env.JWT_AUDIENCE || "health-app-users",
     }) as JWTPayload;
+
+    console.log("JWT verification successful, payload:", {
+      userId: payload.userId,
+      role: payload.role,
+      email: payload.email,
+    });
 
     // Validate required claims
     if (!payload.userId || !payload.role || !payload.email) {
@@ -103,7 +105,7 @@ export function verifyToken(token: string): JWTPayload | null {
 
     return payload;
   } catch (error) {
-    console.error("JWT verification failed:", error);
+    console.error("JWT verification failed:", error instanceof Error ? error.message : error);
     return null;
   }
 }
@@ -133,10 +135,7 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Verify password against hash
  */
-export async function verifyPassword(
-  password: string,
-  hash: string,
-): Promise<boolean> {
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 
@@ -146,12 +145,18 @@ export async function verifyPassword(
 export function getAuthContext(request: NextRequest): AuthContext | null {
   const authHeader = request.headers.get("authorization");
 
+  console.log("Auth header:", authHeader);
+
   if (!authHeader?.startsWith("Bearer ")) {
+    console.log("No bearer token found");
     return null;
   }
 
   const token = authHeader.split(" ")[1];
+  console.log("Extracted token:", token?.substring(0, 20) + "...");
+
   const payload = verifyToken(token);
+  console.log("Token verification result:", payload ? "SUCCESS" : "FAILED");
 
   if (!payload) {
     return null;
@@ -182,9 +187,7 @@ export function getCurrentUserId(request?: NextRequest): string {
  * Middleware to check if user is authenticated
  */
 export function requireAuth(allowedRoles?: UserRole[]) {
-  return (
-    authContext: AuthContext | null,
-  ): { success: true } | { success: false; error: string; status: number } => {
+  return (authContext: AuthContext | null): { success: true } | { success: false; error: string; status: number } => {
     if (!authContext?.isAuthenticated) {
       return { success: false, error: "Authentication required", status: 401 };
     }
@@ -213,11 +216,7 @@ export function createSystemAuthContext(): AuthContext {
 /**
  * Validate user role permissions for specific operations
  */
-export function hasPermission(
-  userRole: UserRole,
-  operation: string,
-  resource: string,
-): boolean {
+export function hasPermission(userRole: UserRole, operation: string, resource: string): boolean {
   const permissions: Record<UserRole, Record<string, string[]>> = {
     [UserRole.ADMIN]: {
       "*": ["*"], // Admin has all permissions
@@ -251,9 +250,7 @@ export function hasPermission(
   const resourcePermissions = userPermissions[resource];
   if (!resourcePermissions) return false;
 
-  return (
-    resourcePermissions.includes(operation) || resourcePermissions.includes("*")
-  );
+  return resourcePermissions.includes(operation) || resourcePermissions.includes("*");
 }
 
 /**

@@ -169,8 +169,8 @@ async function getEncounterDetailsHandler(request: NextRequest, authContext: any
       },
       authorizationGrant: encounter.authorizationGrantId,
       metadata: {
-        createdAt: encounter.createdAt,
-        updatedAt: encounter.updatedAt,
+        createdAt: encounter.auditCreatedDateTime,
+        updatedAt: encounter.auditModifiedDateTime,
         isAttendingPractitioner,
         hasAuthorization,
       },

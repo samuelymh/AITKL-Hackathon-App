@@ -3,7 +3,7 @@ import connectToDatabase from "@/lib/mongodb";
 import { withMedicalStaffAuth } from "@/lib/middleware/auth";
 import { validatePharmacistAccess } from "@/lib/utils/auth-utils";
 import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response-utils";
-import { PrescriptionStatus, DispensationStatus, EncounterStatus, HttpStatus, ErrorMessages } from "@/lib/constants";
+import { PrescriptionStatus, DispensationStatus, HttpStatus, ErrorMessages } from "@/lib/constants";
 import Encounter from "@/lib/models/Encounter";
 import { z } from "zod";
 
@@ -114,7 +114,7 @@ async function dispenseHandler(request: NextRequest, authContext: any) {
     prescription.dispensingOrganizationId = organizationMember.organizationId;
 
     encounter.prescriptions[validatedData.prescriptionIndex] = prescription;
-    encounter.updatedAt = new Date();
+    encounter.auditModifiedDateTime = new Date().toISOString();
     await encounter.save();
 
     // Create audit log entry
