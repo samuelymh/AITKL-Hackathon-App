@@ -544,7 +544,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, height: e.target.value },
                       }))
                     }
-                    placeholder="68 (5'8\" = 68 inches)"
+                    placeholder="68 (5'8&quot; = 68 inches)"
                   />
                 </div>
               </div>
