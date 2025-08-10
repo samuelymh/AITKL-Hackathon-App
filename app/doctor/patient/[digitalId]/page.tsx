@@ -26,10 +26,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
+import DoctorClinicalAssistant from "@/components/ai/DoctorClinicalAssistant";
 import Link from "next/link";
 
 interface PatientSummary {
   digitalIdentifier: string;
+  userId: string; // Add the actual user ID
   name: string;
   dateOfBirth?: string;
   bloodType?: string;
@@ -500,6 +502,9 @@ export default function PatientRecordPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Clinical AI Assistant */}
+        <DoctorClinicalAssistant patientId={medicalData.patient.userId} patientName={medicalData.patient.name} />
       </div>
     </ProtectedLayout>
   );

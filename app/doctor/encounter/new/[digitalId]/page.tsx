@@ -465,7 +465,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, bloodPressure: e.target.value },
                       }))
                     }
-                    placeholder="120/80"
+                    placeholder="120/80 (systolic/diastolic)"
                   />
                 </div>
                 <div>
@@ -480,7 +480,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, heartRate: e.target.value },
                       }))
                     }
-                    placeholder="72"
+                    placeholder="72 (beats per minute)"
                   />
                 </div>
                 <div>
@@ -496,8 +496,11 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, temperature: e.target.value },
                       }))
                     }
-                    placeholder="98.6"
+                    placeholder="101.3 (enter in Fahrenheit)"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter temperature in Fahrenheit (°F). Will be automatically converted to Celsius for storage.
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="oxygenSaturation">O2 Saturation (%)</Label>
@@ -511,7 +514,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, oxygenSaturation: e.target.value },
                       }))
                     }
-                    placeholder="98"
+                    placeholder="95-100 (normal range)"
                   />
                 </div>
                 <div>
@@ -526,7 +529,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, weight: e.target.value },
                       }))
                     }
-                    placeholder="150"
+                    placeholder="150 (pounds)"
                   />
                 </div>
                 <div>
@@ -541,7 +544,7 @@ export default function NewEncounterPage() {
                         vitals: { ...prev.vitals, height: e.target.value },
                       }))
                     }
-                    placeholder="68"
+                    placeholder="68 (5'8\" = 68 inches)"
                   />
                 </div>
               </div>

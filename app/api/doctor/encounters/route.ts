@@ -49,8 +49,11 @@ const CreateEncounterSchema = z.object({
           .optional()
           .transform((val) => {
             if (!val || val === "") return undefined;
-            const num = Number(val);
-            return !isNaN(num) ? num : undefined;
+            const fahrenheit = Number(val);
+            if (isNaN(fahrenheit)) return undefined;
+            // Convert Fahrenheit to Celsius: (°F - 32) × 5/9
+            const celsius = ((fahrenheit - 32) * 5) / 9;
+            return parseFloat(celsius.toFixed(1)); // Round to 1 decimal place
           }),
         bloodPressure: z.string().optional(),
         heartRate: z

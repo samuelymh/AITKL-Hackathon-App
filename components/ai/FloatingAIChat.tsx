@@ -1,11 +1,21 @@
 "use client";
 
+declare global {
+  interface Window {
+    __AICHAT_DEBUG__?: any;
+  }
+}
+
 import React, { useState, useRef, useEffect } from "react";
 import { Send, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css";
 
 interface Message {
   id: string;
@@ -16,10 +26,76 @@ interface Message {
 }
 
 interface FloatingAIChatProps {
-  sessionType?: "consultation_prep" | "clinical_support" | "medication_education" | "emergency_triage" | "general";
+  sessionType?:
+    | "consultation_prep"
+    | "clinical_support"
+    | "clinical_analysis"
+    | "medication_education"
+    | "emergency_triage"
+    | "general";
+  patientId?: string; // Add patientId prop for clinical analysis
 }
 
-export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatProps>) {
+// Markdown renderer component for AI responses
+const MarkdownRenderer = ({ content }: { content: string }) => {
+  return (
+    <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-headings:font-semibold prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:font-semibold prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-gray-700 prose-code:text-blue-800 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={{
+          // Custom heading styles
+          h1: ({ children }) => (
+            <h1 className="text-base font-bold text-gray-900 border-b border-gray-200 pb-1 mb-2 mt-3 first:mt-0">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-1 mb-2 mt-2 first:mt-0">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-sm font-semibold text-gray-800 mb-1 mt-2 first:mt-0">{children}</h3>
+          ),
+          // Custom list styles for smaller chat interface
+          ul: ({ children }) => <ul className="space-y-0.5 my-1">{children}</ul>,
+          ol: ({ children }) => <ol className="space-y-0.5 my-1 list-decimal list-inside">{children}</ol>,
+          li: ({ children }) => (
+            <li className="flex items-start gap-1.5 text-gray-700 leading-relaxed text-sm">
+              <span className="flex-shrink-0 w-1 h-1 bg-blue-500 rounded-full mt-1.5"></span>
+              <span>{children}</span>
+            </li>
+          ),
+          // Custom paragraph styles for chat
+          p: ({ children }) => (
+            <p className="text-gray-700 leading-relaxed my-1 first:mt-0 last:mb-0 text-sm">{children}</p>
+          ),
+          // Custom strong/bold styles
+          strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+          // Custom code styles
+          code: ({ children, className }) => {
+            const isInline = !className;
+            if (isInline) {
+              return <code className="bg-blue-50 text-blue-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>;
+            }
+            return <code className={className}>{children}</code>;
+          },
+          // Custom blockquote styles for chat
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-blue-300 pl-2 py-1 my-2 bg-blue-50 text-gray-700 italic text-sm">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+};
+
+export default function FloatingAIChat({ sessionType, patientId }: Readonly<FloatingAIChatProps>) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -66,10 +142,24 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
   }, [token, refreshToken, refreshAuthToken]);
 
   // Determine appropriate session type based on user role and context
-  // Always use consultation_prep for patients
   const getSessionType = () => {
     if (user?.role === "patient") return "consultation_prep";
     if (sessionType) return sessionType;
+
+    // For doctors with patientId, use clinical analysis
+    if (user?.role === "doctor" && patientId) {
+      return "clinical_analysis";
+    }
+
+    // For doctors, check if we're on a patient page for clinical analysis
+    if (user?.role === "doctor") {
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+      // Check if we're on a patient page (e.g., /doctor/patient/[digitalId])
+      if (currentPath.includes("/doctor/patient/") || currentPath.includes("/doctor/medical-history/")) {
+        return "clinical_analysis";
+      }
+    }
+
     return "general";
   };
 
@@ -126,13 +216,25 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
     try {
       const currentSessionType = getSessionType();
 
-      // Always send userId in context for patients
+      // Build context based on user role and current page
       const context: any = {
         userId: user.id,
         organizationId: (user as any).organizationId,
       };
-      if (user.role === "patient") context.patientId = user.id;
-      if (user.role === "doctor") context.practitionerId = user.id;
+
+      if (user.role === "patient") {
+        context.patientId = user.id;
+      }
+
+      if (user.role === "doctor") {
+        context.practitionerId = user.id;
+
+        // If patientId is provided via props, use it for clinical analysis
+        if (patientId) {
+          context.patientId = patientId;
+          console.log("🔍 Doctor analyzing patient:", patientId);
+        }
+      }
 
       // Debug log for development
       if (typeof window !== "undefined") {
@@ -157,7 +259,7 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
             sessionType: currentSessionType,
             context,
             userRole: user.role || "patient",
-            conversationHistory: messages.slice(-10), // Last 10 messages for context
+            conversationHistory: Array.isArray(messages) ? messages.slice(-10) : [], // Ensure it's an array and limit to last 10 messages
           }),
         });
       };
@@ -248,13 +350,13 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
 
   // Minimalistic Floating Action Button
   const renderFAB = () => (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-20 right-6 z-40">
       <Button
         onClick={toggleChat}
-        className="rounded-full w-14 h-14 bg-gray-900 hover:bg-gray-800 shadow-lg border-0 transition-all duration-200"
+        className="rounded-full w-12 h-12 bg-blue-600 hover:bg-blue-700 shadow-lg border-0 transition-all duration-200"
         size="lg"
       >
-        <MessageCircle className="w-6 h-6 text-white" />
+        <MessageCircle className="w-5 h-5 text-white" />
       </Button>
     </div>
   );
@@ -279,7 +381,7 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
                 <div className="flex flex-col">
                   <span className="font-medium text-sm text-gray-900">AI Assistant</span>
                   <span className="text-xs text-gray-500 capitalize">
-                    {getSessionType().replace("_", " ")} • {user.role}
+                    {getSessionType().replace("_", " ")} • {user?.role}
                   </span>
                 </div>
               </div>
@@ -307,7 +409,11 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
                     {msg.emergencyDetected && (
                       <div className="text-red-600 font-medium text-xs mb-1">Emergency detected</div>
                     )}
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                    {msg.role === "assistant" ? (
+                      <MarkdownRenderer content={msg.content} />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -363,25 +469,25 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
                 <div className="mt-2 text-xs text-red-600">For emergencies, call 911 immediately</div>
               )}
 
-              {getSessionType() === "consultation_prep" && user.role === "patient" && (
+              {getSessionType() === "consultation_prep" && user?.role === "patient" && (
                 <div className="mt-2 text-xs text-blue-600">
                   💡 Personalized advice based on your medical history • {user.firstName || user.email}
                 </div>
               )}
 
-              {user.role === "doctor" && (
+              {user?.role === "doctor" && (
                 <div className="mt-2 text-xs text-green-600">
                   🩺 Clinical decision support • Authenticated as {user.firstName || user.email}
                 </div>
               )}
 
-              {user.role === "pharmacist" && (
+              {user?.role === "pharmacist" && (
                 <div className="mt-2 text-xs text-purple-600">
                   💊 Pharmaceutical guidance • Authenticated as {user.firstName || user.email}
                 </div>
               )}
 
-              {user.role === "admin" && (
+              {user?.role === "admin" && (
                 <div className="mt-2 text-xs text-orange-600">
                   🏥 Administrative support • Authenticated as {user.firstName || user.email}
                 </div>
@@ -393,8 +499,48 @@ export default function FloatingAIChat({ sessionType }: Readonly<FloatingAIChatP
     </div>
   );
 
+  // Don't render if user is not authenticated
   if (!user || !token) {
     return null;
+  }
+
+  // Check current page path for smart rendering logic
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+
+  // SMART RENDERING LOGIC: Avoid overlapping with other chat components
+
+  // 1. PATIENTS: Only show on patient pages (/patient/* or standalone /dashboard for patients)
+  if (user.role === "patient") {
+    if (!currentPath.startsWith("/patient") && currentPath !== "/dashboard") {
+      return null; // Don't show patient chat on non-patient pages
+    }
+  }
+
+  // 2. DOCTORS: Only show on doctor pages, EXCEPT patient analysis pages (has DoctorClinicalAssistant)
+  if (user.role === "doctor") {
+    // First check if we're on doctor pages at all
+    if (!currentPath.startsWith("/doctor") && currentPath !== "/dashboard") {
+      return null; // Don't show on non-doctor pages
+    }
+
+    // Then check if we're on patient analysis pages
+    if (currentPath.includes("/doctor/patient/") || currentPath.includes("/doctor/medical-history/")) {
+      return null; // Don't show floating chat on patient pages - use DoctorClinicalAssistant instead
+    }
+  }
+
+  // 3. PHARMACISTS: Only show on pharmacist pages
+  if (user.role === "pharmacist") {
+    if (!currentPath.startsWith("/pharmacist") && currentPath !== "/dashboard") {
+      return null;
+    }
+  }
+
+  // 4. ADMINS: Only show on admin pages
+  if (user.role === "admin") {
+    if (!currentPath.startsWith("/admin") && currentPath !== "/dashboard") {
+      return null;
+    }
   }
 
   // DEV: Show debug info in the UI for troubleshooting

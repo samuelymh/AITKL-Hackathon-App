@@ -33,7 +33,14 @@ interface ChatContext {
 const ChatRequestSchema = z.object({
   sessionId: z.string().min(1),
   message: z.string().min(1).max(2000),
-  sessionType: z.enum(["consultation_prep", "clinical_support", "medication_education", "emergency_triage", "general"]),
+  sessionType: z.enum([
+    "consultation_prep",
+    "clinical_support",
+    "clinical_analysis",
+    "medication_education",
+    "emergency_triage",
+    "general",
+  ]),
   context: z
     .object({
       userId: z.string().optional(),
@@ -214,6 +221,7 @@ export async function POST(request: NextRequest) {
       tokensUsed: aiResponse.tokensUsed,
       confidence: aiResponse.confidence,
       modelUsed: aiResponse.modelUsed,
+      clinicalInsights: aiResponse.clinicalInsights, // Include clinical insights for doctors
       requestId,
     });
   } catch (error) {
@@ -250,6 +258,7 @@ export async function GET(request: NextRequest) {
           supportedSessionTypes: [
             "consultation_prep",
             "clinical_support",
+            "clinical_analysis",
             "medication_education",
             "emergency_triage",
             "general",

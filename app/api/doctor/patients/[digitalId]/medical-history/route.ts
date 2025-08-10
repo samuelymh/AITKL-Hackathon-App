@@ -192,6 +192,7 @@ async function getPatientMedicalHistoryHandler(request: NextRequest, authContext
     // Get patient summary info (non-encrypted fields only)
     const patientSummary = {
       digitalIdentifier: patient.digitalIdentifier,
+      userId: patient._id.toString(), // Add the actual user ID for AI context
       // Only include decrypted name if available, otherwise use digital ID
       name:
         patient.personalInfo?.firstName && patient.personalInfo?.lastName

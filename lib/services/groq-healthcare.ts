@@ -3,6 +3,7 @@ import Groq from "groq-sdk";
 import NodeCache from "node-cache";
 import { AIServiceInterface, AIServiceFactory, HealthStatus } from "./ai-service-factory";
 import { PatientContextService, PatientMedicalContext } from "./patient-context-service";
+import { ClinicalAnalysisService, ClinicalInsights } from "./clinical-analysis-service";
 
 // Type definitions
 interface HealthcareSystemPrompts {
@@ -28,6 +29,7 @@ interface AIResponse {
   tokensUsed: number;
   confidence: number;
   modelUsed: string;
+  clinicalInsights?: ClinicalInsights; // For clinical analysis responses
 }
 
 // Groq API Configuration
@@ -103,106 +105,6 @@ MAINTAIN PROFESSIONAL BOUNDARIES:
 - Focus on administrative and policy matters
 - Refer clinical questions to appropriate healthcare providers`,
 };
-
-// Medical function definitions for structured healthcare workflows
-const medicalFunctions = [
-  {
-    name: "assessSymptoms",
-    description: "Systematic symptom evaluation following clinical assessment protocols",
-    parameters: {
-      type: "object",
-      properties: {
-        primarySymptom: {
-          type: "string",
-          description: "Main presenting symptom",
-        },
-        additionalSymptoms: {
-          type: "array",
-          items: { type: "string" },
-          description: "Additional reported symptoms",
-        },
-        duration: {
-          type: "string",
-          description: "Duration of symptoms",
-        },
-        severity: {
-          type: "string",
-          enum: ["mild", "moderate", "severe", "critical"],
-          description: "Severity assessment",
-        },
-        triggeringFactors: {
-          type: "array",
-          items: { type: "string" },
-          description: "Known triggering factors",
-        },
-      },
-      required: ["primarySymptom", "severity"],
-    },
-  },
-  {
-    name: "analyzeDrugInteraction",
-    description: "Comprehensive drug interaction analysis",
-    parameters: {
-      type: "object",
-      properties: {
-        medications: {
-          type: "array",
-          items: { type: "string" },
-          description: "List of medications to analyze",
-        },
-        patientAge: {
-          type: "number",
-          description: "Patient age for age-specific considerations",
-        },
-        allergies: {
-          type: "array",
-          items: { type: "string" },
-          description: "Known allergies",
-        },
-        medicalConditions: {
-          type: "array",
-          items: { type: "string" },
-          description: "Relevant medical conditions",
-        },
-      },
-      required: ["medications"],
-    },
-  },
-  {
-    name: "emergencyTriage",
-    description: "Emergency situation assessment and triage",
-    parameters: {
-      type: "object",
-      properties: {
-        symptoms: {
-          type: "array",
-          items: { type: "string" },
-          description: "Emergency symptoms",
-        },
-        vitalSigns: {
-          type: "object",
-          properties: {
-            bloodPressure: { type: "string" },
-            heartRate: { type: "number" },
-            temperature: { type: "number" },
-            oxygenSaturation: { type: "number" },
-          },
-        },
-        consciousness: {
-          type: "string",
-          enum: ["alert", "drowsy", "confused", "unconscious"],
-          description: "Level of consciousness",
-        },
-        urgencyLevel: {
-          type: "string",
-          enum: ["low", "moderate", "high", "critical"],
-          description: "Assessed urgency level",
-        },
-      },
-      required: ["symptoms", "urgencyLevel"],
-    },
-  },
-];
 
 // Disclaimers for different user roles
 const disclaimers: DisclaimerPrompts = {
@@ -320,7 +222,7 @@ export class GroqHealthcareService implements AIServiceInterface {
     ];
 
     // Add conversation history for context (last 5 exchanges to stay within token limits)
-    if (conversationHistory && conversationHistory.length > 0) {
+    if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
       console.log("📝 Adding conversation history", {
         historyLength: conversationHistory.length,
         lastFive: conversationHistory.slice(-10).length,
@@ -328,10 +230,10 @@ export class GroqHealthcareService implements AIServiceInterface {
 
       const recentHistory = conversationHistory.slice(-10); // Last 10 messages
       recentHistory.forEach((msg: any) => {
-        if (msg.role === "user" || msg.role === "assistant") {
+        if (msg && (msg.role === "user" || msg.role === "assistant")) {
           messages.push({
             role: msg.role,
-            content: msg.content,
+            content: msg.content || "",
           });
         }
       });
@@ -345,7 +247,7 @@ export class GroqHealthcareService implements AIServiceInterface {
 
     console.log("🔗 Conversation messages built", {
       totalMessages: messages.length,
-      hasHistory: conversationHistory && conversationHistory.length > 0,
+      hasHistory: conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0,
       historyCount: conversationHistory?.length || 0,
     });
 
@@ -388,21 +290,28 @@ export class GroqHealthcareService implements AIServiceInterface {
       return this.generateMockResponse(message, sessionType, userRole, emergencyCheck);
     }
 
-    // Gather patient medical context for enhanced consultation preparation
+    // Gather patient medical context for enhanced consultation preparation or clinical analysis
     let patientContext: PatientMedicalContext | null = null;
-    if (userRole === "patient" && sessionType === "consultation_prep") {
+    if (
+      (userRole === "patient" && sessionType === "consultation_prep") ||
+      (userRole === "doctor" && sessionType === "clinical_analysis")
+    ) {
       try {
         console.log("🔍 Attempting to gather patient context", {
           userRole,
           sessionType,
           userId: context?.userId,
+          patientId: context?.patientId, // For doctors analyzing a specific patient
           hasContext: !!context,
         });
 
-        if (context?.userId) {
-          patientContext = await PatientContextService.gatherPatientContext(context.userId);
+        // For patients, use their own ID; for doctors, use provided patientId
+        const targetUserId = userRole === "patient" ? context?.userId : context?.patientId;
+
+        if (targetUserId) {
+          patientContext = await PatientContextService.gatherPatientContext(targetUserId);
         } else {
-          console.log("⚠️ No userId provided, creating mock patient context for testing");
+          console.log("⚠️ No userId/patientId provided, creating mock patient context for testing");
           // Create mock patient context for testing
           patientContext = {
             demographics: { age: 35, bloodType: "O+", smokingStatus: "never" },
@@ -471,14 +380,15 @@ export class GroqHealthcareService implements AIServiceInterface {
         userRole,
         sessionType,
         hasUserId: !!context?.userId,
+        hasPatientId: !!context?.patientId,
         reason:
-          userRole !== "patient"
-            ? "Not a patient"
-            : sessionType !== "consultation_prep"
-              ? "Not consultation prep"
-              : !context?.userId
-                ? "No user ID"
-                : "Unknown",
+          userRole === "patient" && sessionType !== "consultation_prep"
+            ? "Patient - not consultation prep"
+            : userRole === "doctor" && sessionType !== "clinical_analysis"
+              ? "Doctor - not clinical analysis"
+              : !context?.userId && !context?.patientId
+                ? "No user ID or patient ID"
+                : "Other condition",
       });
     }
 
@@ -510,6 +420,27 @@ export class GroqHealthcareService implements AIServiceInterface {
 
     const processingTime = Date.now() - startTime;
 
+    // Generate clinical insights for doctors using clinical analysis
+    let clinicalInsights: ClinicalInsights | undefined;
+    if (userRole === "doctor" && sessionType === "clinical_analysis" && patientContext) {
+      try {
+        console.log("🔬 Generating clinical insights for doctor", { requestId });
+        const targetUserId = context?.patientId || context?.userId;
+        if (targetUserId) {
+          clinicalInsights = await ClinicalAnalysisService.generateClinicalInsights(targetUserId, message);
+        }
+        console.log("✅ Clinical insights generated", {
+          requestId,
+          hasInsights: !!clinicalInsights,
+          alertCount: clinicalInsights?.safetyAlerts?.length || 0,
+          recommendationCount: clinicalInsights?.recommendations?.length || 0,
+        });
+      } catch (error) {
+        console.error("❌ Failed to generate clinical insights", { requestId, error });
+        logger.warn("Failed to generate clinical insights", { requestId, error });
+      }
+    }
+
     logger.info("Groq response generated successfully", {
       requestId,
       model: this.model,
@@ -520,6 +451,7 @@ export class GroqHealthcareService implements AIServiceInterface {
       responseLength: response.length,
       emergencyDetected: emergencyCheck.isEmergency,
       hasPatientContext: !!patientContext,
+      hasClinicalInsights: !!clinicalInsights,
     });
 
     return {
@@ -529,6 +461,7 @@ export class GroqHealthcareService implements AIServiceInterface {
       tokensUsed: completion.usage?.total_tokens || 0,
       confidence: patientContext ? 0.95 : 0.9, // Higher confidence with patient context
       modelUsed: this.model,
+      clinicalInsights, // Add clinical insights to response
     };
   }
 
@@ -553,15 +486,21 @@ export class GroqHealthcareService implements AIServiceInterface {
       return this.buildConsultationPrepPrompt(patientContext, message, sessionType);
     }
 
+    // For clinical analysis (doctors), use clinical analysis prompt
+    if (userRole === "doctor" && sessionType === "clinical_analysis" && patientContext) {
+      console.log("✅ Using clinical analysis prompt for doctor");
+      return this.buildClinicalAnalysisPrompt(patientContext, message);
+    }
+
     console.log("ℹ️ Using standard system prompt", {
       reason:
-        userRole !== "patient"
-          ? "Not a patient"
-          : sessionType !== "consultation_prep"
-            ? "Not consultation prep"
+        userRole === "patient" && sessionType !== "consultation_prep"
+          ? "Patient - not consultation prep"
+          : userRole === "doctor" && sessionType !== "clinical_analysis"
+            ? "Doctor - not clinical analysis"
             : !patientContext
               ? "No patient context"
-              : "Unknown",
+              : "Other user role",
     });
 
     // Default to standard system prompts for other cases
@@ -571,6 +510,90 @@ export class GroqHealthcareService implements AIServiceInterface {
   /**
    * Build personalized consultation preparation prompt with patient medical context
    */
+  private buildClinicalAnalysisPrompt(patientContext: PatientMedicalContext, message: string): string {
+    console.log("🏥 Building clinical analysis prompt for doctor", {
+      patientAge: patientContext.demographics?.age,
+      chronicConditions: patientContext.chronicConditions?.length || 0,
+      currentMedications: patientContext.currentMedications?.length || 0,
+      recentEncounters: patientContext.recentEncounters?.length || 0,
+    });
+
+    return `You are an experienced Clinical AI Assistant helping a doctor analyze a specific patient's case.
+
+## PATIENT OVERVIEW
+This ${patientContext.demographics?.age || "adult"} year old patient has the following medical profile:
+
+**Medical History:**
+${
+  patientContext.chronicConditions?.length > 0
+    ? patientContext.chronicConditions
+        .map((c) => `• ${c.condition} (diagnosed ${new Date(c.diagnosedDate).getFullYear()}) - ${c.status}`)
+        .join("\n")
+    : "• No chronic conditions documented"
+}
+
+**Current Medications:**
+${
+  patientContext.currentMedications?.length > 0
+    ? patientContext.currentMedications
+        .map(
+          (m) => `• ${m.name} ${m.dosage} - ${m.frequency} (started ${new Date(m.prescribedDate).toLocaleDateString()})`
+        )
+        .join("\n")
+    : "• No current medications documented"
+}
+
+**Known Allergies:**
+${
+  [...(patientContext.allergies?.drug || []), ...(patientContext.allergies?.food || [])].length > 0
+    ? [...(patientContext.allergies.drug || []), ...(patientContext.allergies.food || [])]
+        .map((a) => `• ${a}`)
+        .join("\n")
+    : "• No documented allergies"
+}
+
+**Recent Clinical Encounters:**
+${
+  patientContext.recentEncounters?.length > 0
+    ? patientContext.recentEncounters
+        .slice(0, 3)
+        .map(
+          (e) =>
+            `• ${new Date(e.date).toLocaleDateString()}: ${e.type} - "${e.chiefComplaint}"
+      Diagnosis: ${Array.isArray(e.diagnosis) ? e.diagnosis.join(", ") : e.diagnosis || "Not specified"}`
+        )
+        .join("\n")
+    : "• No recent encounters documented"
+}
+
+**Latest Vitals:**
+${
+  patientContext.latestVitals
+    ? `• Blood Pressure: ${patientContext.latestVitals.bloodPressure || "Not recorded"}
+• Heart Rate: ${patientContext.latestVitals.heartRate || "Not recorded"} bpm
+• Weight: ${patientContext.latestVitals.weight || "Not recorded"} kg
+• Height: ${patientContext.latestVitals.height || "Not recorded"} cm`
+    : "• No recent vitals available"
+}
+
+## DOCTOR'S QUESTION
+"${message}"
+
+## YOUR RESPONSE INSTRUCTIONS
+
+Based on this patient's complete medical history above, provide a comprehensive clinical analysis that:
+
+1. **References specific patient data** - Use the actual conditions, medications, and history shown above
+2. **Identifies clinical patterns** - Connect the dots between their conditions, medications, and recent visits
+3. **Highlights safety concerns** - Point out any drug interactions, contraindications, or red flags specific to this patient
+4. **Suggests actionable next steps** - Based on their actual medical profile and recent encounters
+5. **Addresses care gaps** - What might be missing based on their conditions and age
+
+**Important:** Your response must be specific to THIS patient's medical data. Reference their actual conditions, medications, encounter history, and vitals. Do not provide generic advice.
+
+Focus on actionable clinical insights that help the doctor make informed decisions about this specific patient's care.`;
+  }
+
   private buildConsultationPrepPrompt(context: PatientMedicalContext, message: string, sessionType: string): string {
     console.log("🏥 Building personalized consultation prep prompt", {
       patientAge: context.demographics.age,
