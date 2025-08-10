@@ -417,8 +417,8 @@ EncounterSchema.methods = {
       organization: this.organizationId,
       attendingPractitioner: this.attendingPractitionerId,
       authorizationGrantId: this.authorizationGrantId,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      createdAt: this.auditCreatedDateTime,
+      updatedAt: this.auditModifiedDateTime,
     };
   },
 };

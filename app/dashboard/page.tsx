@@ -15,7 +15,8 @@ import { PharmacistDashboard } from "@/components/healthcare/PharmacistDashboard
 import EnhancedAdminDashboard from "@/components/admin/EnhancedAdminDashboard";
 import AdminAlertsPanel from "@/components/admin/AdminAlertsPanel";
 import { AdminNavigation, AdminQuickActions } from "@/components/admin/AdminNavigation";
-import { Settings, ArrowRight } from "lucide-react";
+import ChatTriggerButton from "@/components/ai/ChatTriggerButton";
+import { Settings, ArrowRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 function WelcomeCard() {
@@ -293,6 +294,7 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 {/* <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} /> */}
                 <AuthorizationRequests userId={user.digitalIdentifier || user.id} />
+                <UploadDocs onBack={() => {}} onDataUploaded={() => {}} userId={user.digitalIdentifier || user.id} />
 
                 {/* Settings Card - Link to dedicated settings page */}
                 <Card>
