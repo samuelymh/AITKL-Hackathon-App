@@ -154,7 +154,7 @@ SKIN: Acanthosis nigricans present at neck
 ASSESSMENT:
 1. Type 2 diabetes mellitus - suboptimal control (HbA1c 8.2%)
 2. Essential hypertension - well controlled
-3. Diabetic foot care - preventive
+3. Diabetic foot care - preventive 
 
 PLAN:
 1. Increase metformin to maximum tolerated dose
